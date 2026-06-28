@@ -1,14 +1,28 @@
 #!/usr/bin/env node
-// The checked-in codec in src/generated/rdf_pb.ts is intentionally reviewed
-// together with proto/rdf.proto. This guard detects schema changes that require
-// regenerating/reviewing the codec field mapping.
-import { readFile } from 'node:fs/promises';
+import { existsSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { delimiter, join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
-const schema = await readFile(new URL('../proto/rdf.proto', import.meta.url), 'utf8');
-const codec = await readFile(new URL('../src/generated/rdf_pb.ts', import.meta.url), 'utf8');
-for (const required of ['RdfStreamFrame', 'RdfStreamRow', 'RdfStreamOptions', 'RdfQuad', 'RdfTriple']) {
-  if (!schema.includes(`message ${required}`) || !codec.includes(required)) {
-    throw new Error(`Generated codec is missing ${required}`);
-  }
+const root = resolve(new URL('..', import.meta.url).pathname);
+const bin = join(root, 'node_modules', '.bin');
+const executable = join(bin, process.platform === 'win32' ? 'buf.cmd' : 'buf');
+const cache = process.env.XDG_CACHE_HOME ?? join(tmpdir(), 'rdfjs-jelly-buf-cache');
+mkdirSync(cache, { recursive: true });
+const result = spawnSync(executable, ['generate'], {
+  cwd: root,
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`,
+    XDG_CACHE_HOME: cache,
+    NODE_OPTIONS: [process.env.NODE_OPTIONS, `--localstorage-file=${join(cache, 'node-localstorage')}`]
+      .filter(Boolean)
+      .join(' '),
+  },
+});
+if (result.error) throw result.error;
+if (result.status !== 0) process.exit(result.status ?? 1);
+if (!existsSync(join(root, 'src', 'generated', 'proto', 'rdf_pb.ts'))) {
+  throw new Error('Protobuf-ES did not generate src/generated/proto/rdf_pb.ts');
 }
-console.log('The checked-in Jelly protobuf codec covers the pinned rdf.proto messages.');

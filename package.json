@@ -38,16 +38,20 @@
     "check": "npm run lint && npm run build && npm test",
     "ci": "npm run check",
     "prepare": "npm run build",
-    "proto:check": "node scripts/generate-proto.mjs",
+    "proto:generate": "node scripts/generate-proto.mjs",
+    "proto:check": "npm run proto:generate",
     "perf": "npm run build && node perf/bench.mjs",
     "perf:quick": "npm run build && node perf/bench.mjs 10000",
     "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs",
     "perf:compare:pyjelly": "npm run build && node --expose-gc perf/compare-pyjelly.mjs"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
     "@rdfjs/types": "^2.0.1"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
+    "@bufbuild/protoc-gen-es": "^2.12.1",
     "@types/node": "^24.0.0",
     "esbuild": "^0.27.7",
     "tsup": "^8.5.0",

@@ -1,5 +1,4 @@
 import { JellyConformanceError, MessageDecoder, MessageEncoder, Parser } from '../src';
-import { encodeVarint } from '../src/codec/varint';
 import type { RdfStreamFrame } from '../src/generated/rdf_pb';
 
 const validFrame: RdfStreamFrame = {
@@ -23,7 +22,7 @@ describe('binary framing validation', () => {
   });
 
   it('enforces the configured message size', () => {
-    const prefix = encodeVarint(1024);
+    const prefix = Uint8Array.from([0x80, 0x08]); // Protobuf varint for 1024.
     expect(() => new MessageDecoder({ delimited: true, maxMessageSize: 10 }).decode(prefix)).toThrow(/size limit/);
   });
 

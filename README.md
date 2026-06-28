@@ -132,29 +132,6 @@ npm run perf:compare:rdf-parser -- 100000 7
 
 Set `RDF_PARSER_TS_PATH` to compare against a different build.
 
-### Compared with pyjelly
-
-This comparison uses pyjelly 0.7.1's compiled CPython wheel and generic API.
-Both decoders read the exact same 2,579,568-byte Jelly version-2 stream.
-
-| Implementation | Decode median | Decode throughput | Encode median | Encode throughput | Encoded size |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| rdfjs-jelly | 143.6 ms | 0.70 M statements/s | 440.8 ms | 0.23 M statements/s | 2,579,568 B |
-| pyjelly 0.7.1 | 327.9 ms | 0.30 M statements/s | 574.5 ms | 0.17 M statements/s | 2,579,572 B |
-
-In this run, `rdfjs-jelly` decoded 2.28 times faster and encoded 1.30 times
-faster. The encoded sizes were effectively identical. The object models are
-not identical: TypeScript constructs RDF/JS quads, while Python constructs
-pyjelly generic triples.
-
-Reproduce it with pyjelly installed in a virtual environment:
-
-```sh
-python3 -m venv .venv
-.venv/bin/pip install pyjelly==0.7.1
-PYJELLY_PYTHON=.venv/bin/python npm run perf:compare:pyjelly -- 100000 7
-```
-
 ## Development
 
 ```sh
@@ -163,10 +140,18 @@ npm run lint
 npm test
 npm run build
 npm run check
+npm run proto:generate
 ```
 
-The checked-in schema is Jelly-RDF `rdf.proto` 1.1.1. Tests include pinned official Jelly conformance fixtures and pyjelly-compatible version-2 writer behavior.
+The checked-in schema is Jelly-RDF `rdf.proto` 1.1.1. Its TypeScript message
+types and schema descriptors are generated with Protobuf-ES and Buf. The
+Protobuf-ES runtime handles both protobuf wire encoding and size-delimited
+message framing; `src/generated/rdf_pb.ts` only maps between those generated
+messages and the codec's internal model.
+
+Tests include pinned official Jelly conformance fixtures and pyjelly-compatible
+version-2 writer behavior.
 
 ## License
 
-MIT
+Apache 2

@@ -1,7 +1,8 @@
+import { sizeDelimitedPeek } from '@bufbuild/protobuf/wire';
 import { JellyConformanceError } from '../errors';
 import { decodeRdfStreamFrame, type RdfStreamFrame } from '../generated/rdf_pb';
 import type { BinaryInput, ParserOptions } from '../types';
-import { asUint8Array, concatBytes, decodeVarint } from './varint';
+import { asUint8Array, concatBytes } from './bytes';
 
 const DEFAULT_MAX_MESSAGE_SIZE = 64 * 1024 * 1024;
 
@@ -54,12 +55,20 @@ export class MessageDecoder {
     const frames: RdfStreamFrame[] = [];
     let offset = 0;
     while (offset < this.buffer.byteLength) {
-      const length = decodeVarint(this.buffer, offset);
-      if (!length) break;
-      if (length.value > this.maxMessageSize) throw new JellyConformanceError('Jelly message exceeds configured size limit');
-      const end = length.offset + length.value;
+      let length: ReturnType<typeof sizeDelimitedPeek>;
+      try {
+        length = sizeDelimitedPeek(this.buffer.subarray(offset));
+      } catch (error) {
+        throw new JellyConformanceError('Invalid Jelly message length prefix', {
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+      if (length.eof) break;
+      if (length.size > this.maxMessageSize) throw new JellyConformanceError('Jelly message exceeds configured size limit');
+      const payloadOffset = offset + length.offset;
+      const end = payloadOffset + length.size;
       if (end > this.buffer.byteLength) break;
-      frames.push(decodeRdfStreamFrame(this.buffer.subarray(length.offset, end)));
+      frames.push(decodeRdfStreamFrame(this.buffer.subarray(payloadOffset, end)));
       offset = end;
     }
     this.buffer = this.buffer.slice(offset);

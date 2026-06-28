@@ -1,13 +1,12 @@
 import { JellyConformanceError } from '../errors';
-import { encodeRdfStreamFrame, type RdfStreamFrame } from '../generated/rdf_pb';
-import { concatBytes, encodeVarint } from './varint';
+import { encodeDelimitedRdfStreamFrame, encodeRdfStreamFrame, type RdfStreamFrame } from '../generated/rdf_pb';
+import { concatBytes } from './bytes';
 
 export class MessageEncoder {
   public constructor(public readonly delimited = true) {}
 
   public encode(frame: RdfStreamFrame): Uint8Array {
-    const payload = encodeRdfStreamFrame(frame);
-    return this.delimited ? concatBytes([encodeVarint(payload.byteLength), payload]) : payload;
+    return this.delimited ? encodeDelimitedRdfStreamFrame(frame) : encodeRdfStreamFrame(frame);
   }
 
   public encodeAll(frames: readonly RdfStreamFrame[]): Uint8Array {
