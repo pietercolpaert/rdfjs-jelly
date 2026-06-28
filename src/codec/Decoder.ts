@@ -1,6 +1,23 @@
 import type * as RDF from '@rdfjs/types';
 import { JellyConformanceError, JellyUnsupportedFeatureError } from '../errors';
-import type { RdfIri, RdfLiteral, RdfQuad, RdfStreamFrame, RdfStreamOptions, RdfTerm, RdfTriple } from '../generated/rdf_pb';
+import type {
+  ProtoFrame,
+  ProtoGraphStart,
+  ProtoIri,
+  ProtoLiteral,
+  ProtoOneofMarkers,
+  ProtoQuad,
+  ProtoRow,
+  ProtoStreamOptions,
+  ProtoTriple,
+  RdfIri,
+  RdfLiteral,
+  RdfQuad,
+  RdfStreamFrame,
+  RdfStreamOptions,
+  RdfTerm,
+  RdfTriple,
+} from '../generated/rdf_pb';
 import { MAX_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, RDF_LANG_STRING, XSD_STRING } from '../options';
 import { DataFactory } from '../rdfjs/adapter';
 import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type StreamOptions } from '../types';
@@ -8,6 +25,7 @@ import { LookupDecoder } from './LookupDecoder';
 
 type NamespaceListener = (prefix: string, iri: RDF.NamedNode) => void;
 type OptionsListener = (options: StreamOptions) => void;
+const EMPTY_METADATA: ReadonlyMap<string, Uint8Array> = new Map();
 
 export interface DecoderEvents {
   namespace?: NamespaceListener;
@@ -26,6 +44,8 @@ export class Decoder {
   private sawAnyRow = false;
   private messageCounter = 0;
   private readonly events: DecoderEvents;
+  private readonly defaultGraph: RDF.DefaultGraph;
+  private xsdString?: RDF.NamedNode;
   public streamOptions?: StreamOptions;
   public readonly namespaces: Record<string, RDF.NamedNode> = Object.create(null) as Record<string, RDF.NamedNode>;
 
@@ -34,6 +54,7 @@ export class Decoder {
     this.strict = options.strict ?? true;
     this.maxSupportedVersion = options.maxSupportedVersion ?? 2;
     this.events = events;
+    this.defaultGraph = this.factory.defaultGraph();
   }
 
   public decode(frame: RdfStreamFrame): Message {
@@ -51,6 +72,34 @@ export class Decoder {
       else if (row.case === 'graphStart') this.startGraph(row.value.graph);
       else if (row.case === 'graphEnd') this.endGraph();
       else throw new JellyConformanceError(`Unsupported or empty Jelly row field ${row.fieldNumber}`);
+    }
+    return message;
+  }
+
+  public decodeProto(frame: unknown): Message {
+    const protoFrame = frame as ProtoFrame;
+    let metadata: Map<string, Uint8Array> | undefined;
+    for (const key in protoFrame.metadata) {
+      if (Object.hasOwn(protoFrame.metadata, key)) (metadata ??= new Map()).set(key, protoFrame.metadata[key]!);
+    }
+    const message = new Message(this.messageCounter++, [], metadata ?? EMPTY_METADATA);
+    for (const rawRow of protoFrame.rows) {
+      const row = rawRow as ProtoRow & ProtoOneofMarkers;
+      const field = row.$row ?? row.row;
+      if (field === 'options') { this.ingestOptions(row.options as ProtoStreamOptions); continue; }
+      if (!this.streamOptions) throw new JellyConformanceError('Stream options must occur before all other Jelly rows');
+      this.sawAnyRow = true;
+      if (field === 'name') this.names!.assign(row.name!.id ?? 0, row.name!.value ?? '');
+      else if (field === 'prefix') this.prefixes!.assign(row.prefix!.id ?? 0, row.prefix!.value ?? '');
+      else if (field === 'datatype') this.datatypes!.assign(row.datatype!.id ?? 0, row.datatype!.value ?? '');
+      else if (field === 'namespace') {
+        const value = row.namespace!;
+        this.decodeProtoNamespace(value.name ?? '', value.value as ProtoIri);
+      } else if (field === 'triple') message.push(this.decodeProtoTriple(row.triple as ProtoTriple));
+      else if (field === 'quad') message.push(this.decodeProtoQuad(row.quad as ProtoQuad));
+      else if (field === 'graphStart') this.startProtoGraph(row.graphStart as ProtoGraphStart);
+      else if (field === 'graphEnd') this.endGraph();
+      else throw new JellyConformanceError('Unsupported or empty Jelly row field 0');
     }
     return message;
   }
@@ -129,7 +178,7 @@ export class Decoder {
   private decodeLiteral(value: RdfLiteral): RDF.Literal {
     if (value.kind?.case === 'langtag') return this.factory.literal(value.lex, value.kind.value);
     if (value.kind?.case === 'datatype') return this.factory.literal(value.lex, this.factory.namedNode(this.datatypes!.datatype(value.kind.value)));
-    return this.factory.literal(value.lex, this.factory.namedNode(XSD_STRING));
+    return this.factory.literal(value.lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
   }
 
   private decodeTerm(value: RdfTerm, slot: number, allowDefaultGraph = false): RDF.Term {
@@ -142,23 +191,21 @@ export class Decoder {
   }
 
   private statementTerms(value: RdfTriple | RdfQuad): [RDF.Quad_Subject, RDF.Quad_Predicate, RDF.Quad_Object] {
-    const encoded = [value.subject, value.predicate, value.object] as const;
-    const terms: RDF.Term[] = [];
-    for (let slot = 0; slot < 3; slot++) {
-      const field = encoded[slot];
-      const term = field ? this.decodeTerm(field, slot) : this.repeated[slot];
-      if (!term) throw new JellyConformanceError(`First Jelly statement must set slot ${slot}`);
-      if (slot === 0 && term.termType !== 'NamedNode' && term.termType !== 'BlankNode') {
-        throw new JellyConformanceError('Invalid RDF subject term');
-      }
-      if (slot === 1 && term.termType !== 'NamedNode') throw new JellyConformanceError('Invalid RDF predicate term');
-      if (slot === 2 && !['NamedNode', 'BlankNode', 'Literal'].includes(term.termType)) {
-        throw new JellyConformanceError('Invalid RDF object term');
-      }
-      terms.push(term);
-      this.repeated[slot] = term;
+    const subject = value.subject ? this.decodeTerm(value.subject, 0) : this.repeated[0];
+    if (!subject) throw new JellyConformanceError('First Jelly statement must set slot 0');
+    if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') throw new JellyConformanceError('Invalid RDF subject term');
+    const predicate = value.predicate ? this.decodeTerm(value.predicate, 1) : this.repeated[1];
+    if (!predicate) throw new JellyConformanceError('First Jelly statement must set slot 1');
+    if (predicate.termType !== 'NamedNode') throw new JellyConformanceError('Invalid RDF predicate term');
+    const object = value.object ? this.decodeTerm(value.object, 2) : this.repeated[2];
+    if (!object) throw new JellyConformanceError('First Jelly statement must set slot 2');
+    if (object.termType !== 'NamedNode' && object.termType !== 'BlankNode' && object.termType !== 'Literal') {
+      throw new JellyConformanceError('Invalid RDF object term');
     }
-    return terms as [RDF.Quad_Subject, RDF.Quad_Predicate, RDF.Quad_Object];
+    this.repeated[0] = subject;
+    this.repeated[1] = predicate;
+    this.repeated[2] = object;
+    return [subject, predicate, object];
   }
 
   private decodeTriple(value: RdfTriple): RDF.Quad {
@@ -170,7 +217,7 @@ export class Decoder {
     if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
       throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
     }
-    return this.factory.quad(subject, predicate, object, this.graph ?? this.factory.defaultGraph());
+    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
 
   private decodeQuad(value: RdfQuad): RDF.Quad {
@@ -183,6 +230,107 @@ export class Decoder {
     if (!['NamedNode', 'BlankNode', 'DefaultGraph'].includes(graph.termType)) throw new JellyConformanceError('Invalid RDF graph term');
     this.repeated[3] = graph;
     return this.factory.quad(subject, predicate, object, graph as RDF.Quad_Graph);
+  }
+
+  private decodeProtoNamespace(name: string, iri: ProtoIri): void {
+    if (this.streamOptions!.version < 2) throw new JellyConformanceError('Namespace declarations require Jelly protocol version 2');
+    const term = this.decodeProtoIri(iri);
+    this.namespaces[name] = term;
+    this.events.namespace?.(name, term);
+  }
+
+  private decodeProtoIri(value: ProtoIri): RDF.NamedNode {
+    return this.factory.namedNode(this.prefixes!.prefix(value.prefixId) + this.names!.name(value.nameId));
+  }
+
+  private decodeProtoLiteral(value: ProtoLiteral): RDF.Literal {
+    const kind = (value as ProtoLiteral & ProtoOneofMarkers).$literalKind ?? value.literalKind;
+    if (kind === 'langtag') return this.factory.literal(value.lex, value.langtag!);
+    if (kind === 'datatype') return this.factory.literal(value.lex, this.factory.namedNode(this.datatypes!.datatype(value.datatype!)));
+    return this.factory.literal(value.lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
+  }
+
+  private protoStatementTerms(value: ProtoTriple): [RDF.Quad_Subject, RDF.Quad_Predicate, RDF.Quad_Object] {
+    const marked = value as ProtoTriple & ProtoOneofMarkers;
+    let subject: RDF.Term | undefined;
+    if (marked.$subject === 'sIri') subject = this.decodeProtoIri(value.sIri as ProtoIri);
+    else if (marked.$subject === 'sBnode') subject = this.factory.blankNode(value.sBnode!);
+    else if (marked.$subject === 'sLiteral') subject = this.decodeProtoLiteral(value.sLiteral as ProtoLiteral);
+    else if (marked.$subject === 'sTripleTerm') throw new JellyUnsupportedFeatureError('RDF-star quoted triple terms are not supported');
+    else subject = this.repeated[0];
+    if (!subject) throw new JellyConformanceError('First Jelly statement must set slot 0');
+    if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') throw new JellyConformanceError('Invalid RDF subject term');
+
+    let predicate: RDF.Term | undefined;
+    if (marked.$predicate === 'pIri') predicate = this.decodeProtoIri(value.pIri as ProtoIri);
+    else if (marked.$predicate === 'pBnode') predicate = this.factory.blankNode(value.pBnode!);
+    else if (marked.$predicate === 'pLiteral') predicate = this.decodeProtoLiteral(value.pLiteral as ProtoLiteral);
+    else if (marked.$predicate === 'pTripleTerm') throw new JellyUnsupportedFeatureError('RDF-star quoted triple terms are not supported');
+    else predicate = this.repeated[1];
+    if (!predicate) throw new JellyConformanceError('First Jelly statement must set slot 1');
+    if (predicate.termType !== 'NamedNode') throw new JellyConformanceError('Invalid RDF predicate term');
+
+    let object: RDF.Term | undefined;
+    if (marked.$object === 'oIri') object = this.decodeProtoIri(value.oIri as ProtoIri);
+    else if (marked.$object === 'oBnode') object = this.factory.blankNode(value.oBnode!);
+    else if (marked.$object === 'oLiteral') object = this.decodeProtoLiteral(value.oLiteral as ProtoLiteral);
+    else if (marked.$object === 'oTripleTerm') throw new JellyUnsupportedFeatureError('RDF-star quoted triple terms are not supported');
+    else object = this.repeated[2];
+    if (!object) throw new JellyConformanceError('First Jelly statement must set slot 2');
+    if (object.termType !== 'NamedNode' && object.termType !== 'BlankNode' && object.termType !== 'Literal') {
+      throw new JellyConformanceError('Invalid RDF object term');
+    }
+
+    this.repeated[0] = subject;
+    this.repeated[1] = predicate;
+    this.repeated[2] = object;
+    return [subject, predicate, object];
+  }
+
+  private decodeProtoTriple(value: ProtoTriple): RDF.Quad {
+    const physical = this.streamOptions!.physicalType;
+    if (physical !== PhysicalStreamType.TRIPLES && physical !== PhysicalStreamType.GRAPHS) {
+      throw new JellyConformanceError('Triple row is invalid in this physical stream type');
+    }
+    const [subject, predicate, object] = this.protoStatementTerms(value);
+    if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
+      throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
+    }
+    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
+  }
+
+  private decodeProtoGraphTerm(value: ProtoQuad | ProtoGraphStart): RDF.Term | undefined {
+    const kind = (value as (ProtoQuad | ProtoGraphStart) & ProtoOneofMarkers).$graph;
+    if (kind === 'gIri') return this.decodeProtoIri(value.gIri as ProtoIri);
+    if (kind === 'gBnode') return this.factory.blankNode(value.gBnode!);
+    if (kind === 'gLiteral') return this.decodeProtoLiteral(value.gLiteral as ProtoLiteral);
+    if (kind === 'gDefaultGraph') return this.defaultGraph;
+    return undefined;
+  }
+
+  private decodeProtoQuad(value: ProtoQuad): RDF.Quad {
+    if (this.streamOptions!.physicalType !== PhysicalStreamType.QUADS) {
+      throw new JellyConformanceError('Quad row is invalid in this physical stream type');
+    }
+    const [subject, predicate, object] = this.protoStatementTerms(value as unknown as ProtoTriple);
+    const graph = this.decodeProtoGraphTerm(value) ?? this.repeated[3];
+    if (!graph) throw new JellyConformanceError('First Jelly quad must set its graph');
+    if (graph.termType !== 'NamedNode' && graph.termType !== 'BlankNode' && graph.termType !== 'DefaultGraph') {
+      throw new JellyConformanceError('Invalid RDF graph term');
+    }
+    this.repeated[3] = graph;
+    return this.factory.quad(subject, predicate, object, graph);
+  }
+
+  private startProtoGraph(value: ProtoGraphStart): void {
+    if (this.streamOptions!.physicalType !== PhysicalStreamType.GRAPHS) throw new JellyConformanceError('graph_start outside a GRAPHS stream');
+    if (this.graph !== undefined) throw new JellyConformanceError('Nested graph_start is invalid');
+    const graph = this.decodeProtoGraphTerm(value);
+    if (!graph) throw new JellyConformanceError('graph_start must identify a graph');
+    if (graph.termType !== 'NamedNode' && graph.termType !== 'BlankNode' && graph.termType !== 'DefaultGraph') {
+      throw new JellyConformanceError('Invalid RDF graph name');
+    }
+    this.graph = graph;
   }
 
   private startGraph(encoded: RdfTerm | undefined): void {

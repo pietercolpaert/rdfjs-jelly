@@ -1,26 +1,30 @@
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
-import { sizeDelimitedEncode } from '@bufbuild/protobuf/wire';
 import { JellyConformanceError } from '../errors';
-import {
-  RdfDatatypeEntrySchema,
-  RdfDefaultGraphSchema,
-  RdfGraphEndSchema,
-  RdfGraphStartSchema,
-  RdfIriSchema,
-  RdfLiteralSchema,
-  RdfNameEntrySchema,
-  RdfNamespaceDeclarationSchema,
-  RdfPrefixEntrySchema,
-  RdfQuadSchema,
-  RdfStreamFrameSchema,
-  RdfStreamOptionsSchema,
-  RdfStreamRowSchema,
-  RdfTripleSchema,
-  type RdfGraphStart as ProtoGraphStart,
-  type RdfQuad as ProtoQuad,
-  type RdfStreamRow as ProtoStreamRow,
-  type RdfTriple as ProtoTriple,
-} from './proto/rdf_pb';
+import { Reader } from 'protobufjs/minimal.js';
+import { eu } from './proto/rdf_pb.mjs';
+
+const proto = eu.ostrzyciel.jelly.core.proto.v1;
+
+export type ProtoIri = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
+export type ProtoLiteral = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral;
+export type ProtoTriple = eu.ostrzyciel.jelly.core.proto.v1.RdfTriple;
+export type ProtoQuad = eu.ostrzyciel.jelly.core.proto.v1.RdfQuad;
+export type ProtoGraphStart = eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart;
+export type ProtoRow = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow;
+export type ProtoStreamOptions = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions;
+export type ProtoFrame = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
+type TripleProperties = eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.$Properties;
+type QuadProperties = eu.ostrzyciel.jelly.core.proto.v1.RdfQuad.$Properties;
+type RowProperties = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties;
+type FrameProperties = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties;
+
+export interface ProtoOneofMarkers {
+  $literalKind?: 'langtag' | 'datatype';
+  $subject?: 'sIri' | 'sBnode' | 'sLiteral' | 'sTripleTerm';
+  $predicate?: 'pIri' | 'pBnode' | 'pLiteral' | 'pTripleTerm';
+  $object?: 'oIri' | 'oBnode' | 'oLiteral' | 'oTripleTerm';
+  $graph?: 'gIri' | 'gBnode' | 'gDefaultGraph' | 'gLiteral';
+  $row?: 'options' | 'triple' | 'quad' | 'graphStart' | 'graphEnd' | 'namespace' | 'name' | 'prefix' | 'datatype';
+}
 
 export interface RdfIri { prefixId: number; nameId: number }
 export interface RdfLiteral { lex: string; kind?: { case: 'langtag'; value: string } | { case: 'datatype'; value: number } }
@@ -63,121 +67,126 @@ export interface RdfStreamFrame {
   metadata: Map<string, Uint8Array>;
 }
 
-function toIri(value: RdfIri) {
-  return create(RdfIriSchema, value);
-}
-
-function fromIri(value: { prefixId: number; nameId: number }): RdfIri {
+function toIri(value: RdfIri): eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties {
   return { prefixId: value.prefixId, nameId: value.nameId };
 }
 
-function toLiteral(value: RdfLiteral) {
-  return create(RdfLiteralSchema, {
-    lex: value.lex,
-    literalKind: value.kind ?? { case: undefined },
-  });
+function fromIri(value: ProtoIri): RdfIri {
+  return { prefixId: value.prefixId, nameId: value.nameId };
 }
 
-function fromLiteral(value: { lex: string; literalKind: { case?: string; value?: string | number } }): RdfLiteral {
-  const kind = value.literalKind.case === 'langtag'
-    ? { case: 'langtag' as const, value: value.literalKind.value as string }
-    : value.literalKind.case === 'datatype'
-      ? { case: 'datatype' as const, value: value.literalKind.value as number }
-      : undefined;
-  return { lex: value.lex, ...(kind ? { kind } : {}) };
+function toLiteral(value: RdfLiteral): eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties {
+  if (value.kind?.case === 'langtag') return { lex: value.lex, langtag: value.kind.value };
+  if (value.kind?.case === 'datatype') return { lex: value.lex, datatype: value.kind.value };
+  return { lex: value.lex };
 }
 
-function toSubject(term: RdfTerm | undefined): ProtoTriple['subject'] {
-  if (!term) return { case: undefined };
-  if (term.case === 'iri') return { case: 'sIri', value: toIri(term.value) };
-  if (term.case === 'bnode') return { case: 'sBnode', value: term.value };
-  if (term.case === 'literal') return { case: 'sLiteral', value: toLiteral(term.value) };
-  if (term.case === 'triple') return { case: 'sTripleTerm', value: toTriple(term.value) };
-  return { case: undefined };
+function fromLiteral(value: ProtoLiteral): RdfLiteral {
+  const field = (value as ProtoLiteral & ProtoOneofMarkers).$literalKind ?? value.literalKind;
+  if (field === 'langtag') return { lex: value.lex, kind: { case: 'langtag', value: value.langtag! } };
+  if (field === 'datatype') return { lex: value.lex, kind: { case: 'datatype', value: value.datatype! } };
+  return { lex: value.lex };
 }
 
-function toPredicate(term: RdfTerm | undefined): ProtoTriple['predicate'] {
-  if (!term) return { case: undefined };
-  if (term.case === 'iri') return { case: 'pIri', value: toIri(term.value) };
-  if (term.case === 'bnode') return { case: 'pBnode', value: term.value };
-  if (term.case === 'literal') return { case: 'pLiteral', value: toLiteral(term.value) };
-  if (term.case === 'triple') return { case: 'pTripleTerm', value: toTriple(term.value) };
-  return { case: undefined };
+function setSubject(target: TripleProperties, term: RdfTerm | undefined): void {
+  if (!term) return;
+  if (term.case === 'iri') target.sIri = toIri(term.value);
+  else if (term.case === 'bnode') target.sBnode = term.value;
+  else if (term.case === 'literal') target.sLiteral = toLiteral(term.value);
+  else if (term.case === 'triple') target.sTripleTerm = toTriple(term.value);
 }
 
-function toObject(term: RdfTerm | undefined): ProtoTriple['object'] {
-  if (!term) return { case: undefined };
-  if (term.case === 'iri') return { case: 'oIri', value: toIri(term.value) };
-  if (term.case === 'bnode') return { case: 'oBnode', value: term.value };
-  if (term.case === 'literal') return { case: 'oLiteral', value: toLiteral(term.value) };
-  if (term.case === 'triple') return { case: 'oTripleTerm', value: toTriple(term.value) };
-  return { case: undefined };
+function setPredicate(target: TripleProperties, term: RdfTerm | undefined): void {
+  if (!term) return;
+  if (term.case === 'iri') target.pIri = toIri(term.value);
+  else if (term.case === 'bnode') target.pBnode = term.value;
+  else if (term.case === 'literal') target.pLiteral = toLiteral(term.value);
+  else if (term.case === 'triple') target.pTripleTerm = toTriple(term.value);
 }
 
-function toGraph(term: RdfTerm | undefined): ProtoQuad['graph'] {
-  if (!term) return { case: undefined };
-  if (term.case === 'iri') return { case: 'gIri', value: toIri(term.value) };
-  if (term.case === 'bnode') return { case: 'gBnode', value: term.value };
-  if (term.case === 'literal') return { case: 'gLiteral', value: toLiteral(term.value) };
-  if (term.case === 'defaultGraph') return { case: 'gDefaultGraph', value: create(RdfDefaultGraphSchema) };
-  return { case: undefined };
+function setObject(target: TripleProperties, term: RdfTerm | undefined): void {
+  if (!term) return;
+  if (term.case === 'iri') target.oIri = toIri(term.value);
+  else if (term.case === 'bnode') target.oBnode = term.value;
+  else if (term.case === 'literal') target.oLiteral = toLiteral(term.value);
+  else if (term.case === 'triple') target.oTripleTerm = toTriple(term.value);
 }
 
-function toTriple(value: RdfTriple) {
-  return create(RdfTripleSchema, {
-    subject: toSubject(value.subject),
-    predicate: toPredicate(value.predicate),
-    object: toObject(value.object),
-  });
+function setGraph(target: QuadProperties, term: RdfTerm | undefined): void {
+  if (!term) return;
+  if (term.case === 'iri') target.gIri = toIri(term.value);
+  else if (term.case === 'bnode') target.gBnode = term.value;
+  else if (term.case === 'literal') target.gLiteral = toLiteral(term.value);
+  else if (term.case === 'defaultGraph') target.gDefaultGraph = {};
 }
 
-function toQuad(value: RdfQuad) {
-  return create(RdfQuadSchema, {
-    subject: toSubject(value.subject),
-    predicate: toPredicate(value.predicate),
-    object: toObject(value.object),
-    graph: toGraph(value.graph),
-  });
+function toTriple(value: RdfTriple): TripleProperties {
+  const output: TripleProperties = {};
+  setSubject(output, value.subject);
+  setPredicate(output, value.predicate);
+  setObject(output, value.object);
+  return output;
 }
 
-function fromSpoTerm(term: ProtoTriple['subject'] | ProtoTriple['predicate'] | ProtoTriple['object']): RdfTerm | undefined {
-  if (term.case === undefined) return undefined;
-  if (term.case.endsWith('Iri')) return { case: 'iri', value: fromIri(term.value as { prefixId: number; nameId: number }) };
-  if (term.case.endsWith('Bnode')) return { case: 'bnode', value: term.value as string };
-  if (term.case.endsWith('Literal')) return { case: 'literal', value: fromLiteral(term.value as Parameters<typeof fromLiteral>[0]) };
-  return { case: 'triple', value: fromTriple(term.value as ProtoTriple) };
+function toQuad(value: RdfQuad): QuadProperties {
+  const output: QuadProperties = {};
+  setSubject(output, value.subject);
+  setPredicate(output, value.predicate);
+  setObject(output, value.object);
+  setGraph(output, value.graph);
+  return output;
 }
 
-function fromGraphTerm(term: ProtoQuad['graph'] | ProtoGraphStart['graph']): RdfTerm | undefined {
-  if (term.case === undefined) return undefined;
-  if (term.case === 'gIri') return { case: 'iri', value: fromIri(term.value) };
-  if (term.case === 'gBnode') return { case: 'bnode', value: term.value };
-  if (term.case === 'gLiteral') return { case: 'literal', value: fromLiteral(term.value) };
-  return { case: 'defaultGraph', value: {} };
+function fromSubject(value: ProtoTriple): RdfTerm | undefined {
+  const field = (value as ProtoTriple & ProtoOneofMarkers).$subject ?? value.subject;
+  if (field === 'sIri') return { case: 'iri', value: fromIri(value.sIri as ProtoIri) };
+  if (field === 'sBnode') return { case: 'bnode', value: value.sBnode! };
+  if (field === 'sLiteral') return { case: 'literal', value: fromLiteral(value.sLiteral as ProtoLiteral) };
+  if (field === 'sTripleTerm') return { case: 'triple', value: fromTriple(value.sTripleTerm as ProtoTriple) };
+  return undefined;
+}
+
+function fromPredicate(value: ProtoTriple): RdfTerm | undefined {
+  const field = (value as ProtoTriple & ProtoOneofMarkers).$predicate ?? value.predicate;
+  if (field === 'pIri') return { case: 'iri', value: fromIri(value.pIri as ProtoIri) };
+  if (field === 'pBnode') return { case: 'bnode', value: value.pBnode! };
+  if (field === 'pLiteral') return { case: 'literal', value: fromLiteral(value.pLiteral as ProtoLiteral) };
+  if (field === 'pTripleTerm') return { case: 'triple', value: fromTriple(value.pTripleTerm as ProtoTriple) };
+  return undefined;
+}
+
+function fromObject(value: ProtoTriple): RdfTerm | undefined {
+  const field = (value as ProtoTriple & ProtoOneofMarkers).$object ?? value.object;
+  if (field === 'oIri') return { case: 'iri', value: fromIri(value.oIri as ProtoIri) };
+  if (field === 'oBnode') return { case: 'bnode', value: value.oBnode! };
+  if (field === 'oLiteral') return { case: 'literal', value: fromLiteral(value.oLiteral as ProtoLiteral) };
+  if (field === 'oTripleTerm') return { case: 'triple', value: fromTriple(value.oTripleTerm as ProtoTriple) };
+  return undefined;
+}
+
+function fromGraph(value: ProtoQuad | ProtoGraphStart): RdfTerm | undefined {
+  const field = (value as (ProtoQuad | ProtoGraphStart) & ProtoOneofMarkers).$graph ?? value.graph;
+  if (field === 'gIri') return { case: 'iri', value: fromIri(value.gIri as ProtoIri) };
+  if (field === 'gBnode') return { case: 'bnode', value: value.gBnode! };
+  if (field === 'gLiteral') return { case: 'literal', value: fromLiteral(value.gLiteral as ProtoLiteral) };
+  if (field === 'gDefaultGraph') return { case: 'defaultGraph', value: {} };
+  return undefined;
 }
 
 function fromTriple(value: ProtoTriple): RdfTriple {
-  return {
-    subject: fromSpoTerm(value.subject),
-    predicate: fromSpoTerm(value.predicate),
-    object: fromSpoTerm(value.object),
-  };
+  return { subject: fromSubject(value), predicate: fromPredicate(value), object: fromObject(value) };
 }
 
 function fromQuad(value: ProtoQuad): RdfQuad {
   return {
-    subject: fromSpoTerm(value.subject),
-    predicate: fromSpoTerm(value.predicate),
-    object: fromSpoTerm(value.object),
-    graph: fromGraphTerm(value.graph),
+    subject: fromSubject(value as unknown as ProtoTriple),
+    predicate: fromPredicate(value as unknown as ProtoTriple),
+    object: fromObject(value as unknown as ProtoTriple),
+    graph: fromGraph(value),
   };
 }
 
-function toOptions(value: RdfStreamOptions) {
-  return create(RdfStreamOptionsSchema, value);
-}
-
-function fromOptions(value: Parameters<typeof toOptions>[0]): RdfStreamOptions {
+function fromOptions(value: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions): RdfStreamOptions {
   return {
     streamName: value.streamName,
     physicalType: value.physicalType,
@@ -191,58 +200,76 @@ function fromOptions(value: Parameters<typeof toOptions>[0]): RdfStreamOptions {
   };
 }
 
-function toRow(row: RdfStreamRow) {
-  let value: ProtoStreamRow['row'];
-  if (row.case === 'options') value = { case: 'options', value: toOptions(row.value) };
-  else if (row.case === 'triple') value = { case: 'triple', value: toTriple(row.value) };
-  else if (row.case === 'quad') value = { case: 'quad', value: toQuad(row.value) };
-  else if (row.case === 'graphStart') value = { case: 'graphStart', value: create(RdfGraphStartSchema, { graph: toGraph(row.value.graph) }) };
-  else if (row.case === 'graphEnd') value = { case: 'graphEnd', value: create(RdfGraphEndSchema) };
-  else if (row.case === 'namespace') value = { case: 'namespace', value: create(RdfNamespaceDeclarationSchema, { name: row.value.name, value: toIri(row.value.value) }) };
-  else if (row.case === 'name') value = { case: 'name', value: create(RdfNameEntrySchema, row.value) };
-  else if (row.case === 'prefix') value = { case: 'prefix', value: create(RdfPrefixEntrySchema, row.value) };
-  else if (row.case === 'datatype') value = { case: 'datatype', value: create(RdfDatatypeEntrySchema, row.value) };
-  else value = { case: undefined };
-  return create(RdfStreamRowSchema, { row: value });
+function toRow(row: RdfStreamRow): RowProperties {
+  if (row.case === 'options') return { options: row.value };
+  if (row.case === 'triple') return { triple: toTriple(row.value) };
+  if (row.case === 'quad') return { quad: toQuad(row.value) };
+  if (row.case === 'graphStart') {
+    const graphStart: QuadProperties = {};
+    setGraph(graphStart, row.value.graph);
+    return { graphStart };
+  }
+  if (row.case === 'graphEnd') return { graphEnd: {} };
+  if (row.case === 'namespace') return { namespace: { name: row.value.name, value: toIri(row.value.value) } };
+  if (row.case === 'name') return { name: row.value };
+  if (row.case === 'prefix') return { prefix: row.value };
+  if (row.case === 'datatype') return { datatype: row.value };
+  return {};
 }
 
-function fromRow(row: ProtoStreamRow): RdfStreamRow {
-  const value = row.row;
-  if (value.case === 'options') return { case: 'options', value: fromOptions(value.value) };
-  if (value.case === 'triple') return { case: 'triple', value: fromTriple(value.value) };
-  if (value.case === 'quad') return { case: 'quad', value: fromQuad(value.value) };
-  if (value.case === 'graphStart') return { case: 'graphStart', value: { graph: fromGraphTerm(value.value.graph) } };
-  if (value.case === 'graphEnd') return { case: 'graphEnd', value: {} };
-  if (value.case === 'namespace') return { case: 'namespace', value: { name: value.value.name, value: fromIri(value.value.value!) } };
-  if (value.case === 'name') return { case: 'name', value: { id: value.value.id, value: value.value.value } };
-  if (value.case === 'prefix') return { case: 'prefix', value: { id: value.value.id, value: value.value.value } };
-  if (value.case === 'datatype') return { case: 'datatype', value: { id: value.value.id, value: value.value.value } };
+function fromRow(row: ProtoRow): RdfStreamRow {
+  const field = (row as ProtoRow & ProtoOneofMarkers).$row ?? row.row;
+  if (field === 'options') return { case: 'options', value: fromOptions(row.options! as eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions) };
+  if (field === 'triple') return { case: 'triple', value: fromTriple(row.triple! as ProtoTriple) };
+  if (field === 'quad') return { case: 'quad', value: fromQuad(row.quad! as ProtoQuad) };
+  if (field === 'graphStart') return { case: 'graphStart', value: { graph: fromGraph(row.graphStart! as ProtoGraphStart) } };
+  if (field === 'graphEnd') return { case: 'graphEnd', value: {} };
+  if (field === 'namespace') {
+    const value = row.namespace!;
+    return { case: 'namespace', value: { name: value.name ?? '', value: fromIri(value.value as ProtoIri) } };
+  }
+  if (field === 'name') return { case: 'name', value: { id: row.name!.id ?? 0, value: row.name!.value ?? '' } };
+  if (field === 'prefix') return { case: 'prefix', value: { id: row.prefix!.id ?? 0, value: row.prefix!.value ?? '' } };
+  if (field === 'datatype') return { case: 'datatype', value: { id: row.datatype!.id ?? 0, value: row.datatype!.value ?? '' } };
   return { case: 'unknown', fieldNumber: 0 };
 }
 
-function toProtoFrame(frame: RdfStreamFrame) {
-  return create(RdfStreamFrameSchema, {
-    rows: frame.rows.map(toRow),
-    metadata: Object.fromEntries(frame.metadata),
-  });
+function toProtoFrame(frame: RdfStreamFrame): FrameProperties {
+  return { rows: frame.rows.map(toRow), metadata: Object.fromEntries(frame.metadata) };
 }
 
 export function encodeRdfStreamFrame(frame: RdfStreamFrame): Uint8Array {
-  const message = toProtoFrame(frame);
-  return toBinary(RdfStreamFrameSchema, message);
+  return proto.RdfStreamFrame.encode(toProtoFrame(frame)).finish();
 }
 
 export function encodeDelimitedRdfStreamFrame(frame: RdfStreamFrame): Uint8Array {
-  return sizeDelimitedEncode(RdfStreamFrameSchema, toProtoFrame(frame));
+  return proto.RdfStreamFrame.encodeDelimited(toProtoFrame(frame)).finish();
 }
 
 export function decodeRdfStreamFrame(input: Uint8Array): RdfStreamFrame {
   try {
-    const frame = fromBinary(RdfStreamFrameSchema, input);
-    return {
-      rows: frame.rows.map(fromRow),
-      metadata: new Map(Object.entries(frame.metadata)),
-    };
+    const frame = decodeProtoRdfStreamFrame(input);
+    return { rows: frame.rows.map(row => fromRow(row as ProtoRow)), metadata: new Map(Object.entries(frame.metadata)) };
+  } catch (error) {
+    throw new JellyConformanceError('Invalid Jelly protobuf frame', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
+export function decodeProtoRdfStreamFrame(input: Uint8Array): ProtoFrame {
+  try {
+    return proto.RdfStreamFrame.decode(input) as unknown as ProtoFrame;
+  } catch (error) {
+    throw new JellyConformanceError('Invalid Jelly protobuf frame', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
+export function decodeProtoRdfStreamFrameReader(reader: Reader, length: number): ProtoFrame {
+  try {
+    return proto.RdfStreamFrame.decode(reader, length) as unknown as ProtoFrame;
   } catch (error) {
     throw new JellyConformanceError('Invalid Jelly protobuf frame', {
       cause: error instanceof Error ? error : undefined,

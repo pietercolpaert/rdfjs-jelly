@@ -1,16 +1,16 @@
 import { Transform, type Readable, type TransformCallback } from 'node:stream';
 import { Decoder } from '../codec/Decoder';
-import { MessageDecoder } from '../codec/MessageDecoder';
+import { ProtoMessageDecoder } from '../codec/MessageDecoder';
 import type { Message, MessageQuad, StreamParserOptions } from '../types';
 
 export class StreamParser extends Transform {
-  private readonly messageReader: MessageDecoder;
+  private readonly messageReader: ProtoMessageDecoder;
   private readonly decoder: Decoder;
   private readonly messageMode: boolean;
 
   public constructor(options: StreamParserOptions = {}) {
     super({ ...options, readableObjectMode: true, writableObjectMode: false });
-    this.messageReader = new MessageDecoder(options);
+    this.messageReader = new ProtoMessageDecoder(options);
     this.messageMode = options.messages === true || options.rdfMessages === true;
     this.decoder = new Decoder(options, {
       options: value => this.emit('options', value),
@@ -26,7 +26,7 @@ export class StreamParser extends Transform {
 
   public override _transform(chunk: Buffer | Uint8Array, _encoding: BufferEncoding, callback: TransformCallback): void {
     try {
-      for (const frame of this.messageReader.write(chunk)) this.pushMessage(this.decoder.decode(frame));
+      this.messageReader.writeEach(chunk, frame => this.pushMessage(this.decoder.decodeProto(frame)));
       callback();
     } catch (error) {
       callback(error instanceof Error ? error : new Error(String(error)));
@@ -35,7 +35,7 @@ export class StreamParser extends Transform {
 
   public override _flush(callback: TransformCallback): void {
     try {
-      for (const frame of this.messageReader.end()) this.pushMessage(this.decoder.decode(frame));
+      this.messageReader.endEach(frame => this.pushMessage(this.decoder.decodeProto(frame)));
       this.decoder.finish();
       callback();
     } catch (error) {

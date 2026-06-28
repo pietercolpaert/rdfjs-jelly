@@ -112,17 +112,39 @@ implementation performance.
 
 | Parser | Format | Input size | Median | Throughput |
 | --- | --- | ---: | ---: | ---: |
-| rdfjs-jelly | Jelly | 2,579,568 B | 134.7 ms | 0.74 M statements/s |
-| rdf-parser.ts | N-Triples | 6,377,780 B | 37.7 ms | 2.65 M statements/s |
-| rdfjs-jelly | Jelly + gzip | 496,581 B | 133.3 ms | 0.75 M statements/s |
-| rdf-parser.ts | N-Triples + gzip | 490,694 B | 45.9 ms | 2.18 M statements/s |
+| rdfjs-jelly | Jelly | 2,579,568 B | 67.4 ms | 1.48 M statements/s |
+| rdf-parser.ts | N-Triples | 6,377,780 B | 38.5 ms | 2.60 M statements/s |
+| rdfjs-jelly | Jelly + gzip | 496,581 B | 79.5 ms | 1.26 M statements/s |
+| rdf-parser.ts | N-Triples + gzip | 490,694 B | 42.1 ms | 2.37 M statements/s |
 
-For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 3.6 times
-faster and gzipped N-Triples about 2.9 times faster, including decompression.
+For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 1.75 times
+faster and gzipped N-Triples about 1.89 times faster, including decompression.
 Uncompressed Jelly was about 60% smaller (2.47 times less data). After gzip,
 the highly repetitive N-Triples input was about 1.2% smaller than Jelly. This
 compressed-size result is dataset-dependent and should not be extrapolated to
 less repetitive RDF.
+
+### Profiling and optimization
+
+The initial V8 profile spent about 337 ms of a 376 ms parse in protobuf framing
+and decoding. Its hottest functions were Protobuf-ES descriptor lookup and
+reflective message construction, followed by garbage collection. RDF/JS
+materialization itself took about 38 ms.
+
+The optimized path uses schema-specific static protobuf.js code, records oneof
+discriminators without protobuf.js's generic deletion loops, decodes each frame
+directly into RDF/JS objects, avoids retaining the full intermediate frame
+graph, and reuses immutable datatype and default-graph terms. Straight-line
+statement validation also avoids temporary arrays and polymorphic `includes()`
+calls.
+On this benchmark that reduced the complete parse from about 359 ms at the
+measured pre-optimization baseline to 67 ms, or roughly 5.3 times faster.
+
+Reproduce the phase breakdown with:
+
+```sh
+npm run perf:profile -- 100000 7
+```
 
 Reproduce it from this repository, with `../rdf-parser.ts` built:
 
@@ -143,11 +165,11 @@ npm run check
 npm run proto:generate
 ```
 
-The checked-in schema is Jelly-RDF `rdf.proto` 1.1.1. Its TypeScript message
-types and schema descriptors are generated with Protobuf-ES and Buf. The
-Protobuf-ES runtime handles both protobuf wire encoding and size-delimited
-message framing; `src/generated/rdf_pb.ts` only maps between those generated
-messages and the codec's internal model.
+The checked-in schema is Jelly-RDF `rdf.proto` 1.1.1. Static JavaScript codecs
+and TypeScript declarations are generated with protobuf.js. The generation
+step replaces generic oneof setter calls with cheap discriminator markers;
+`src/generated/rdf_pb.ts` consumes those markers while preserving protobuf's
+last-one-wins semantics.
 
 Tests include pinned official Jelly conformance fixtures and pyjelly-compatible
 version-2 writer behavior.

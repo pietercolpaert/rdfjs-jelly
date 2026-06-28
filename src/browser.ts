@@ -2,7 +2,7 @@ export * from './shared';
 
 import type * as RDF from '@rdfjs/types';
 import { Decoder } from './codec/Decoder';
-import { MessageDecoder } from './codec/MessageDecoder';
+import { ProtoMessageDecoder } from './codec/MessageDecoder';
 import { Writer } from './api/Writer';
 import type { Message, MessageQuad, ParserOutputItem, StreamOptions, WriterOptions } from './types';
 import type { ParserOptions } from './types';
@@ -17,7 +17,7 @@ export class StreamParser {
   private readonly listeners: Partial<Record<BrowserParserEvent, Listener[]>> = {};
 
   public constructor(options: ParserOptions = {}) {
-    const reader = new MessageDecoder(options);
+    const reader = new ProtoMessageDecoder(options);
     const messageMode = options.messages === true || options.rdfMessages === true;
     const decoder = new Decoder(options, {
       options: value => this.emit('options', value),
@@ -35,10 +35,10 @@ export class StreamParser {
     };
     const transform = new TransformStream<BrowserStreamChunk, ParserOutputItem>({
       transform: (chunk, controller) => {
-        for (const frame of reader.write(chunk)) push(decoder.decode(frame), controller);
+        reader.writeEach(chunk, frame => push(decoder.decodeProto(frame), controller));
       },
       flush: controller => {
-        for (const frame of reader.end()) push(decoder.decode(frame), controller);
+        reader.endEach(frame => push(decoder.decodeProto(frame), controller));
         decoder.finish();
       },
     });

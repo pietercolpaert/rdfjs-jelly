@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { Decoder, JellyUnsupportedFeatureError, MessageEncoder, Parser, PhysicalStreamType } from '../src';
+import { eu } from '../src/generated/proto/rdf_pb.mjs';
 import type { RdfStreamFrame } from '../src/generated/rdf_pb';
 
 function options(overrides: Record<string, unknown> = {}): RdfStreamFrame {
@@ -65,5 +66,25 @@ describe('Parser validation', () => {
     );
     expect(new Parser({ factory }).parse(new MessageEncoder().encode(frame))).toHaveLength(1);
     expect(namedNodes).toBe(3);
+  });
+
+  it('preserves protobuf last-one-wins semantics on the optimized oneof path', () => {
+    const ProtoFrame = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
+    const optionsRow = options().rows[0];
+    if (!optionsRow || optionsRow.case !== 'options') throw new Error('Missing test stream options');
+    const bytes = ProtoFrame.encode({ rows: [
+      { options: optionsRow.value },
+      { name: { id: 0, value: 'urn:p' } },
+      { name: { id: 0, value: 'urn:o' } },
+      { triple: {
+        sIri: { prefixId: 0, nameId: 1 },
+        sBnode: 'last-subject',
+        pIri: { prefixId: 0, nameId: 1 },
+        oIri: { prefixId: 0, nameId: 2 },
+      } },
+    ] }).finish();
+    const [quad] = new Parser({ delimited: false }).parse(bytes) as RDF.Quad[];
+    expect(quad?.subject.termType).toBe('BlankNode');
+    expect(quad?.subject.value).toBe('last-subject');
   });
 });
