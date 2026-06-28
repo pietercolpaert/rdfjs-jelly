@@ -40,7 +40,9 @@
     "prepare": "npm run build",
     "proto:check": "node scripts/generate-proto.mjs",
     "perf": "npm run build && node perf/bench.mjs",
-    "perf:quick": "npm run build && node perf/bench.mjs 10000"
+    "perf:quick": "npm run build && node perf/bench.mjs 10000",
+    "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs",
+    "perf:compare:pyjelly": "npm run build && node --expose-gc perf/compare-pyjelly.mjs"
   },
   "dependencies": {
     "@rdfjs/types": "^2.0.1"

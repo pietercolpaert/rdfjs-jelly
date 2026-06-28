@@ -90,6 +90,71 @@ The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and No
 
 Transport compression is intentionally separate from Jelly framing. Compose the Node streams with `createGzip()`/`createGunzip()`, or browser streams with `CompressionStream`/`DecompressionStream`.
 
+## Performance
+
+These are local microbenchmarks, not universal rankings. They measure 100,000
+generated RDF triples with unique subjects and literals and one repeated
+predicate. Each result is the median of seven measured runs after two warm-up
+runs. Parsing includes constructing the result RDF objects; serialization starts
+with already constructed objects. Gzip rows include synchronous decompression
+and use Node.js's default gzip level; compression itself is performed before the
+timed section.
+
+Snapshot recorded on 2026-06-28 with Node.js 25.9.0 and Python 3.12 on Linux,
+using an Intel Core i7-1265U and 30 GiB RAM.
+
+### Compared with rdf-parser.ts
+
+This compares equivalent RDF data, but not identical input formats:
+`rdfjs-jelly` parses Jelly while `rdf-parser.ts` 0.2.6 (`ce8846b`) parses
+N-Triples. It therefore reflects the end-user format choice as well as parser
+implementation performance.
+
+| Parser | Format | Input size | Median | Throughput |
+| --- | --- | ---: | ---: | ---: |
+| rdfjs-jelly | Jelly | 2,579,568 B | 134.7 ms | 0.74 M statements/s |
+| rdf-parser.ts | N-Triples | 6,377,780 B | 37.7 ms | 2.65 M statements/s |
+| rdfjs-jelly | Jelly + gzip | 496,581 B | 133.3 ms | 0.75 M statements/s |
+| rdf-parser.ts | N-Triples + gzip | 490,694 B | 45.9 ms | 2.18 M statements/s |
+
+For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 3.6 times
+faster and gzipped N-Triples about 2.9 times faster, including decompression.
+Uncompressed Jelly was about 60% smaller (2.47 times less data). After gzip,
+the highly repetitive N-Triples input was about 1.2% smaller than Jelly. This
+compressed-size result is dataset-dependent and should not be extrapolated to
+less repetitive RDF.
+
+Reproduce it from this repository, with `../rdf-parser.ts` built:
+
+```sh
+npm run perf:compare:rdf-parser -- 100000 7
+```
+
+Set `RDF_PARSER_TS_PATH` to compare against a different build.
+
+### Compared with pyjelly
+
+This comparison uses pyjelly 0.7.1's compiled CPython wheel and generic API.
+Both decoders read the exact same 2,579,568-byte Jelly version-2 stream.
+
+| Implementation | Decode median | Decode throughput | Encode median | Encode throughput | Encoded size |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| rdfjs-jelly | 143.6 ms | 0.70 M statements/s | 440.8 ms | 0.23 M statements/s | 2,579,568 B |
+| pyjelly 0.7.1 | 327.9 ms | 0.30 M statements/s | 574.5 ms | 0.17 M statements/s | 2,579,572 B |
+
+In this run, `rdfjs-jelly` decoded 2.28 times faster and encoded 1.30 times
+faster. The encoded sizes were effectively identical. The object models are
+not identical: TypeScript constructs RDF/JS quads, while Python constructs
+pyjelly generic triples.
+
+Reproduce it with pyjelly installed in a virtual environment:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install pyjelly==0.7.1
+PYJELLY_PYTHON=.venv/bin/python npm run perf:compare:pyjelly -- 100000 7
+```
+
 ## Development
 
 ```sh
