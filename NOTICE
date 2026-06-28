@@ -1,0 +1,8 @@
+rdfjs-jelly
+
+This product includes a TypeScript port of concepts and wire definitions from
+pyjelly and jelly-protobuf, Copyright Jelly-RDF contributors, licensed under
+the Apache License, Version 2.0.
+
+https://github.com/Jelly-RDF/pyjelly
+https://github.com/Jelly-RDF/jelly-protobuf

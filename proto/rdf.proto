@@ -1,0 +1,137 @@
+// Licensed under the Apache License, Version 2.0.
+// Source: Jelly-RDF/jelly-protobuf@1a467179c41ce5224cf3cc1245a8ff80fe6ee37c,
+// proto/rdf.proto, protocol 1.1.1.
+syntax = "proto3";
+package eu.ostrzyciel.jelly.core.proto.v1;
+
+message RdfIri {
+  uint32 prefix_id = 1;
+  uint32 name_id = 2;
+}
+
+message RdfLiteral {
+  string lex = 1;
+  oneof literalKind {
+    string langtag = 2;
+    uint32 datatype = 3;
+  }
+}
+
+message RdfDefaultGraph {}
+
+message RdfTriple {
+  oneof subject {
+    RdfIri s_iri = 1;
+    string s_bnode = 2;
+    RdfLiteral s_literal = 3;
+    RdfTriple s_triple_term = 4;
+  }
+  oneof predicate {
+    RdfIri p_iri = 5;
+    string p_bnode = 6;
+    RdfLiteral p_literal = 7;
+    RdfTriple p_triple_term = 8;
+  }
+  oneof object {
+    RdfIri o_iri = 9;
+    string o_bnode = 10;
+    RdfLiteral o_literal = 11;
+    RdfTriple o_triple_term = 12;
+  }
+}
+
+message RdfQuad {
+  oneof subject {
+    RdfIri s_iri = 1;
+    string s_bnode = 2;
+    RdfLiteral s_literal = 3;
+    RdfTriple s_triple_term = 4;
+  }
+  oneof predicate {
+    RdfIri p_iri = 5;
+    string p_bnode = 6;
+    RdfLiteral p_literal = 7;
+    RdfTriple p_triple_term = 8;
+  }
+  oneof object {
+    RdfIri o_iri = 9;
+    string o_bnode = 10;
+    RdfLiteral o_literal = 11;
+    RdfTriple o_triple_term = 12;
+  }
+  oneof graph {
+    RdfIri g_iri = 13;
+    string g_bnode = 14;
+    RdfDefaultGraph g_default_graph = 15;
+    RdfLiteral g_literal = 16;
+  }
+}
+
+message RdfGraphStart {
+  oneof graph {
+    RdfIri g_iri = 1;
+    string g_bnode = 2;
+    RdfDefaultGraph g_default_graph = 3;
+    RdfLiteral g_literal = 4;
+  }
+}
+
+message RdfGraphEnd {}
+
+message RdfNamespaceDeclaration {
+  string name = 1;
+  RdfIri value = 2;
+}
+
+message RdfNameEntry { uint32 id = 1; string value = 2; }
+message RdfPrefixEntry { uint32 id = 1; string value = 2; }
+message RdfDatatypeEntry { uint32 id = 1; string value = 2; }
+
+message RdfStreamOptions {
+  string stream_name = 1;
+  PhysicalStreamType physical_type = 2;
+  bool generalized_statements = 3;
+  bool rdf_star = 4;
+  uint32 max_name_table_size = 9;
+  uint32 max_prefix_table_size = 10;
+  uint32 max_datatype_table_size = 11;
+  LogicalStreamType logical_type = 14;
+  uint32 version = 15;
+}
+
+enum PhysicalStreamType {
+  PHYSICAL_STREAM_TYPE_UNSPECIFIED = 0;
+  PHYSICAL_STREAM_TYPE_TRIPLES = 1;
+  PHYSICAL_STREAM_TYPE_QUADS = 2;
+  PHYSICAL_STREAM_TYPE_GRAPHS = 3;
+}
+
+enum LogicalStreamType {
+  LOGICAL_STREAM_TYPE_UNSPECIFIED = 0;
+  LOGICAL_STREAM_TYPE_FLAT_TRIPLES = 1;
+  LOGICAL_STREAM_TYPE_FLAT_QUADS = 2;
+  LOGICAL_STREAM_TYPE_GRAPHS = 3;
+  LOGICAL_STREAM_TYPE_DATASETS = 4;
+  LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS = 13;
+  LOGICAL_STREAM_TYPE_NAMED_GRAPHS = 14;
+  LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS = 114;
+}
+
+message RdfStreamRow {
+  oneof row {
+    RdfStreamOptions options = 1;
+    RdfTriple triple = 2;
+    RdfQuad quad = 3;
+    RdfGraphStart graph_start = 4;
+    RdfGraphEnd graph_end = 5;
+    RdfNamespaceDeclaration namespace = 6;
+    RdfNameEntry name = 9;
+    RdfPrefixEntry prefix = 10;
+    RdfDatatypeEntry datatype = 11;
+  }
+}
+
+message RdfStreamFrame {
+  repeated RdfStreamRow rows = 1;
+  map<string, bytes> metadata = 15;
+}

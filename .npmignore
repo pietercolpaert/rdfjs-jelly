@@ -1,0 +1,5 @@
+test/
+perf/
+PLAN.md
+vitest.config.ts
+tsconfig.json

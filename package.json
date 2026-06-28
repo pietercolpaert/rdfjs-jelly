@@ -1,0 +1,56 @@
+{
+  "name": "rdfjs-jelly",
+  "version": "0.1.0",
+  "description": "Jelly-RDF parser and writer for RDF/JS in Node.js and browsers",
+  "keywords": ["rdf", "rdf-js", "jelly", "protobuf", "streaming"],
+  "license": "Apache-2.0",
+  "author": "Pieter Colpaert",
+  "type": "commonjs",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "browser": "./dist/browser/index.mjs",
+  "unpkg": "./dist/browser/index.global.js",
+  "jsdelivr": "./dist/browser/index.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser/index.mjs",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.mjs",
+      "default": "./dist/browser/index.mjs"
+    }
+  },
+  "files": ["dist", "src", "proto", "README.md", "LICENSE", "NOTICE"],
+  "scripts": {
+    "clean": "rm -rf dist coverage",
+    "build": "npm run build:node && npm run build:browser",
+    "build:node": "tsup src/index.ts --format cjs,esm --dts --target node24 --platform node --clean --splitting false --out-dir dist",
+    "build:browser": "tsup src/browser.ts --format esm --dts --dts-only --out-dir dist/browser-types --clean && node scripts/build-browser.cjs",
+    "test": "vitest run --coverage.enabled false",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run build && npm test",
+    "ci": "npm run check",
+    "prepare": "npm run build",
+    "proto:check": "node scripts/generate-proto.mjs",
+    "perf": "npm run build && node perf/bench.mjs",
+    "perf:quick": "npm run build && node perf/bench.mjs 10000"
+  },
+  "dependencies": {
+    "@rdfjs/types": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.27.7",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
+  },
+  "engines": { "node": ">=24.0.0" }
+}
