@@ -86,6 +86,20 @@ for await (const quad of response.body!.pipeThrough(new StreamParser())) {
 
 The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and Node parsers emit `options`, `namespace`, `message`, and `messageCounter` events.
 
+## Browser playground
+
+Build the browser bundle, serve the repository, and open `/index.html`:
+
+```sh
+npm run build:browser
+python3 -m http.server 8000
+```
+
+The bundled `example/osm-dk-10k.jelly.gz` dataset is selected by default, while
+the URL remains editable. The playground detects gzip from the response bytes,
+steps through one RDF Message at a time, can fast-forward to the end, and
+retains a rolling history of 20 messages.
+
 ## Compression
 
 Transport compression is intentionally separate from Jelly framing. Compose the

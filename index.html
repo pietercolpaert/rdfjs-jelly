@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rdfjs-jelly playground</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: #5b67f1;
+      --accent-dark: #3d45b8;
+      --border: color-mix(in srgb, CanvasText 18%, transparent);
+      --panel: color-mix(in srgb, Canvas 92%, CanvasText 8%);
+      --muted: color-mix(in srgb, CanvasText 62%, transparent);
+      --danger: #c2414b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      background: radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 22%, Canvas), Canvas 32rem);
+      color: CanvasText;
+    }
+    main { width: min(1180px, calc(100vw - 2rem)); margin: 0 auto; padding: 2rem 0 3rem; }
+    header { margin-bottom: 1.5rem; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); letter-spacing: -0.04em; }
+    h2 { margin-top: 0; }
+    .lead { max-width: 75ch; color: var(--muted); font-size: 1.1rem; }
+    .grid { display: grid; grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1.2fr); gap: 1rem; align-items: start; }
+    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+    form, .card {
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem;
+      background: color-mix(in srgb, Canvas 82%, transparent);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 60px rgb(0 0 0 / 0.08);
+    }
+    label { display: block; margin: 0.8rem 0 0.35rem; font-weight: 700; }
+    input, button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.72rem 0.85rem;
+      font: inherit;
+      background: Canvas;
+      color: CanvasText;
+    }
+    button {
+      border: 0;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      font-weight: 800;
+    }
+    button:disabled { cursor: not-allowed; opacity: 0.45; }
+    .secondary { color: var(--accent); background: transparent; border: 1px solid var(--border); }
+    .danger { color: var(--danger); }
+    .controls { display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.55rem; margin-top: 1rem; }
+    .controls button { width: auto; min-width: 3.2rem; margin: 0; }
+    #stop { margin-top: 0.55rem; }
+    @media (max-width: 520px) { .controls { grid-template-columns: 1fr 1fr 1fr; } .controls #run { grid-column: 1 / -1; width: 100%; } }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin: 1rem 0; }
+    @media (max-width: 560px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .metric { padding: 0.75rem; border-radius: 0.85rem; background: var(--panel); border: 1px solid var(--border); }
+    .metric strong { display: block; font-size: 1.15rem; overflow-wrap: anywhere; }
+    .metric span, .hint, .status { color: var(--muted); font-size: 0.88rem; }
+    .status { min-height: 2.7rem; margin: 0.8rem 0 0; }
+    pre {
+      min-height: 25rem;
+      max-height: 60vh;
+      overflow: auto;
+      margin: 0;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      background: color-mix(in srgb, Canvas 88%, CanvasText 12%);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+    }
+    .message-head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>rdfjs-jelly playground</h1>
+      <p class="lead">Load a Jelly stream one RDF Message at a time. Plain <code>.jelly</code> and gzip-compressed <code>.jelly.gz</code> URLs are supported. Only the most recent 20 visited messages are retained.</p>
+    </header>
+
+    <div class="grid">
+      <form id="playground-form">
+        <label for="url">Jelly URL</label>
+        <input id="url" name="url" type="url" autocomplete="url" required>
+        <p class="hint">The bundled OSM Denmark 10K stream is selected by default. You can replace it with another URL whose server allows browser CORS access.</p>
+
+        <div class="controls" aria-label="Message navigation">
+          <button id="run" type="submit">Parse</button>
+          <button id="previous" class="secondary" type="button" title="Previous retained message" aria-label="Previous retained message" disabled>←</button>
+          <button id="next" class="secondary" type="button" title="Parse next message" aria-label="Parse next message" disabled>→</button>
+          <button id="fast-forward" class="secondary" type="button" title="Parse to the last message" aria-label="Parse all remaining messages" disabled>&gt;&gt;|</button>
+        </div>
+        <button id="stop" class="secondary danger" type="button" disabled>Stop</button>
+        <p id="status" class="status" aria-live="polite">Ready.</p>
+      </form>
+
+      <section class="card">
+        <div class="message-head">
+          <h2>RDF Message</h2>
+          <span id="history-note" class="hint">No message loaded</span>
+        </div>
+        <div class="metrics">
+          <div class="metric"><strong id="message-number">–</strong><span>message counter</span></div>
+          <div class="metric"><strong id="message-quads">0</strong><span>quads in message</span></div>
+          <div class="metric"><strong id="processed-messages">0</strong><span>messages processed</span></div>
+          <div class="metric"><strong id="processed-quads">0</strong><span>quads processed</span></div>
+          <div class="metric"><strong id="downloaded">0 B</strong><span>downloaded</span></div>
+          <div class="metric"><strong id="elapsed">0 ms</strong><span>elapsed</span></div>
+        </div>
+        <pre id="message-output" aria-live="polite">Press Parse to load the first RDF Message.</pre>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Decoder, MessageDecoder } from './dist/browser/index.mjs';
+
+    const HISTORY_LIMIT = 20;
+    const INPUT_STEP_SIZE = 4096;
+
+    const form = document.querySelector('#playground-form');
+    const urlInput = document.querySelector('#url');
+    const runButton = document.querySelector('#run');
+    const previousButton = document.querySelector('#previous');
+    const nextButton = document.querySelector('#next');
+    const fastForwardButton = document.querySelector('#fast-forward');
+    const stopButton = document.querySelector('#stop');
+    const status = document.querySelector('#status');
+    const output = document.querySelector('#message-output');
+    const historyNote = document.querySelector('#history-note');
+    const metrics = {
+      messageNumber: document.querySelector('#message-number'),
+      messageQuads: document.querySelector('#message-quads'),
+      processedMessages: document.querySelector('#processed-messages'),
+      processedQuads: document.querySelector('#processed-quads'),
+      downloaded: document.querySelector('#downloaded'),
+      elapsed: document.querySelector('#elapsed'),
+    };
+
+    let session;
+    let history = [];
+    let historyCursor = -1;
+    let discardedMessages = 0;
+    let busy = false;
+
+    const initialParams = new URLSearchParams(location.hash.slice(1));
+    const initialUrl = initialParams.get('url') || new URL('./example/osm-dk-10k.jelly.gz', location.href).href;
+    urlInput.value = initialUrl;
+
+    form.addEventListener('input', persistUrl);
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      runExclusive(startParsing);
+    });
+    previousButton.addEventListener('click', () => {
+      if (historyCursor <= 0) return;
+      historyCursor--;
+      renderCurrentMessage();
+    });
+    nextButton.addEventListener('click', () => runExclusive(showNextMessage));
+    fastForwardButton.addEventListener('click', () => runExclusive(fastForward));
+    stopButton.addEventListener('click', stopParsing);
+    if (initialParams.get('autostart') === '1') requestAnimationFrame(() => form.requestSubmit());
+
+    async function runExclusive(operation) {
+      if (busy) return;
+      busy = true;
+      updateControls();
+      try {
+        await operation();
+      } catch (error) {
+        if (error?.name === 'AbortError' || session?.stopped) status.textContent = 'Stopped. Retained messages remain available.';
+        else {
+          if (session) session.stopped = true;
+          status.textContent = error instanceof Error ? error.message : String(error);
+        }
+      } finally {
+        busy = false;
+        updateControls();
+      }
+    }
+
+    async function startParsing() {
+      stopParsing(false);
+      const url = urlInput.value.trim();
+      if (!url) throw new Error('Enter a Jelly URL.');
+      history = [];
+      historyCursor = -1;
+      discardedMessages = 0;
+      resetMetrics();
+      output.textContent = 'Fetching stream…';
+      status.textContent = 'Fetching URL…';
+      const controller = new AbortController();
+      session = {
+        controller,
+        framer: new MessageDecoder(),
+        decoder: new Decoder(),
+        pendingFrames: [],
+        inputChunk: undefined,
+        inputOffset: 0,
+        sourceDone: false,
+        decoderFinished: false,
+        stopped: false,
+        downloadedBytes: 0,
+        processedMessages: 0,
+        processedQuads: 0,
+        startedAt: performance.now(),
+      };
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error(`Fetch failed with HTTP ${response.status}.`);
+      if (!response.body) throw new Error('This browser does not expose the response as a stream.');
+      const { body, compressed } = await sniffCompression(response.body, session);
+      session.reader = body.getReader();
+      status.textContent = compressed ? 'Gzip detected. Parsing the first message…' : 'Parsing the first message…';
+      await loadOneMessage();
+      if (history.length === 0) status.textContent = 'The stream contained no RDF Messages.';
+    }
+
+    async function showNextMessage() {
+      if (!session) return;
+      if (historyCursor < history.length - 1) {
+        historyCursor++;
+        renderCurrentMessage();
+        return;
+      }
+      await loadOneMessage();
+    }
+
+    async function fastForward() {
+      if (!session || session.decoderFinished) return;
+      historyCursor = history.length - 1;
+      status.textContent = 'Parsing all remaining messages…';
+      let lastPaint = performance.now();
+      while (!session.decoderFinished && !session.stopped) {
+        const loaded = await loadOneMessage(false);
+        if (!loaded) break;
+        const now = performance.now();
+        if (now - lastPaint > 100) {
+          renderCurrentMessage();
+          status.textContent = `Fast-forwarding… ${session.processedMessages.toLocaleString()} messages processed.`;
+          await nextPaint();
+          lastPaint = now;
+        }
+      }
+      renderCurrentMessage();
+      if (!session.stopped) status.textContent = `Done. Reached the last of ${session.processedMessages.toLocaleString()} messages.`;
+    }
+
+    async function loadOneMessage(render = true) {
+      const frame = await readNextFrame();
+      if (!frame) {
+        if (!session.stopped) status.textContent = `Done. Reached the last of ${session.processedMessages.toLocaleString()} messages.`;
+        updateControls();
+        return false;
+      }
+      const message = session.decoder.decode(frame);
+      session.processedMessages++;
+      session.processedQuads += message.length;
+      history.push(message);
+      if (history.length > HISTORY_LIMIT) {
+        history.shift();
+        discardedMessages++;
+      }
+      historyCursor = history.length - 1;
+      if (render) {
+        renderCurrentMessage();
+        status.textContent = `Loaded message ${message.messageCounter.toLocaleString()}.`;
+      }
+      return true;
+    }
+
+    async function readNextFrame() {
+      while (session.pendingFrames.length === 0 && !session.sourceDone) {
+        if (session.inputChunk && session.inputOffset < session.inputChunk.byteLength) {
+          const end = Math.min(session.inputOffset + INPUT_STEP_SIZE, session.inputChunk.byteLength);
+          const part = session.inputChunk.subarray(session.inputOffset, end);
+          session.inputOffset = end;
+          session.pendingFrames.push(...session.framer.write(part));
+          continue;
+        }
+        const result = await session.reader.read();
+        if (result.done) {
+          session.sourceDone = true;
+          session.pendingFrames.push(...session.framer.end());
+          break;
+        }
+        session.inputChunk = result.value;
+        session.inputOffset = 0;
+      }
+      if (session.pendingFrames.length > 0) return session.pendingFrames.shift();
+      if (session.sourceDone && !session.decoderFinished) {
+        session.decoder.finish();
+        session.decoderFinished = true;
+      }
+      return undefined;
+    }
+
+    function stopParsing(showStatus = true) {
+      if (!session) return;
+      session.stopped = true;
+      session.controller?.abort();
+      session.reader?.cancel('Stopped by user').catch(() => undefined);
+      if (showStatus) status.textContent = 'Stopping…';
+      updateControls();
+    }
+
+    async function sniffCompression(body, activeSession) {
+      const reader = body.getReader();
+      const prefixChunks = [];
+      let prefixLength = 0;
+      let sourceEnded = false;
+      while (prefixLength < 2 && !sourceEnded) {
+        const result = await reader.read();
+        sourceEnded = result.done;
+        if (!result.done && result.value.byteLength > 0) {
+          prefixChunks.push(result.value);
+          prefixLength += result.value.byteLength;
+          activeSession.downloadedBytes += result.value.byteLength;
+        }
+      }
+      const replay = new ReadableStream({
+        start(controller) {
+          for (const chunk of prefixChunks) controller.enqueue(chunk);
+          if (sourceEnded) controller.close();
+        },
+        async pull(controller) {
+          const result = await reader.read();
+          if (result.done) controller.close();
+          else {
+            activeSession.downloadedBytes += result.value.byteLength;
+            controller.enqueue(result.value);
+          }
+          updateMetrics();
+        },
+        cancel(reason) { return reader.cancel(reason); },
+      });
+      const firstByte = prefixChunks[0]?.[0];
+      const secondByte = prefixChunks[0]?.byteLength >= 2 ? prefixChunks[0][1] : prefixChunks[1]?.[0];
+      const compressed = firstByte === 0x1f && secondByte === 0x8b;
+      if (!compressed) return { body: replay, compressed: false };
+      if (!globalThis.DecompressionStream) throw new Error('This browser cannot decompress gzip streams.');
+      return { body: replay.pipeThrough(new DecompressionStream('gzip')), compressed: true };
+    }
+
+    function renderCurrentMessage() {
+      const message = history[historyCursor];
+      if (!message) {
+        output.textContent = 'No RDF Message loaded.';
+        updateMetrics();
+        updateControls();
+        return;
+      }
+      const lines = [];
+      if (message.metadata.size > 0) {
+        lines.push('# Metadata');
+        for (const [key, value] of message.metadata) lines.push(`# ${key}: ${formatBytes(value)}`);
+        lines.push('');
+      }
+      for (const quad of message) lines.push(formatQuad(quad));
+      output.textContent = lines.join('\n') || '# Empty RDF Message';
+      const firstCounter = history[0]?.messageCounter ?? 0;
+      historyNote.textContent = `History ${historyCursor + 1}/${history.length} · counters ${firstCounter}–${history.at(-1).messageCounter}`;
+      metrics.messageNumber.textContent = message.messageCounter.toLocaleString();
+      metrics.messageQuads.textContent = message.length.toLocaleString();
+      updateMetrics();
+      updateControls();
+    }
+
+    function updateMetrics() {
+      if (!session) return;
+      metrics.processedMessages.textContent = session.processedMessages.toLocaleString();
+      metrics.processedQuads.textContent = session.processedQuads.toLocaleString();
+      metrics.downloaded.textContent = formatSize(session.downloadedBytes);
+      metrics.elapsed.textContent = `${Math.round(performance.now() - session.startedAt).toLocaleString()} ms`;
+    }
+
+    function updateControls() {
+      runButton.disabled = busy;
+      const hasSession = Boolean(session);
+      previousButton.disabled = busy || historyCursor <= 0;
+      const atBufferedEnd = historyCursor >= history.length - 1;
+      nextButton.disabled = busy || !hasSession || (atBufferedEnd && (session.decoderFinished || session.stopped));
+      fastForwardButton.disabled = busy || !hasSession || session.decoderFinished || session.stopped;
+      stopButton.disabled = !hasSession || session.decoderFinished || session.stopped;
+      if (historyCursor === 0 && discardedMessages > 0 && !busy) {
+        status.textContent = `The ${discardedMessages.toLocaleString()} earlier messages were discarded; history is limited to ${HISTORY_LIMIT}.`;
+      }
+    }
+
+    function formatQuad(quad) {
+      const graph = quad.graph.termType === 'DefaultGraph' ? '' : ` ${formatTerm(quad.graph)}`;
+      return `${formatTerm(quad.subject)} ${formatTerm(quad.predicate)} ${formatTerm(quad.object)}${graph} .`;
+    }
+
+    function formatTerm(term) {
+      if (term.termType === 'NamedNode') return `<${term.value.replaceAll('\\', '\\\\').replaceAll('>', '\\>')}>`;
+      if (term.termType === 'BlankNode') return `_:${term.value}`;
+      if (term.termType === 'DefaultGraph') return '';
+      if (term.termType === 'Literal') {
+        const value = JSON.stringify(term.value);
+        if (term.language) return `${value}@${term.language}`;
+        if (term.datatype.value === 'http://www.w3.org/2001/XMLSchema#string') return value;
+        return `${value}^^<${term.datatype.value}>`;
+      }
+      return `<< ${formatQuad(term)} >>`;
+    }
+
+    function formatBytes(value) {
+      const preview = [...value.subarray(0, 24)].map(byte => byte.toString(16).padStart(2, '0')).join(' ');
+      return `${value.byteLength.toLocaleString()} B${preview ? ` [${preview}${value.byteLength > 24 ? ' …' : ''}]` : ''}`;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes.toLocaleString()} B`;
+      if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`;
+      return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
+    }
+
+    function persistUrl() {
+      window.history.replaceState(null, '', `${location.pathname}${location.search}#${new URLSearchParams({ url: urlInput.value })}`);
+    }
+
+    function resetMetrics() {
+      metrics.messageNumber.textContent = '–';
+      metrics.messageQuads.textContent = '0';
+      metrics.processedMessages.textContent = '0';
+      metrics.processedQuads.textContent = '0';
+      metrics.downloaded.textContent = '0 B';
+      metrics.elapsed.textContent = '0 ms';
+      historyNote.textContent = 'No message loaded';
+    }
+
+    function nextPaint() {
+      return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    }
+  </script>
+</body>
+</html>
