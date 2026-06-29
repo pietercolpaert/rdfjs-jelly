@@ -2,7 +2,7 @@ export * from './shared';
 
 import type * as RDF from '@rdfjs/types';
 import { Decoder } from './codec/Decoder';
-import { ProtoMessageDecoder } from './codec/MessageDecoder';
+import { DirectMessageDecoder } from './codec/MessageDecoder';
 import { Writer } from './api/Writer';
 import type { Message, MessageQuad, ParserOutputItem, StreamOptions, WriterOptions } from './types';
 import type { ParserOptions } from './types';
@@ -17,12 +17,12 @@ export class StreamParser {
   private readonly listeners: Partial<Record<BrowserParserEvent, Listener[]>> = {};
 
   public constructor(options: ParserOptions = {}) {
-    const reader = new ProtoMessageDecoder(options);
     const messageMode = options.messages === true || options.rdfMessages === true;
     const decoder = new Decoder(options, {
       options: value => this.emit('options', value),
       namespace: (prefix, iri) => this.emit('namespace', prefix, iri),
     });
+    const reader = new DirectMessageDecoder(options, decoder);
     const push = (message: Message, controller: TransformStreamDefaultController<ParserOutputItem>): void => {
       this.emit('message', message);
       for (const quad of message) {
@@ -35,10 +35,10 @@ export class StreamParser {
     };
     const transform = new TransformStream<BrowserStreamChunk, ParserOutputItem>({
       transform: (chunk, controller) => {
-        reader.writeEach(chunk, frame => push(decoder.decodeProto(frame), controller));
+        reader.writeEach(chunk, message => push(message, controller));
       },
       flush: controller => {
-        reader.endEach(frame => push(decoder.decodeProto(frame), controller));
+        reader.endEach(message => push(message, controller));
         decoder.finish();
       },
     });

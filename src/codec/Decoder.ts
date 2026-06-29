@@ -1,5 +1,7 @@
 import type * as RDF from '@rdfjs/types';
+import type { Reader } from 'protobufjs/minimal.js';
 import { JellyConformanceError, JellyUnsupportedFeatureError } from '../errors';
+import { ProtoRowKind, decodeProtoRdfStreamFrameRows, decodeProtoTripleWire } from '../generated/rdf_pb';
 import type {
   ProtoFrame,
   ProtoGraphStart,
@@ -45,6 +47,7 @@ export class Decoder {
   private messageCounter = 0;
   private readonly events: DecoderEvents;
   private readonly defaultGraph: RDF.DefaultGraph;
+  private readonly datatypeNodes: Array<RDF.NamedNode | undefined> = [];
   private xsdString?: RDF.NamedNode;
   public streamOptions?: StreamOptions;
   public readonly namespaces: Record<string, RDF.NamedNode> = Object.create(null) as Record<string, RDF.NamedNode>;
@@ -102,6 +105,227 @@ export class Decoder {
       else throw new JellyConformanceError('Unsupported or empty Jelly row field 0');
     }
     return message;
+  }
+
+  public decodeProtoPayload(rawReader: unknown, length: number): Message {
+    const metadata = new Map<string, Uint8Array>();
+    const message = new Message(this.messageCounter++, [], metadata);
+    decodeProtoRdfStreamFrameRows(
+      rawReader as Reader,
+      length,
+      (kind, value, wireReader, wireLength) => this.consumeProtoRow(
+        kind, value, message, undefined, wireReader, wireLength,
+      ),
+      metadata,
+    );
+    return message;
+  }
+
+  public decodeProtoPayloadTo(rawReader: unknown, length: number, output: RDF.Quad[]): void {
+    this.messageCounter++;
+    decodeProtoRdfStreamFrameRows(
+      rawReader as Reader,
+      length,
+      (kind, value, wireReader, wireLength) => this.consumeProtoRow(
+        kind, value, undefined, output, wireReader, wireLength,
+      ),
+      new Map(),
+    );
+  }
+
+  private consumeProtoRow(
+    kind: ProtoRowKind,
+    value: unknown,
+    message?: Message,
+    output?: RDF.Quad[],
+    wireReader?: Reader,
+    wireLength?: number,
+  ): void {
+    if (kind === ProtoRowKind.OPTIONS) { this.ingestOptions(value as ProtoStreamOptions); return; }
+    if (!this.streamOptions) throw new JellyConformanceError('Stream options must occur before all other Jelly rows');
+    this.sawAnyRow = true;
+    if (wireReader && wireLength !== undefined) {
+      try {
+        if (kind === ProtoRowKind.TRIPLE) {
+          this.emitQuad(this.decodeWireTriple(wireReader, wireLength), message, output);
+          return;
+        }
+        if (kind === ProtoRowKind.NAME) this.decodeWireLookupEntry(wireReader, wireLength, this.names!);
+        else if (kind === ProtoRowKind.PREFIX) this.decodeWireLookupEntry(wireReader, wireLength, this.prefixes!);
+        else this.decodeWireLookupEntry(wireReader, wireLength, this.datatypes!);
+        return;
+      } catch (error) {
+        if (error instanceof JellyConformanceError || error instanceof JellyUnsupportedFeatureError) throw error;
+        throw new JellyConformanceError('Invalid Jelly protobuf row', {
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+    }
+    if (kind === ProtoRowKind.NAME) {
+      const entry = value as { id: number; value: string };
+      this.names!.assign(entry.id, entry.value);
+    } else if (kind === ProtoRowKind.PREFIX) {
+      const entry = value as { id: number; value: string };
+      this.prefixes!.assign(entry.id, entry.value);
+    } else if (kind === ProtoRowKind.DATATYPE) {
+      const entry = value as { id: number; value: string };
+      this.datatypes!.assign(entry.id, entry.value);
+    } else if (kind === ProtoRowKind.NAMESPACE) {
+      const declaration = value as { name: string; value: ProtoIri };
+      this.decodeProtoNamespace(declaration.name, declaration.value);
+    } else if (kind === ProtoRowKind.TRIPLE) this.emitQuad(this.decodeProtoTriple(value as ProtoTriple), message, output);
+    else if (kind === ProtoRowKind.QUAD) this.emitQuad(this.decodeProtoQuad(value as ProtoQuad), message, output);
+    else if (kind === ProtoRowKind.GRAPH_START) this.startProtoGraph(value as ProtoGraphStart);
+    else if (kind === ProtoRowKind.GRAPH_END) this.endGraph();
+    else throw new JellyConformanceError('Unsupported or empty Jelly row field 0');
+  }
+
+  private emitQuad(quad: RDF.Quad, message?: Message, output?: RDF.Quad[]): void {
+    if (message) message.push(quad);
+    else output!.push(quad);
+  }
+
+  private decodeWireLookupEntry(reader: Reader, length: number, lookup: LookupDecoder): void {
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly lookup entry');
+    let id = 0;
+    let value = '';
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field === 1 && wireType === 0) id = reader.uint32();
+      else if (field === 2 && wireType === 2) value = reader.string();
+      else reader.skipType(wireType);
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly lookup entry length');
+    lookup.assign(id, value);
+  }
+
+  private decodeWireTriple(reader: Reader, length: number): RDF.Quad {
+    const physical = this.streamOptions!.physicalType;
+    if (physical !== PhysicalStreamType.TRIPLES && physical !== PhysicalStreamType.GRAPHS) {
+      throw new JellyConformanceError('Triple row is invalid in this physical stream type');
+    }
+
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly triple');
+    let subjectField = 0;
+    let subjectPosition = 0;
+    let predicateField = 0;
+    let predicatePosition = 0;
+    let objectField = 0;
+    let objectPosition = 0;
+    let duplicateField = false;
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field >= 1 && field <= 12 && wireType === 2) {
+        const position = reader.pos;
+        const termLength = reader.uint32();
+        reader.pos += termLength;
+        if (reader.pos > end) throw new RangeError('Invalid Jelly triple term length');
+        if (field <= 4) {
+          duplicateField ||= subjectField === field;
+          subjectField = field;
+          subjectPosition = position;
+        } else if (field <= 8) {
+          duplicateField ||= predicateField === field;
+          predicateField = field;
+          predicatePosition = position;
+        } else {
+          duplicateField ||= objectField === field;
+          objectField = field;
+          objectPosition = position;
+        }
+      } else {
+        reader.skipType(wireType);
+        if (reader.pos > end) throw new RangeError('Invalid Jelly triple field length');
+      }
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly triple length');
+    if (duplicateField) {
+      reader.pos = end - length;
+      return this.decodeProtoTriple(decodeProtoTripleWire(reader, length));
+    }
+
+    const subject = subjectField
+      ? this.decodeWireTerm(reader, subjectField, subjectPosition)
+      : this.repeated[0];
+    if (!subject) throw new JellyConformanceError('First Jelly statement must set slot 0');
+    if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') {
+      throw new JellyConformanceError('Invalid RDF subject term');
+    }
+    const predicate = predicateField
+      ? this.decodeWireTerm(reader, predicateField, predicatePosition)
+      : this.repeated[1];
+    if (!predicate) throw new JellyConformanceError('First Jelly statement must set slot 1');
+    if (predicate.termType !== 'NamedNode') throw new JellyConformanceError('Invalid RDF predicate term');
+    const object = objectField
+      ? this.decodeWireTerm(reader, objectField, objectPosition)
+      : this.repeated[2];
+    if (!object) throw new JellyConformanceError('First Jelly statement must set slot 2');
+    if (object.termType !== 'NamedNode' && object.termType !== 'BlankNode' && object.termType !== 'Literal') {
+      throw new JellyConformanceError('Invalid RDF object term');
+    }
+
+    reader.pos = end;
+    this.repeated[0] = subject;
+    this.repeated[1] = predicate;
+    this.repeated[2] = object;
+    if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
+      throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
+    }
+    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
+  }
+
+  private decodeWireTerm(reader: Reader, field: number, position: number): RDF.Term {
+    const kind = (field - 1) & 3;
+    reader.pos = position;
+    if (kind === 0) return this.decodeWireIri(reader, reader.uint32());
+    if (kind === 1) return this.factory.blankNode(reader.string());
+    if (kind === 2) return this.decodeWireLiteral(reader, reader.uint32());
+    throw new JellyUnsupportedFeatureError('RDF-star quoted triple terms are not supported');
+  }
+
+  private decodeWireIri(reader: Reader, length: number): RDF.NamedNode {
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly IRI');
+    let prefixId = 0;
+    let nameId = 0;
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field === 1 && wireType === 0) prefixId = reader.uint32();
+      else if (field === 2 && wireType === 0) nameId = reader.uint32();
+      else reader.skipType(wireType);
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly IRI length');
+    return this.factory.namedNode(this.prefixes!.prefix(prefixId) + this.names!.name(nameId));
+  }
+
+  private decodeWireLiteral(reader: Reader, length: number): RDF.Literal {
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly literal');
+    let lex = '';
+    let kind = 0;
+    let langtag = '';
+    let datatype = 0;
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field === 1 && wireType === 2) lex = reader.string();
+      else if (field === 2 && wireType === 2) { langtag = reader.string(); kind = 2; }
+      else if (field === 3 && wireType === 0) { datatype = reader.uint32(); kind = 3; }
+      else reader.skipType(wireType);
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly literal length');
+    if (kind === 2) return this.factory.literal(lex, langtag);
+    if (kind === 3) return this.factory.literal(lex, this.datatypeNode(datatype));
+    return this.factory.literal(lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
   }
 
   public finish(): void {
@@ -175,9 +399,18 @@ export class Decoder {
     return this.factory.namedNode(prefix + name);
   }
 
+  private datatypeNode(index: number): RDF.NamedNode {
+    const value = this.datatypes!.datatype(index);
+    const cached = this.datatypeNodes[index];
+    if (cached?.value === value) return cached;
+    const term = this.factory.namedNode(value);
+    this.datatypeNodes[index] = term;
+    return term;
+  }
+
   private decodeLiteral(value: RdfLiteral): RDF.Literal {
     if (value.kind?.case === 'langtag') return this.factory.literal(value.lex, value.kind.value);
-    if (value.kind?.case === 'datatype') return this.factory.literal(value.lex, this.factory.namedNode(this.datatypes!.datatype(value.kind.value)));
+    if (value.kind?.case === 'datatype') return this.factory.literal(value.lex, this.datatypeNode(value.kind.value));
     return this.factory.literal(value.lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
   }
 
@@ -246,7 +479,7 @@ export class Decoder {
   private decodeProtoLiteral(value: ProtoLiteral): RDF.Literal {
     const kind = (value as ProtoLiteral & ProtoOneofMarkers).$literalKind ?? value.literalKind;
     if (kind === 'langtag') return this.factory.literal(value.lex, value.langtag!);
-    if (kind === 'datatype') return this.factory.literal(value.lex, this.factory.namedNode(this.datatypes!.datatype(value.datatype!)));
+    if (kind === 'datatype') return this.factory.literal(value.lex, this.datatypeNode(value.datatype!));
     return this.factory.literal(value.lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
   }
 

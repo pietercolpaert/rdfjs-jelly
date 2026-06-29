@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
-import { Decoder, JellyUnsupportedFeatureError, MessageEncoder, Parser, PhysicalStreamType } from '../src';
+import { Writer as ProtoWriter } from 'protobufjs/minimal.js';
+import { Decoder, JellyConformanceError, JellyUnsupportedFeatureError, MessageEncoder, Parser, PhysicalStreamType } from '../src';
 import { eu } from '../src/generated/proto/rdf_pb.mjs';
 import type { RdfStreamFrame } from '../src/generated/rdf_pb';
 
@@ -86,5 +87,50 @@ describe('Parser validation', () => {
     const [quad] = new Parser({ delimited: false }).parse(bytes) as RDF.Quad[];
     expect(quad?.subject.termType).toBe('BlankNode');
     expect(quad?.subject.value).toBe('last-subject');
+
+    const rowBytes = ProtoFrame.encode({ rows: [
+      { options: optionsRow.value },
+      {
+        triple: { sBnode: 'ignored', pBnode: 'invalid', oBnode: 'ignored' },
+        name: { id: 0, value: 'last-row-field' },
+      },
+    ] }).finish();
+    expect(new Parser({ delimited: false }).parse(rowBytes)).toEqual([]);
+  });
+
+  it('preserves protobuf merging for a repeated embedded triple field', () => {
+    const ProtoRow = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow;
+    const optionsRow = options({ maxPrefixTableSize: 1 }).rows[0];
+    if (!optionsRow || optionsRow.case !== 'options') throw new Error('Missing test stream options');
+    const frame = ProtoWriter.create();
+    const appendRow = (row: Parameters<typeof ProtoRow.encode>[0]): void => {
+      ProtoRow.encode(row, frame.uint32(10).fork()).ldelim();
+    };
+    appendRow({ options: optionsRow.value });
+    appendRow({ prefix: { id: 0, value: 'https://' } });
+    appendRow({ name: { id: 0, value: 'subject' } });
+    appendRow({ name: { id: 0, value: 'predicate' } });
+    appendRow({ name: { id: 0, value: 'object' } });
+
+    const triple = ProtoWriter.create();
+    triple.uint32(10).fork().uint32(8).uint32(1).ldelim();
+    triple.uint32(10).fork().uint32(16).uint32(1).ldelim();
+    triple.uint32(42).fork().uint32(16).uint32(2).ldelim();
+    triple.uint32(74).fork().uint32(16).uint32(3).ldelim();
+    const row = ProtoWriter.create().uint32(18).bytes(triple.finish()).finish();
+    frame.uint32(10).bytes(row);
+
+    const [quad] = new Parser({ delimited: false }).parse(frame.finish()) as RDF.Quad[];
+    expect(quad?.subject.value).toBe('https://subject');
+    expect(quad?.predicate.value).toBe('https://predicate');
+    expect(quad?.object.value).toBe('https://object');
+  });
+
+  it('rejects an empty protobuf row on the fused decoder path', () => {
+    const ProtoFrame = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
+    const optionsRow = options().rows[0];
+    if (!optionsRow || optionsRow.case !== 'options') throw new Error('Missing test stream options');
+    const bytes = ProtoFrame.encode({ rows: [{ options: optionsRow.value }, {}] }).finish();
+    expect(() => new Parser({ delimited: false }).parse(bytes)).toThrow(JellyConformanceError);
   });
 });

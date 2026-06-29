@@ -24,6 +24,7 @@ const writer = new Writer({ physicalType: PhysicalStreamType.TRIPLES, messageSiz
 writer.addQuads(quads);
 const jelly = await new Promise((resolve, reject) => writer.end((error, output) =>
   error ? reject(error) : resolve(output)));
+const jellyBuffer = Buffer.from(jelly.buffer, jelly.byteOffset, jelly.byteLength);
 const frames = new MessageDecoder().decode(jelly);
 const RdfStreamFrame = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
 
@@ -70,6 +71,9 @@ const results = [
     if (output.reduce((sum, message) => sum + message.length, 0) !== count) throw new Error('Quad count mismatch');
   }),
   measure('complete Parser.parse', () => new Parser().parse(jelly), output => {
+    if (output.length !== count) throw new Error('Quad count mismatch');
+  }),
+  measure('complete Parser.parse Buffer', () => new Parser().parse(jellyBuffer), output => {
     if (output.length !== count) throw new Error('Quad count mismatch');
   }),
 ];

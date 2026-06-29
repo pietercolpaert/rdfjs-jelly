@@ -26,6 +26,164 @@ export interface ProtoOneofMarkers {
   $row?: 'options' | 'triple' | 'quad' | 'graphStart' | 'graphEnd' | 'namespace' | 'name' | 'prefix' | 'datatype';
 }
 
+export const enum ProtoRowKind {
+  UNKNOWN = 0,
+  OPTIONS = 1,
+  TRIPLE = 2,
+  QUAD = 3,
+  GRAPH_START = 4,
+  GRAPH_END = 5,
+  NAMESPACE = 6,
+  NAME = 9,
+  PREFIX = 10,
+  DATATYPE = 11,
+}
+
+type ProtoRowConsumer = (
+  kind: ProtoRowKind,
+  value: unknown,
+  wireReader?: Reader,
+  wireLength?: number,
+) => void;
+type InternalDecode = (
+  reader: Reader,
+  length: number,
+  end: undefined,
+  depth: number,
+  target: unknown,
+) => unknown;
+
+const decodeOptions = proto.RdfStreamOptions.decode as unknown as InternalDecode;
+const decodeTriple = proto.RdfTriple.decode as unknown as InternalDecode;
+const decodeQuad = proto.RdfQuad.decode as unknown as InternalDecode;
+const decodeGraphStart = proto.RdfGraphStart.decode as unknown as InternalDecode;
+const decodeGraphEnd = proto.RdfGraphEnd.decode as unknown as InternalDecode;
+const decodeNamespace = proto.RdfNamespaceDeclaration.decode as unknown as InternalDecode;
+const decodeName = proto.RdfNameEntry.decode as unknown as InternalDecode;
+const decodePrefix = proto.RdfPrefixEntry.decode as unknown as InternalDecode;
+const decodeDatatype = proto.RdfDatatypeEntry.decode as unknown as InternalDecode;
+
+export function decodeProtoTripleWire(reader: Reader, length: number): ProtoTriple {
+  return decodeTriple(reader, length, undefined, 2, undefined) as ProtoTriple;
+}
+
+function decodeRowField(field: number, reader: Reader, length: number, target: unknown): unknown {
+  switch (field) {
+    case ProtoRowKind.OPTIONS: return decodeOptions(reader, length, undefined, 2, target);
+    case ProtoRowKind.TRIPLE: return decodeTriple(reader, length, undefined, 2, target);
+    case ProtoRowKind.QUAD: return decodeQuad(reader, length, undefined, 2, target);
+    case ProtoRowKind.GRAPH_START: return decodeGraphStart(reader, length, undefined, 2, target);
+    case ProtoRowKind.GRAPH_END: return decodeGraphEnd(reader, length, undefined, 2, target);
+    case ProtoRowKind.NAMESPACE: return decodeNamespace(reader, length, undefined, 2, target);
+    case ProtoRowKind.NAME: return decodeName(reader, length, undefined, 2, target);
+    case ProtoRowKind.PREFIX: return decodePrefix(reader, length, undefined, 2, target);
+    case ProtoRowKind.DATATYPE: return decodeDatatype(reader, length, undefined, 2, target);
+    default: return undefined;
+  }
+}
+
+function decodeProtoRow(reader: Reader, length: number, consume: ProtoRowConsumer): void {
+  const end = reader.pos + length;
+  if (end > reader.len) throw new RangeError('Truncated Jelly protobuf row');
+  if (length === 0) {
+    consume(ProtoRowKind.UNKNOWN, undefined);
+    return;
+  }
+  const firstTag = reader.uint32();
+  const firstField = firstTag >>> 3;
+  const firstWireType = firstTag & 7;
+  if (firstWireType === 2 && (
+    firstField === ProtoRowKind.TRIPLE || firstField === ProtoRowKind.NAME ||
+    firstField === ProtoRowKind.PREFIX || firstField === ProtoRowKind.DATATYPE
+  )) {
+    const nestedLength = reader.uint32();
+    if (reader.pos + nestedLength === end) {
+      consume(firstField, undefined, reader, nestedLength);
+      if (reader.pos !== end) throw new RangeError('Invalid Jelly protobuf row payload length');
+      return;
+    }
+  }
+  reader.pos = end - length;
+  let kind: ProtoRowKind | undefined;
+  let value: unknown;
+  while (reader.pos < end) {
+    const tag = reader.uint32();
+    const field = tag >>> 3;
+    const wireType = tag & 7;
+    if (wireType === 2 && (
+      field === ProtoRowKind.OPTIONS || field === ProtoRowKind.TRIPLE || field === ProtoRowKind.QUAD ||
+      field === ProtoRowKind.GRAPH_START || field === ProtoRowKind.GRAPH_END || field === ProtoRowKind.NAMESPACE ||
+      field === ProtoRowKind.NAME || field === ProtoRowKind.PREFIX || field === ProtoRowKind.DATATYPE
+    )) {
+      const nestedLength = reader.uint32();
+      const target = kind === field ? value : undefined;
+      value = decodeRowField(field, reader, nestedLength, target);
+      kind = field;
+      continue;
+    }
+    reader.skipType(wireType);
+  }
+  if (reader.pos !== end) throw new RangeError('Invalid Jelly protobuf row length');
+  consume(kind ?? ProtoRowKind.UNKNOWN, value);
+}
+
+function decodeMetadataEntry(reader: Reader, length: number, metadata: Map<string, Uint8Array>): void {
+  const end = reader.pos + length;
+  if (end > reader.len) throw new RangeError('Truncated Jelly metadata entry');
+  let key = '';
+  let value: Uint8Array<ArrayBufferLike> = new Uint8Array();
+  while (reader.pos < end) {
+    const tag = reader.uint32();
+    const field = tag >>> 3;
+    const wireType = tag & 7;
+    if (field === 1 && wireType === 2) key = reader.string();
+    else if (field === 2 && wireType === 2) {
+      const bytes = reader.bytes();
+      value = bytes instanceof Uint8Array && bytes.constructor === Uint8Array
+        ? bytes
+        : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    }
+    else reader.skipType(wireType);
+  }
+  if (reader.pos !== end) throw new RangeError('Invalid Jelly metadata entry length');
+  metadata.set(key, value);
+}
+
+export function decodeProtoRdfStreamFrameRows(
+  reader: Reader,
+  length: number,
+  consume: ProtoRowConsumer,
+  metadata: Map<string, Uint8Array>,
+): void {
+  let consumerError: unknown;
+  const guardedConsume: ProtoRowConsumer = (kind, value, wireReader, wireLength) => {
+    try {
+      consume(kind, value, wireReader, wireLength);
+    } catch (error) {
+      consumerError = error;
+      throw error;
+    }
+  };
+  try {
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly protobuf frame');
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field === 1 && wireType === 2) decodeProtoRow(reader, reader.uint32(), guardedConsume);
+      else if (field === 15 && wireType === 2) decodeMetadataEntry(reader, reader.uint32(), metadata);
+      else reader.skipType(wireType);
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly protobuf frame length');
+  } catch (error) {
+    if (error === consumerError) throw error;
+    throw new JellyConformanceError('Invalid Jelly protobuf frame', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
 export interface RdfIri { prefixId: number; nameId: number }
 export interface RdfLiteral { lex: string; kind?: { case: 'langtag'; value: string } | { case: 'datatype'; value: number } }
 export type RdfTerm =

@@ -1,4 +1,5 @@
 import { Reader } from 'protobufjs/minimal.js';
+import type { Decoder } from './Decoder';
 import { JellyConformanceError } from '../errors';
 import {
   decodeProtoRdfStreamFrame,
@@ -8,6 +9,7 @@ import {
   type RdfStreamFrame,
 } from '../generated/rdf_pb';
 import type { BinaryInput, ParserOptions } from '../types';
+import type { Message } from '../types';
 import { asUint8Array, concatBytes } from './bytes';
 
 const DEFAULT_MAX_MESSAGE_SIZE = 64 * 1024 * 1024;
@@ -120,5 +122,32 @@ export class MessageDecoder extends FramedMessageDecoder<RdfStreamFrame> {
 export class ProtoMessageDecoder extends FramedMessageDecoder<ProtoFrame> {
   public constructor(options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'> = {}) {
     super(options, decodeProtoRdfStreamFrame, decodeProtoRdfStreamFrameReader);
+  }
+}
+
+export class DirectMessageDecoder extends FramedMessageDecoder<Message> {
+  public constructor(
+    options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>,
+    decoder: Decoder,
+  ) {
+    super(
+      options,
+      input => decoder.decodeProtoPayload(Reader.create(input), input.byteLength),
+      (reader, length) => decoder.decodeProtoPayload(reader, length),
+    );
+  }
+}
+
+export class DirectQuadDecoder extends FramedMessageDecoder<void> {
+  public constructor(
+    options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>,
+    decoder: Decoder,
+    output: import('@rdfjs/types').Quad[],
+  ) {
+    super(
+      options,
+      input => decoder.decodeProtoPayloadTo(Reader.create(input), input.byteLength, output),
+      (reader, length) => decoder.decodeProtoPayloadTo(reader, length, output),
+    );
   }
 }

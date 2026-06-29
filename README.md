@@ -94,13 +94,13 @@ Transport compression is intentionally separate from Jelly framing. Compose the 
 
 These are local microbenchmarks, not universal rankings. They measure 100,000
 generated RDF triples with unique subjects and literals and one repeated
-predicate. Each result is the median of seven measured runs after two warm-up
+predicate. Each result is the median of 15 measured runs after two warm-up
 runs. Parsing includes constructing the result RDF objects; serialization starts
 with already constructed objects. Gzip rows include synchronous decompression
 and use Node.js's default gzip level; compression itself is performed before the
 timed section.
 
-Snapshot recorded on 2026-06-28 with Node.js 25.9.0 and Python 3.12 on Linux,
+Snapshot recorded on 2026-06-29 with Node.js 25.9.0 and Python 3.12 on Linux,
 using an Intel Core i7-1265U and 30 GiB RAM.
 
 ### Compared with rdf-parser.ts
@@ -112,13 +112,13 @@ implementation performance.
 
 | Parser | Format | Input size | Median | Throughput |
 | --- | --- | ---: | ---: | ---: |
-| rdfjs-jelly | Jelly | 2,579,568 B | 67.4 ms | 1.48 M statements/s |
-| rdf-parser.ts | N-Triples | 6,377,780 B | 38.5 ms | 2.60 M statements/s |
-| rdfjs-jelly | Jelly + gzip | 496,581 B | 79.5 ms | 1.26 M statements/s |
-| rdf-parser.ts | N-Triples + gzip | 490,694 B | 42.1 ms | 2.37 M statements/s |
+| rdfjs-jelly | Jelly | 2,579,568 B | 36.9 ms | 2.71 M statements/s |
+| rdf-parser.ts | N-Triples | 6,377,780 B | 35.8 ms | 2.79 M statements/s |
+| rdfjs-jelly | Jelly + gzip | 496,581 B | 39.3 ms | 2.55 M statements/s |
+| rdf-parser.ts | N-Triples + gzip | 490,694 B | 39.6 ms | 2.53 M statements/s |
 
-For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 1.75 times
-faster and gzipped N-Triples about 1.89 times faster, including decompression.
+For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 3% faster,
+while `rdfjs-jelly` parsed gzipped input about 1% faster, including decompression.
 Uncompressed Jelly was about 60% smaller (2.47 times less data). After gzip,
 the highly repetitive N-Triples input was about 1.2% smaller than Jelly. This
 compressed-size result is dataset-dependent and should not be extrapolated to
@@ -131,14 +131,19 @@ and decoding. Its hottest functions were Protobuf-ES descriptor lookup and
 reflective message construction, followed by garbage collection. RDF/JS
 materialization itself took about 38 ms.
 
-The optimized path uses schema-specific static protobuf.js code, records oneof
-discriminators without protobuf.js's generic deletion loops, decodes each frame
-directly into RDF/JS objects, avoids retaining the full intermediate frame
-graph, and reuses immutable datatype and default-graph terms. Straight-line
-statement validation also avoids temporary arrays and polymorphic `includes()`
-calls.
-On this benchmark that reduced the complete parse from about 359 ms at the
-measured pre-optimization baseline to 67 ms, or roughly 5.3 times faster.
+The optimized path uses schema-specific static protobuf.js code with monomorphic
+decoder call sites. Common triple, IRI, literal, and lookup-entry payloads are
+decoded directly from protobuf bytes into the RDF/JS factory, avoiding temporary
+protobuf objects and frame/row object graphs. Plain `Parser.parse()` also writes
+quads directly to its result array instead of constructing intermediate
+`Message` arrays, and Node inputs are normalized to zero-copy `Buffer` views.
+
+Immutable datatype terms are cached by their bounded Jelly lookup IDs. A generic
+string-keyed NamedNode cache was tested but rejected: on this unique-subject
+workload it increased parse time because Jelly's repeated-term encoding already
+handles the common reuse case. Together with straight-line statement validation,
+the retained changes reduced the complete parse from about 359 ms at the measured
+pre-optimization baseline to about 37 ms, or roughly 9.7 times faster.
 
 Reproduce the phase breakdown with:
 
@@ -149,7 +154,7 @@ npm run perf:profile -- 100000 7
 Reproduce it from this repository, with `../rdf-parser.ts` built:
 
 ```sh
-npm run perf:compare:rdf-parser -- 100000 7
+npm run perf:compare:rdf-parser -- 100000 15
 ```
 
 Set `RDF_PARSER_TS_PATH` to compare against a different build.
