@@ -88,17 +88,21 @@ The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and No
 
 ## Compression
 
-Transport compression is intentionally separate from Jelly framing. Compose the Node streams with `createGzip()`/`createGunzip()`, or browser streams with `CompressionStream`/`DecompressionStream`.
+Transport compression is intentionally separate from Jelly framing. Compose the
+Node streams with gzip or Brotli transforms from `node:zlib`, or browser streams
+with `CompressionStream`/`DecompressionStream` where the selected format is
+supported.
 
 ## Performance
 
 These are local microbenchmarks, not universal rankings. They measure 100,000
 generated RDF triples with unique subjects and literals and one repeated
 predicate. Each result is the median of 15 measured runs after two warm-up
-runs. Parsing includes constructing the result RDF objects; serialization starts
-with already constructed objects. Gzip rows include synchronous decompression
-and use Node.js's default gzip level; compression itself is performed before the
-timed section.
+runs, with case order alternated between rounds. Parsing includes constructing
+the result RDF objects. Writing includes constructing the writer, adding all
+quads, and final serialization, starting with already constructed objects.
+Compressed parsing includes synchronous decompression and uses Node.js's default
+gzip and Brotli settings; compression itself is performed before the timed section.
 
 Snapshot recorded on 2026-06-29 with Node.js 25.9.0 and Python 3.12 on Linux,
 using an Intel Core i7-1265U and 30 GiB RAM.
@@ -110,19 +114,33 @@ This compares equivalent RDF data, but not identical input formats:
 N-Triples. It therefore reflects the end-user format choice as well as parser
 implementation performance.
 
+#### Parsing
+
 | Parser | Format | Input size | Median | Throughput |
 | --- | --- | ---: | ---: | ---: |
-| rdfjs-jelly | Jelly | 2,579,568 B | 36.9 ms | 2.71 M statements/s |
-| rdf-parser.ts | N-Triples | 6,377,780 B | 35.8 ms | 2.79 M statements/s |
-| rdfjs-jelly | Jelly + gzip | 496,581 B | 39.3 ms | 2.55 M statements/s |
-| rdf-parser.ts | N-Triples + gzip | 490,694 B | 39.6 ms | 2.53 M statements/s |
+| rdfjs-jelly | Jelly | 2,579,568 B | 42.9 ms | 2.33 M statements/s |
+| rdf-parser.ts | N-Triples | 6,377,780 B | 46.6 ms | 2.15 M statements/s |
+| rdfjs-jelly | Jelly + gzip | 496,581 B | 45.7 ms | 2.19 M statements/s |
+| rdf-parser.ts | N-Triples + gzip | 490,694 B | 47.0 ms | 2.13 M statements/s |
+| rdfjs-jelly | Jelly + Brotli | 128,277 B | 44.6 ms | 2.24 M statements/s |
+| rdf-parser.ts | N-Triples + Brotli | 117,438 B | 46.9 ms | 2.13 M statements/s |
 
-For this dataset, `rdf-parser.ts` parsed uncompressed N-Triples about 3% faster,
-while `rdfjs-jelly` parsed gzipped input about 1% faster, including decompression.
-Uncompressed Jelly was about 60% smaller (2.47 times less data). After gzip,
-the highly repetitive N-Triples input was about 1.2% smaller than Jelly. This
-compressed-size result is dataset-dependent and should not be extrapolated to
-less repetitive RDF.
+Parsing performance is within about 9% for all three transport variants on this
+dataset. Uncompressed Jelly was about 60% smaller (2.47 times less data). The
+highly repetitive N-Triples input was about 1.2% smaller after gzip and 8.4%
+smaller after Brotli. Compressed sizes are dataset-dependent and should not be
+extrapolated to less repetitive RDF.
+
+#### Writing
+
+| Writer | Format | Output size | Median | Throughput |
+| --- | --- | ---: | ---: | ---: |
+| rdfjs-jelly | Jelly | 2,579,568 B | 126.6 ms | 0.79 M statements/s |
+| rdf-parser.ts | N-Triples | 6,377,780 B | 35.3 ms | 2.83 M statements/s |
+
+For this workload, `rdf-parser.ts` wrote N-Triples about 3.6 times faster. Jelly
+writing performs lookup-table management, frame construction, and protobuf
+serialization, producing an output about 60% smaller before transport compression.
 
 ### Profiling and optimization
 
@@ -143,12 +161,22 @@ string-keyed NamedNode cache was tested but rejected: on this unique-subject
 workload it increased parse time because Jelly's repeated-term encoding already
 handles the common reuse case. Together with straight-line statement validation,
 the retained changes reduced the complete parse from about 359 ms at the measured
-pre-optimization baseline to about 37 ms, or roughly 9.7 times faster.
+pre-optimization baseline to roughly 37–43 ms, or about 9 times faster.
+
+The writer profile originally spent about 137 ms maintaining lookup tables and
+constructing frame rows, plus about 72 ms converting and serializing protobuf
+objects. Lookup eviction now uses indexed O(1) LRU links instead of repeatedly
+creating `Map` iterators, lookup insertion and reference selection share one map
+probe, and statement encoding reuses scratch storage with straight-line term
+comparisons. Frames are serialized directly from Jelly rows without first
+creating a second protobuf object graph. In the comparison above these changes
+reduced writing from 200.6 ms to 126.6 ms, about 1.6 times faster.
 
 Reproduce the phase breakdown with:
 
 ```sh
 npm run perf:profile -- 100000 7
+npm run perf:profile:writer -- 100000 7
 ```
 
 Reproduce it from this repository, with `../rdf-parser.ts` built:

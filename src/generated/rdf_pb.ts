@@ -1,5 +1,5 @@
 import { JellyConformanceError } from '../errors';
-import { Reader } from 'protobufjs/minimal.js';
+import { Reader, Writer as ProtobufWriter } from 'protobufjs/minimal.js';
 import { eu } from './proto/rdf_pb.mjs';
 
 const proto = eu.ostrzyciel.jelly.core.proto.v1;
@@ -392,16 +392,156 @@ function fromRow(row: ProtoRow): RdfStreamRow {
   return { case: 'unknown', fieldNumber: 0 };
 }
 
-function toProtoFrame(frame: RdfStreamFrame): FrameProperties {
-  return { rows: frame.rows.map(toRow), metadata: Object.fromEntries(frame.metadata) };
+function encodeIriWire(writer: ProtobufWriter, value: RdfIri): void {
+  if (value.prefixId !== 0) writer.uint32(8).uint32(value.prefixId);
+  if (value.nameId !== 0) writer.uint32(16).uint32(value.nameId);
+}
+
+function encodeLiteralWire(writer: ProtobufWriter, value: RdfLiteral): void {
+  if (value.lex !== '') writer.uint32(10).string(value.lex);
+  if (value.kind?.case === 'langtag') writer.uint32(18).string(value.kind.value);
+  else if (value.kind?.case === 'datatype') writer.uint32(24).uint32(value.kind.value);
+}
+
+function encodeStatementTermWire(writer: ProtobufWriter, field: number, term: RdfTerm): void {
+  const tag = (field << 3) | 2;
+  if (term.case === 'iri') {
+    writer.uint32(tag).fork();
+    encodeIriWire(writer, term.value);
+    writer.ldelim();
+  } else if (term.case === 'bnode') writer.uint32(tag + 8).string(term.value);
+  else if (term.case === 'literal') {
+    writer.uint32(tag + 16).fork();
+    encodeLiteralWire(writer, term.value);
+    writer.ldelim();
+  } else if (term.case === 'triple') {
+    writer.uint32(tag + 24).fork();
+    encodeTripleWire(writer, term.value);
+    writer.ldelim();
+  }
+}
+
+function encodeTripleWire(writer: ProtobufWriter, value: RdfTriple): void {
+  if (value.subject) encodeStatementTermWire(writer, 1, value.subject);
+  if (value.predicate) encodeStatementTermWire(writer, 5, value.predicate);
+  if (value.object) encodeStatementTermWire(writer, 9, value.object);
+}
+
+function encodeGraphTermWire(writer: ProtobufWriter, field: number, term: RdfTerm): void {
+  const tag = (field << 3) | 2;
+  if (term.case === 'iri') {
+    writer.uint32(tag).fork();
+    encodeIriWire(writer, term.value);
+    writer.ldelim();
+  } else if (term.case === 'bnode') writer.uint32(tag + 8).string(term.value);
+  else if (term.case === 'defaultGraph') writer.uint32(tag + 16).fork().ldelim();
+  else if (term.case === 'literal') {
+    writer.uint32(tag + 24).fork();
+    encodeLiteralWire(writer, term.value);
+    writer.ldelim();
+  }
+}
+
+function encodeQuadWire(writer: ProtobufWriter, value: RdfQuad): void {
+  encodeTripleWire(writer, value);
+  if (value.graph) encodeGraphTermWire(writer, 13, value.graph);
+}
+
+function encodeOptionsWire(writer: ProtobufWriter, value: RdfStreamOptions): void {
+  if (value.streamName !== '') writer.uint32(10).string(value.streamName);
+  if (value.physicalType !== 0) writer.uint32(16).int32(value.physicalType);
+  if (value.generalizedStatements) writer.uint32(24).bool(value.generalizedStatements);
+  if (value.rdfStar) writer.uint32(32).bool(value.rdfStar);
+  if (value.maxNameTableSize !== 0) writer.uint32(72).uint32(value.maxNameTableSize);
+  if (value.maxPrefixTableSize !== 0) writer.uint32(80).uint32(value.maxPrefixTableSize);
+  if (value.maxDatatypeTableSize !== 0) writer.uint32(88).uint32(value.maxDatatypeTableSize);
+  if (value.logicalType !== 0) writer.uint32(112).int32(value.logicalType);
+  if (value.version !== 0) writer.uint32(120).uint32(value.version);
+}
+
+function encodeLookupEntryWire(writer: ProtobufWriter, value: { id: number; value: string }): void {
+  if (value.id !== 0) writer.uint32(8).uint32(value.id);
+  if (value.value !== '') writer.uint32(18).string(value.value);
+}
+
+function encodeRowWire(writer: ProtobufWriter, row: RdfStreamRow): void {
+  if (row.case === 'options') {
+    writer.uint32(10).fork();
+    encodeOptionsWire(writer, row.value);
+    writer.ldelim();
+  } else if (row.case === 'triple') {
+    writer.uint32(18).fork();
+    encodeTripleWire(writer, row.value);
+    writer.ldelim();
+  } else if (row.case === 'quad') {
+    writer.uint32(26).fork();
+    encodeQuadWire(writer, row.value);
+    writer.ldelim();
+  } else if (row.case === 'graphStart') {
+    writer.uint32(34).fork();
+    if (row.value.graph) encodeGraphTermWire(writer, 1, row.value.graph);
+    writer.ldelim();
+  } else if (row.case === 'graphEnd') writer.uint32(42).fork().ldelim();
+  else if (row.case === 'namespace') {
+    writer.uint32(50).fork();
+    if (row.value.name !== '') writer.uint32(10).string(row.value.name);
+    writer.uint32(18).fork();
+    encodeIriWire(writer, row.value.value);
+    writer.ldelim().ldelim();
+  } else if (row.case === 'name') {
+    writer.uint32(74).fork();
+    encodeLookupEntryWire(writer, row.value);
+    writer.ldelim();
+  } else if (row.case === 'prefix') {
+    writer.uint32(82).fork();
+    encodeLookupEntryWire(writer, row.value);
+    writer.ldelim();
+  } else if (row.case === 'datatype') {
+    writer.uint32(90).fork();
+    encodeLookupEntryWire(writer, row.value);
+    writer.ldelim();
+  }
+}
+
+function encodeFrameWire(writer: ProtobufWriter, frame: RdfStreamFrame): void {
+  for (const row of frame.rows) {
+    writer.uint32(10).fork();
+    encodeRowWire(writer, row);
+    writer.ldelim();
+  }
+  for (const [key, value] of frame.metadata) {
+    writer.uint32(122).fork().uint32(10).string(key).uint32(18).bytes(value).ldelim();
+  }
+}
+
+export function encodeRdfStreamFrames(frames: readonly RdfStreamFrame[], delimited: boolean): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let totalLength = 0;
+  for (const frame of frames) {
+    const writer = ProtobufWriter.create();
+    if (delimited) writer.fork();
+    encodeFrameWire(writer, frame);
+    if (delimited) writer.ldelim();
+    const chunk = writer.finish();
+    chunks.push(chunk);
+    totalLength += chunk.byteLength;
+  }
+  if (chunks.length === 1) return chunks[0]!;
+  const output = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return output;
 }
 
 export function encodeRdfStreamFrame(frame: RdfStreamFrame): Uint8Array {
-  return proto.RdfStreamFrame.encode(toProtoFrame(frame)).finish();
+  return encodeRdfStreamFrames([frame], false);
 }
 
 export function encodeDelimitedRdfStreamFrame(frame: RdfStreamFrame): Uint8Array {
-  return proto.RdfStreamFrame.encodeDelimited(toProtoFrame(frame)).finish();
+  return encodeRdfStreamFrames([frame], true);
 }
 
 export function decodeRdfStreamFrame(input: Uint8Array): RdfStreamFrame {

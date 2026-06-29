@@ -1,6 +1,5 @@
 import { JellyConformanceError } from '../errors';
-import { encodeDelimitedRdfStreamFrame, encodeRdfStreamFrame, type RdfStreamFrame } from '../generated/rdf_pb';
-import { concatBytes } from './bytes';
+import { encodeDelimitedRdfStreamFrame, encodeRdfStreamFrame, encodeRdfStreamFrames, type RdfStreamFrame } from '../generated/rdf_pb';
 
 export class MessageEncoder {
   public constructor(public readonly delimited = true) {}
@@ -13,6 +12,6 @@ export class MessageEncoder {
     if (!this.delimited && frames.length !== 1) {
       throw new JellyConformanceError('Non-delimited Jelly output must contain exactly one message');
     }
-    return concatBytes(frames.map(frame => this.encode(frame)));
+    return encodeRdfStreamFrames(frames, this.delimited);
   }
 }

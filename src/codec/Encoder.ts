@@ -5,21 +5,19 @@ import { XSD_STRING, normalizeLookupPreset, type LookupPreset } from '../options
 import { LogicalStreamType, PhysicalStreamType, type MessageMetadata, type WriterOptions } from '../types';
 import { LookupEncoder } from './LookupEncoder';
 
-function splitIri(iri: string): [string, string] {
-  for (const separator of ['#', '/']) {
-    const index = iri.lastIndexOf(separator);
-    if (index >= 0) return [iri.slice(0, index + 1), iri.slice(index + 1)];
-  }
-  return ['', iri];
-}
-
 function metadataMap(metadata: MessageMetadata | undefined): Map<string, Uint8Array> {
   if (!metadata) return new Map();
   return metadata instanceof Map ? new Map(metadata) : new Map(Object.entries(metadata));
 }
 
 function sameTerm(left: RDF.Term | undefined, right: RDF.Term): boolean {
-  return left?.equals(right) ?? false;
+  if (left === right) return true;
+  if (!left || left.termType !== right.termType || left.value !== right.value) return false;
+  if (left.termType === 'Literal' && right.termType === 'Literal') {
+    return left.language === right.language && left.direction === right.direction &&
+      left.datatype.value === right.datatype.value;
+  }
+  return left.termType !== 'Quad';
 }
 
 export class Encoder {
@@ -33,6 +31,7 @@ export class Encoder {
   private readonly datatypes: LookupEncoder;
   private readonly repeated: Array<RDF.Term | undefined> = new Array(4);
   private rows: RdfStreamRow[];
+  private readonly scratchRows: RdfStreamRow[] = [];
   private hasStatements = false;
   private finished = false;
 
@@ -80,8 +79,12 @@ export class Encoder {
 
   public addNamespace(name: string, iri: string): void {
     this.assertOpen();
-    const encoded = this.encodeIri(iri);
-    this.appendRows([...encoded.rows, { case: 'namespace', value: { name, value: encoded.value } }], false);
+    const rows = this.scratchRows;
+    rows.length = 0;
+    const value = this.encodeIri(iri, rows);
+    rows.push({ case: 'namespace', value: { name, value } });
+    this.appendRows(rows, false);
+    rows.length = 0;
   }
 
   public addQuad(quad: RDF.Quad): void {
@@ -92,8 +95,12 @@ export class Encoder {
     if (this.physicalType === PhysicalStreamType.TRIPLES && quad.graph.termType !== 'DefaultGraph') {
       throw new JellyConformanceError('TRIPLES streams cannot contain named graph quads');
     }
-    const rows = this.physicalType === PhysicalStreamType.TRIPLES ? this.encodeTriple(quad) : this.encodeQuad(quad);
+    const rows = this.scratchRows;
+    rows.length = 0;
+    if (this.physicalType === PhysicalStreamType.TRIPLES) this.encodeTriple(quad, rows);
+    else this.encodeQuad(quad, rows);
     this.appendRows(rows, true);
+    rows.length = 0;
   }
 
   public addMessage(quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void {
@@ -104,7 +111,8 @@ export class Encoder {
       if (this.physicalType === PhysicalStreamType.TRIPLES && quad.graph.termType !== 'DefaultGraph') {
         throw new JellyConformanceError('TRIPLES streams cannot contain named graph quads');
       }
-      this.rows.push(...(this.physicalType === PhysicalStreamType.TRIPLES ? this.encodeTriple(quad) : this.encodeQuad(quad)));
+      if (this.physicalType === PhysicalStreamType.TRIPLES) this.encodeTriple(quad, this.rows);
+      else this.encodeQuad(quad, this.rows);
       this.hasStatements = true;
     }
     this.flush(metadata, true);
@@ -114,11 +122,11 @@ export class Encoder {
     this.assertOpen();
     if (this.physicalType !== PhysicalStreamType.GRAPHS) throw new JellyConformanceError('addGraph() requires a GRAPHS physical stream');
     if (this.hasStatements) this.flush(undefined, true);
-    const encodedGraph = this.encodeTerm(graph, 3, true);
-    this.rows.push(...encodedGraph.rows, { case: 'graphStart', value: { graph: encodedGraph.value } });
+    const encodedGraph = this.encodeTerm(graph, 3, this.rows, true);
+    this.rows.push({ case: 'graphStart', value: { graph: encodedGraph } });
     for (const quad of quads) {
       if (!quad.graph.equals(graph)) throw new JellyConformanceError('Every quad passed to addGraph() must use the graph argument');
-      this.rows.push(...this.encodeTriple(quad));
+      this.encodeTriple(quad, this.rows);
       this.hasStatements = true;
     }
     this.rows.push({ case: 'graphEnd', value: {} });
@@ -139,86 +147,85 @@ export class Encoder {
   }
 
   private flush(metadata?: MessageMetadata, force = false): void {
-    if (force || this.rows.length > 0) this.frames.push({ rows: this.rows, metadata: metadataMap(metadata) });
+    if (force || this.rows.length > 0) {
+      this.frames.push({ rows: this.rows, metadata: metadataMap(metadata) });
+    }
     this.rows = [];
     this.hasStatements = false;
   }
 
-  private encodeIri(iri: string): { rows: RdfStreamRow[]; value: RdfIri } {
-    let [prefix, name] = splitIri(iri);
-    const rows: RdfStreamRow[] = [];
+  private encodeIri(iri: string, rows: RdfStreamRow[]): RdfIri {
+    const hashIndex = iri.lastIndexOf('#');
+    const separatorIndex = hashIndex >= 0 ? hashIndex : iri.lastIndexOf('/');
+    let prefix = separatorIndex >= 0 ? iri.slice(0, separatorIndex + 1) : '';
+    let name = separatorIndex >= 0 ? iri.slice(separatorIndex + 1) : iri;
     if (this.lookup.maxPrefixes === 0) { prefix = ''; name = iri; }
     else {
-      const entry = this.prefixes.ensure(prefix);
-      if (entry) rows.push({ case: 'prefix', value: entry });
+      const id = this.prefixes.ensureId(prefix);
+      if (id >= 0) rows.push({ case: 'prefix', value: { id, value: prefix } });
     }
-    const nameEntry = this.names.ensure(name);
-    if (nameEntry) rows.push({ case: 'name', value: nameEntry });
-    return { rows, value: { prefixId: this.prefixes.prefix(prefix), nameId: this.names.name(name) } };
-  }
-
-  private encodeLiteral(term: RDF.Literal): { rows: RdfStreamRow[]; value: RdfLiteral } {
-    if (term.direction) throw new JellyUnsupportedFeatureError('Directional language literals are not supported by Jelly-RDF 1.1');
-    if (term.language) return { rows: [], value: { lex: term.value, kind: { case: 'langtag', value: term.language } } };
-    if (term.datatype.value === XSD_STRING) return { rows: [], value: { lex: term.value } };
-    if (this.lookup.maxDatatypes === 0) throw new JellyConformanceError('Datatype lookup is disabled but a typed literal was provided');
-    const entry = this.datatypes.ensure(term.datatype.value);
+    const nameId = this.names.ensureId(name);
+    if (nameId >= 0) rows.push({ case: 'name', value: { id: nameId, value: name } });
     return {
-      rows: entry ? [{ case: 'datatype', value: entry }] : [],
-      value: { lex: term.value, kind: { case: 'datatype', value: this.datatypes.datatype(term.datatype.value) } },
+      prefixId: this.lookup.maxPrefixes === 0 ? 0 : this.prefixes.ensuredPrefix(),
+      nameId: this.names.ensuredName(),
     };
   }
 
-  private encodeTerm(term: RDF.Term, slot: number, graph = false): { rows: RdfStreamRow[]; value: RdfTerm } {
+  private encodeLiteral(term: RDF.Literal, rows: RdfStreamRow[]): RdfLiteral {
+    if (term.direction) throw new JellyUnsupportedFeatureError('Directional language literals are not supported by Jelly-RDF 1.1');
+    if (term.language) return { lex: term.value, kind: { case: 'langtag', value: term.language } };
+    if (term.datatype.value === XSD_STRING) return { lex: term.value };
+    if (this.lookup.maxDatatypes === 0) throw new JellyConformanceError('Datatype lookup is disabled but a typed literal was provided');
+    const id = this.datatypes.ensureId(term.datatype.value);
+    if (id >= 0) rows.push({ case: 'datatype', value: { id, value: term.datatype.value } });
+    return { lex: term.value, kind: { case: 'datatype', value: this.datatypes.ensuredDatatype() } };
+  }
+
+  private encodeTerm(term: RDF.Term, slot: number, rows: RdfStreamRow[], graph = false): RdfTerm {
     if (term.termType === 'Quad') throw new JellyUnsupportedFeatureError('RDF-star quoted triple terms are not supported');
     if (term.termType === 'Variable') throw new JellyConformanceError('RDF variables cannot be serialized as RDF statements');
     if (term.termType === 'NamedNode') {
-      const encoded = this.encodeIri(term.value);
-      return { rows: encoded.rows, value: { case: 'iri', value: encoded.value } };
+      return { case: 'iri', value: this.encodeIri(term.value, rows) };
     }
-    if (term.termType === 'BlankNode') return { rows: [], value: { case: 'bnode', value: term.value } };
-    if (term.termType === 'Literal' && !graph) {
-      const encoded = this.encodeLiteral(term);
-      return { rows: encoded.rows, value: { case: 'literal', value: encoded.value } };
-    }
-    if (term.termType === 'DefaultGraph' && graph) return { rows: [], value: { case: 'defaultGraph', value: {} } };
+    if (term.termType === 'BlankNode') return { case: 'bnode', value: term.value };
+    if (term.termType === 'Literal' && !graph) return { case: 'literal', value: this.encodeLiteral(term, rows) };
+    if (term.termType === 'DefaultGraph' && graph) return { case: 'defaultGraph', value: {} };
     throw new JellyConformanceError(`Invalid RDF term ${term.termType} in statement slot ${slot}`);
   }
 
-  private encodeSpo(quad: RDF.Quad, target: RdfTriple | RdfQuad): RdfStreamRow[] {
-    const terms = [quad.subject, quad.predicate, quad.object] as const;
-    const rows: RdfStreamRow[] = [];
-    for (let slot = 0; slot < 3; slot++) {
-      const term = terms[slot]!;
-      if (sameTerm(this.repeated[slot], term)) continue;
-      const encoded = this.encodeTerm(term, slot);
-      rows.push(...encoded.rows);
-      if (slot === 0) target.subject = encoded.value;
-      else if (slot === 1) target.predicate = encoded.value;
-      else target.object = encoded.value;
-      this.repeated[slot] = term;
+  private encodeSpo(quad: RDF.Quad, target: RdfTriple | RdfQuad, rows: RdfStreamRow[]): void {
+    const subject = quad.subject;
+    if (!sameTerm(this.repeated[0], subject)) {
+      target.subject = this.encodeTerm(subject, 0, rows);
+      this.repeated[0] = subject;
     }
-    return rows;
+    const predicate = quad.predicate;
+    if (!sameTerm(this.repeated[1], predicate)) {
+      target.predicate = this.encodeTerm(predicate, 1, rows);
+      this.repeated[1] = predicate;
+    }
+    const object = quad.object;
+    if (!sameTerm(this.repeated[2], object)) {
+      target.object = this.encodeTerm(object, 2, rows);
+      this.repeated[2] = object;
+    }
   }
 
-  private encodeTriple(quad: RDF.Quad): RdfStreamRow[] {
+  private encodeTriple(quad: RDF.Quad, rows: RdfStreamRow[]): void {
     const value: RdfTriple = {};
-    const rows = this.encodeSpo(quad, value);
+    this.encodeSpo(quad, value, rows);
     rows.push({ case: 'triple', value });
-    return rows;
   }
 
-  private encodeQuad(quad: RDF.Quad): RdfStreamRow[] {
+  private encodeQuad(quad: RDF.Quad, rows: RdfStreamRow[]): void {
     const value: RdfQuad = {};
-    const rows = this.encodeSpo(quad, value);
+    this.encodeSpo(quad, value, rows);
     if (!sameTerm(this.repeated[3], quad.graph)) {
-      const encoded = this.encodeTerm(quad.graph, 3, true);
-      rows.push(...encoded.rows);
-      value.graph = encoded.value;
+      value.graph = this.encodeTerm(quad.graph, 3, rows, true);
       this.repeated[3] = quad.graph;
     }
     rows.push({ case: 'quad', value });
-    return rows;
   }
 
   private assertOpen(): void {

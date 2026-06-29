@@ -43,6 +43,7 @@
     "perf": "npm run build && node perf/bench.mjs",
     "perf:quick": "npm run build && node perf/bench.mjs 10000",
     "perf:profile": "npm run build && node --expose-gc perf/profile-breakdown.mjs",
+    "perf:profile:writer": "npm run build && node --expose-gc perf/profile-writer.mjs",
     "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs"
   },
   "dependencies": {
