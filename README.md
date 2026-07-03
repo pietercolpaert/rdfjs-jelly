@@ -30,7 +30,9 @@ npx rdfjs-jelly convert messages.log --output messages.jelly.zst
 
 Both commands accept a URL, local file path, or `-` for stdin. Plain, gzip, and
 zstd-compressed input is detected from its bytes. `read` is an alias for
-`inspect`; run `npx rdfjs-jelly --help` for the complete usage.
+`inspect`; run `npx rdfjs-jelly --help` for the complete usage. Conversion is a
+bounded-memory pipeline: the input, RDF Message parser, Jelly writer, native
+zstd compressor, and output file are all streamed.
 
 ## Parse and write
 
@@ -117,9 +119,13 @@ history of 20 messages.
 
 The conversion mode parses an RDF 1.2 Message Stream Log with `rdf-parser-ts`,
 preserves empty message boundaries, writes Jelly protocol version 2, compresses
-the result as a standard zstd frame, and saves a `.jelly.zst` file. The zstd
-WASM API works on complete buffers, so zstd input and conversion output are held
-in memory; gzip and uncompressed Jelly inspection remain streaming.
+the result as a standard zstd frame, and saves a `.jelly.zst` file. Conversion
+streams through the parser, Jelly encoder, and zstd WASM codec into a file chosen
+with the File System Access API. Browsers without that API cannot provide a
+bounded-memory download and should use the CLI. Browser zstd input is streamed
+when the browser exposes a native zstd `DecompressionStream`; otherwise the
+WASM fallback still requires a complete compressed input buffer. Gzip and
+uncompressed input remain streaming.
 
 ## Compression
 
@@ -138,10 +144,11 @@ const quads = createReadStream('data.jelly.zst')
 ```
 
 Browser `CompressionStream` and `DecompressionStream` do not currently expose
-zstd. The playground therefore uses `@hpcc-js/wasm-zstd` for zstd compression
-and decompression, while retaining the native browser stream API for gzip. The
-WASM codec is isolated in `dist/browser/playground.mjs`, so it does not increase
-the normal `dist/browser/index.mjs` parser bundle.
+zstd. The playground therefore uses `@hpcc-js/wasm-zstd` for incremental zstd
+output compression and buffered zstd input decompression, while retaining the
+native browser stream API for gzip. The WASM codec is isolated in
+`dist/browser/playground.mjs`, so it does not increase the normal
+`dist/browser/index.mjs` parser bundle.
 
 ## Performance
 

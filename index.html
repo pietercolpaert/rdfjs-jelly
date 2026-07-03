@@ -175,7 +175,7 @@
 
   <script type="module">
     import { Decoder, MessageDecoder } from './dist/browser/index.mjs';
-    import { compressZstd, convertMessageLogToJelly, decompressZstd } from './dist/browser/playground.mjs';
+    import { createZstdCompressionStream, convertMessageLogStreamToJelly, decompressZstd } from './dist/browser/playground.mjs';
 
     const HISTORY_LIMIT = 20;
     const INPUT_STEP_SIZE = 4096;
@@ -248,7 +248,11 @@
       } catch (error) {
         if (error?.name === 'AbortError' || session?.stopped) status.textContent = 'Stopped. Retained messages remain available.';
         else {
-          if (session) session.stopped = true;
+          if (session) {
+            session.stopped = true;
+            session.controller?.abort();
+            session.reader?.cancel(error).catch(() => undefined);
+          }
           status.textContent = error instanceof Error ? error.message : String(error);
         }
       } finally {
@@ -299,36 +303,72 @@
 
     async function convertMessageLog() {
       const activeSession = beginSession(false);
-      output.textContent = 'Reading RDF Message Stream Log…';
-      status.textContent = 'Opening input…';
+      const suggestedName = outputFilename(selectedSource() === 'file'
+        ? (fileInput.files?.[0]?.name || 'messages')
+        : inputName(urlInput.value.trim()));
+      const outputHandle = await chooseOutputFile(suggestedName);
+      output.textContent = 'Streaming RDF Message Stream Log…';
+      status.textContent = 'Opening input and loading the zstd encoder…';
       const source = await openInput(activeSession);
       const decoded = await decodeCompression(source.body, activeSession);
-      status.textContent = `Parsing ${decoded.compression === 'none' ? '' : `${decoded.compression}-compressed `}RDF Message Stream Log…`;
-      const input = new Uint8Array(await new Response(decoded.body).arrayBuffer());
-      if (activeSession.stopped) return;
-      const text = new TextDecoder('utf-8', { fatal: true }).decode(input);
-      const converted = convertMessageLogToJelly(text);
+      const compressor = await createZstdCompressionStream(3);
+      let jellyByteCount = 0;
+      let compressedByteCount = 0;
+      let lastPaint = performance.now();
+      const conversion = convertMessageLogStreamToJelly(decoded.body, progress => {
+        activeSession.processedMessages = progress.messageCount;
+        activeSession.processedQuads = progress.quadCount;
+        const now = performance.now();
+        if (now - lastPaint > 100) {
+          updateMetrics();
+          status.textContent = `Streaming conversion… ${progress.messageCount.toLocaleString()} messages processed.`;
+          lastPaint = now;
+        }
+      });
+      const countJelly = new TransformStream({
+        transform(chunk, controller) {
+          jellyByteCount += chunk.byteLength;
+          controller.enqueue(chunk);
+        },
+      });
+      const countCompressed = new TransformStream({
+        transform(chunk, controller) {
+          compressedByteCount += chunk.byteLength;
+          controller.enqueue(chunk);
+        },
+      });
+      status.textContent = `Streaming ${decoded.compression === 'none' ? '' : `${decoded.compression}-compressed `}input to ${outputHandle.name}…`;
+      const outputStream = await outputHandle.createWritable();
+      await conversion.readable
+        .pipeThrough(countJelly)
+        .pipeThrough(compressor)
+        .pipeThrough(countCompressed)
+        .pipeTo(outputStream, { signal: activeSession.controller.signal });
+      const converted = await conversion.result;
       activeSession.processedMessages = converted.messageCount;
       activeSession.processedQuads = converted.quadCount;
-      updateMetrics();
-      status.textContent = 'Compressing Jelly output with zstd…';
-      await nextPaint();
-      const compressed = await compressZstd(converted.jelly, 3);
-      if (activeSession.stopped) return;
-      const filename = outputFilename(source.name);
-      saveBytes(compressed, filename);
       activeSession.decoderFinished = true;
       output.textContent = [
-        `Created ${filename}`,
+        `Created ${outputHandle.name}`,
         '',
         `RDF Messages: ${converted.messageCount.toLocaleString()}`,
         `RDF quads: ${converted.quadCount.toLocaleString()}`,
-        `Jelly v2: ${formatSize(converted.jelly.byteLength)}`,
-        `Jelly v2 + zstd: ${formatSize(compressed.byteLength)}`,
+        `Jelly v2: ${formatSize(jellyByteCount)}`,
+        `Jelly v2 + zstd: ${formatSize(compressedByteCount)}`,
       ].join('\n');
       resultTitle.textContent = 'Conversion result';
-      historyNote.textContent = 'Download started';
-      status.textContent = `Done. Saved ${filename}.`;
+      historyNote.textContent = 'Written incrementally';
+      status.textContent = `Done. Saved ${outputHandle.name}.`;
+    }
+
+    async function chooseOutputFile(suggestedName) {
+      if (!globalThis.showSaveFilePicker) {
+        throw new Error('This browser cannot write a download incrementally. Use a Chromium-based browser with the File System Access API, or use the CLI.');
+      }
+      return globalThis.showSaveFilePicker({
+        suggestedName,
+        types: [{ description: 'Zstandard-compressed Jelly', accept: { 'application/zstd': ['.zst'] } }],
+      });
     }
 
     async function openInput(activeSession) {
@@ -390,6 +430,11 @@
         return { body: replay.pipeThrough(new DecompressionStream('gzip')), compression: 'gzip' };
       }
       if (isZstd(prefix)) {
+        if (globalThis.DecompressionStream) {
+          try {
+            return { body: replay.pipeThrough(new DecompressionStream('zstd')), compression: 'zstd' };
+          } catch { /* fall back to the complete-buffer WASM decoder */ }
+        }
         status.textContent = 'zstd detected. Buffering compressed input and loading the decoder…';
         const compressed = new Uint8Array(await new Response(replay).arrayBuffer());
         const decompressed = await decompressZstd(compressed);
@@ -598,17 +643,6 @@
     function inputName(input) {
       try { return new URL(input, location.href).pathname.split('/').filter(Boolean).at(-1) || 'stream'; }
       catch { return input; }
-    }
-
-    function saveBytes(bytes, filename) {
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zstd' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
     }
 
     function outputFilename(inputName) {

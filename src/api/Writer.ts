@@ -26,14 +26,16 @@ export class Writer {
   private lastCompletedCounter = -1;
   private mode: 'plain' | 'messages' | undefined;
   private ended = false;
+  private readonly streaming: boolean;
 
   public constructor(options?: WriterOptions);
   public constructor(output: BinaryOutput, options?: WriterOptions);
   public constructor(outputOrOptions: BinaryOutput | WriterOptions = {}, maybeOptions: WriterOptions = {}) {
     const options = isOutput(outputOrOptions) ? maybeOptions : outputOrOptions;
     this.output = isOutput(outputOrOptions) ? outputOrOptions : undefined;
-    this.encoder = new Encoder(options);
     this.messageEncoder = new MessageEncoder(options.delimited ?? true);
+    this.streaming = Boolean(this.output && this.messageEncoder.delimited);
+    this.encoder = new Encoder(options, this.streaming ? frame => this.writeFrame(frame) : undefined);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
       this.encoder.addNamespace(prefix, typeof iri === 'string' ? iri : iri.value);
     }
@@ -88,6 +90,18 @@ export class Writer {
     }
   }
 
+  /** Complete all RDF Messages below messageCount, adding any empty messages. */
+  public finishMessages(messageCount: number): void {
+    this.requireMode('messages');
+    if (!Number.isInteger(messageCount) || messageCount < 0) throw new JellyConformanceError('Invalid messageCount');
+    if (this.pendingCounter !== undefined && this.pendingCounter < messageCount) this.flushPending();
+    if (messageCount < this.lastCompletedCounter + 1) throw new JellyConformanceError('Message count cannot decrease');
+    while (this.lastCompletedCounter + 1 < messageCount) {
+      this.encoder.addMessage([]);
+      this.lastCompletedCounter++;
+    }
+  }
+
   public addGraph(graph: RDF.Quad_Graph, quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void {
     this.requireMode('messages');
     this.flushPending();
@@ -100,7 +114,12 @@ export class Writer {
       if (this.ended) throw new JellyConformanceError('Writer has already ended');
       this.ended = true;
       this.flushPending();
-      const bytes = this.messageEncoder.encodeAll(this.encoder.finish());
+      const frames = this.encoder.finish();
+      if (this.streaming) {
+        this.output!.end(error => done?.(error ?? null));
+        return;
+      }
+      const bytes = this.messageEncoder.encodeAll(frames);
       if (this.output) {
         this.output.write(bytes);
         this.output.end(error => done?.(error ?? null, error ? undefined : bytes));
@@ -109,6 +128,10 @@ export class Writer {
       const actual = error instanceof Error ? error : new Error(String(error));
       if (done) done(actual); else throw actual;
     }
+  }
+
+  private writeFrame(frame: Parameters<MessageEncoder['encode']>[0]): void {
+    this.output!.write(this.messageEncoder.encode(frame));
   }
 
   private addMessageQuad(entry: MessageQuad): void {

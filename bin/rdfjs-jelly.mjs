@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { basename } from 'node:path';
-import { gunzipSync } from 'node:zlib';
-import { Zstd } from '@hpcc-js/wasm-zstd';
-import { Parser as RdfTextParser } from 'rdf-parser-ts';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { constants, createGunzip, createZstdCompress, createZstdDecompress } from 'node:zlib';
+import { IncrementalParser as RdfTextIncrementalParser, isMessageQuad as isRdfTextMessageQuad } from 'rdf-parser-ts';
 import { Parser, Writer } from '../dist/index.mjs';
 
 const HELP = `Usage:
@@ -30,18 +31,19 @@ async function main(args) {
   }
 
   const { input, output } = parseArguments(args, operation === 'convert');
-  const source = await readInput(input);
-  const bytes = await decompress(source.bytes);
+  const source = await openInput(input);
+  const decoded = await decompress(source.body);
 
   if (operation === 'convert') {
-    const result = convertMessageLog(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-    const compressed = (await Zstd.load()).compress(result.jelly, 3);
     const outputPath = output ?? outputFilename(source.name);
-    await writeFile(outputPath, compressed);
-    console.error(`Saved ${outputPath} (${result.messageCount.toLocaleString()} messages, ${result.quadCount.toLocaleString()} quads).`);
+    const converter = new MessageLogToJelly();
+    const compressor = createZstdCompress({ params: { [constants.ZSTD_c_compressionLevel]: 3 } });
+    await pipeline(decoded, converter, compressor, createWriteStream(outputPath));
+    console.error(`Saved ${outputPath} (${converter.messageCount.toLocaleString()} messages, ${converter.quadCount.toLocaleString()} quads).`);
     return;
   }
 
+  const bytes = await collect(decoded);
   const messages = new Parser().parseMessages(bytes);
   for (const message of messages) {
     console.log(`# RDF Message ${message.messageCounter}`);
@@ -69,30 +71,59 @@ function parseArguments(args, allowOutput) {
   return { input, output };
 }
 
-async function readInput(input) {
-  if (input === '-') return { bytes: await readStdin(), name: 'messages' };
+async function openInput(input) {
+  if (input === '-') return { body: process.stdin, name: 'messages' };
   if (/^https?:\/\//i.test(input)) {
     const response = await fetch(input);
     if (!response.ok) throw new Error(`Fetch failed with HTTP ${response.status}.`);
+    if (!response.body) throw new Error('The HTTP response does not expose a readable body.');
     const name = new URL(input).pathname.split('/').filter(Boolean).at(-1) || 'stream';
-    return { bytes: new Uint8Array(await response.arrayBuffer()), name };
+    return { body: Readable.fromWeb(response.body), name };
   }
   if (/^file:\/\//i.test(input)) {
-    return { bytes: new Uint8Array(await readFile(new URL(input))), name: basename(new URL(input).pathname) };
+    return { body: createReadStream(new URL(input)), name: basename(new URL(input).pathname) };
   }
-  return { bytes: new Uint8Array(await readFile(input)), name: basename(input) };
+  return { body: createReadStream(input), name: basename(input) };
 }
 
-async function readStdin() {
+async function collect(stream) {
   const chunks = [];
-  for await (const chunk of process.stdin) chunks.push(chunk);
+  for await (const chunk of stream) chunks.push(chunk);
   return new Uint8Array(Buffer.concat(chunks));
 }
 
-async function decompress(bytes) {
-  if (bytes[0] === 0x1f && bytes[1] === 0x8b) return new Uint8Array(gunzipSync(bytes));
-  if (isZstd(bytes)) return (await Zstd.load()).decompress(bytes);
-  return bytes;
+async function decompress(body) {
+  const { prefix, replay } = await peek(body, 4);
+  if (prefix[0] === 0x1f && prefix[1] === 0x8b) return replay.pipe(createGunzip());
+  if (isZstd(prefix)) return replay.pipe(createZstdDecompress());
+  return replay;
+}
+
+async function peek(body, size) {
+  const iterator = body[Symbol.asyncIterator]();
+  const chunks = [];
+  let byteLength = 0;
+  while (byteLength < size) {
+    const result = await iterator.next();
+    if (result.done) break;
+    const chunk = Buffer.isBuffer(result.value) ? result.value : Buffer.from(result.value);
+    chunks.push(chunk);
+    byteLength += chunk.byteLength;
+  }
+  const prefix = Buffer.concat(chunks, byteLength).subarray(0, size);
+  const replay = Readable.from((async function* () {
+    try {
+      yield* chunks;
+      while (true) {
+        const result = await iterator.next();
+        if (result.done) return;
+        yield result.value;
+      }
+    } finally {
+      await iterator.return?.();
+    }
+  })());
+  return { prefix, replay };
 }
 
 function isZstd(bytes) {
@@ -101,23 +132,52 @@ function isZstd(bytes) {
   return standard || skippable;
 }
 
-function convertMessageLog(input) {
-  const messages = new RdfTextParser({ rdfMessages: true }).parseMessages(input);
-  const writer = new Writer({ version: 2 });
-  let quadCount = 0;
-  for (const message of messages) {
-    quadCount += message.length;
-    writer.addMessage(message);
+class MessageLogToJelly extends Transform {
+  parser = new RdfTextIncrementalParser({ rdfMessages: true });
+  decoder = new TextDecoder('utf-8', { fatal: true });
+  writer;
+  messageCount = 0;
+  quadCount = 0;
+
+  constructor() {
+    super({ readableObjectMode: false, writableObjectMode: false });
+    this.writer = new Writer({
+      write: chunk => this.push(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)),
+      end: callback => callback?.(null),
+    }, { version: 2 });
   }
-  let jelly;
-  let failure;
-  writer.end((error, output) => {
-    failure = error ?? undefined;
-    jelly = output;
-  });
-  if (failure) throw failure;
-  if (!jelly) throw new Error('The Jelly writer did not produce output.');
-  return { jelly, messageCount: messages.length, quadCount };
+
+  _transform(chunk, encoding, callback) {
+    try {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding);
+      this.addItems(this.parser.write(this.decoder.decode(bytes, { stream: true })));
+      this.writer.finishMessages(this.parser.parserState.messageCounter);
+      this.parser.parserState.namedNodeCache.clear();
+      callback();
+    } catch (error) {
+      callback(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  _flush(callback) {
+    try {
+      this.addItems(this.parser.end(this.decoder.decode()));
+      this.parser.parserState.namedNodeCache.clear();
+      this.messageCount = this.parser.parserState.messageCountHint;
+      this.writer.finishMessages(this.messageCount);
+      this.writer.end(error => callback(error ?? undefined));
+    } catch (error) {
+      callback(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  addItems(items) {
+    for (const item of items) {
+      if (!isRdfTextMessageQuad(item)) throw new Error('The RDF text parser did not enable RDF Messages mode.');
+      this.writer.addQuad(item);
+      this.quadCount++;
+    }
+  }
 }
 
 function outputFilename(inputName) {

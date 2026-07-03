@@ -23,11 +23,17 @@ describe('browser Web Streams', () => {
         controller.close();
       },
     });
-    const encoded = await collect(source.pipeThrough(new StreamWriter()));
-    expect(encoded).toHaveLength(1);
-    expect(new Parser().parse(encoded[0]!)).toHaveLength(2);
+    const encoded = await collect(source.pipeThrough(new StreamWriter({ messageSize: 1 })));
+    expect(encoded).toHaveLength(2);
+    const allBytes = new Uint8Array(encoded.reduce((total, chunk) => total + chunk.byteLength, 0));
+    let offset = 0;
+    for (const chunk of encoded) {
+      allBytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    expect(new Parser().parse(allBytes)).toHaveLength(2);
 
-    const bytes = encoded[0]!;
+    const bytes = allBytes;
     const binary = new ReadableStream<Uint8Array>({
       start(controller) {
         for (let i = 0; i < bytes.length; i++) controller.enqueue(bytes.subarray(i, i + 1));

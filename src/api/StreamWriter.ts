@@ -8,7 +8,10 @@ export class StreamWriter extends Transform {
 
   public constructor(options: WriterOptions = {}) {
     super({ writableObjectMode: true, readableObjectMode: false });
-    this.writer = new Writer(options);
+    this.writer = new Writer({
+      write: chunk => this.push(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)),
+      end: callback => callback?.(null),
+    }, options);
   }
 
   public import(stream: Readable): this {
@@ -22,13 +25,6 @@ export class StreamWriter extends Transform {
   }
 
   public override _flush(callback: TransformCallback): void {
-    this.writer.end((error, output) => {
-      if (error) callback(error);
-      else {
-        if (output) this.push(Buffer.from(output.buffer, output.byteOffset, output.byteLength));
-        callback();
-      }
-    });
+    this.writer.end(error => callback(error ?? undefined));
   }
 }
-

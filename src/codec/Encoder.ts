@@ -26,16 +26,19 @@ export class Encoder {
   public readonly lookup: LookupPreset;
   public readonly messageSize: number;
   public readonly frames: RdfStreamFrame[] = [];
+  private readonly frameSink?: (frame: RdfStreamFrame) => void;
   private readonly names: LookupEncoder;
   private readonly prefixes: LookupEncoder;
   private readonly datatypes: LookupEncoder;
   private readonly repeated: Array<RDF.Term | undefined> = new Array(4);
   private rows: RdfStreamRow[];
   private readonly scratchRows: RdfStreamRow[] = [];
+  private frameCount = 0;
   private hasStatements = false;
   private finished = false;
 
-  public constructor(options: WriterOptions = {}) {
+  public constructor(options: WriterOptions = {}, frameSink?: (frame: RdfStreamFrame) => void) {
+    this.frameSink = frameSink;
     if (options.version !== undefined && options.version !== 2) {
       throw new JellyUnsupportedFeatureError('Writing is supported only for Jelly protocol version 2');
     }
@@ -136,7 +139,7 @@ export class Encoder {
   public finish(): readonly RdfStreamFrame[] {
     this.assertOpen();
     this.finished = true;
-    if (this.rows.length > 0 || this.frames.length === 0) this.flush(undefined, true);
+    if (this.rows.length > 0 || this.frameCount === 0) this.flush(undefined, true);
     return this.frames;
   }
 
@@ -148,7 +151,10 @@ export class Encoder {
 
   private flush(metadata?: MessageMetadata, force = false): void {
     if (force || this.rows.length > 0) {
-      this.frames.push({ rows: this.rows, metadata: metadataMap(metadata) });
+      const frame = { rows: this.rows, metadata: metadataMap(metadata) };
+      this.frameCount++;
+      if (this.frameSink) this.frameSink(frame);
+      else this.frames.push(frame);
     }
     this.rows = [];
     this.hasStatements = false;

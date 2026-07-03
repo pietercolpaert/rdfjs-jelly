@@ -107,14 +107,18 @@ declare class Writer {
     private lastCompletedCounter;
     private mode;
     private ended;
+    private readonly streaming;
     constructor(options?: WriterOptions);
     constructor(output: BinaryOutput, options?: WriterOptions);
     addQuad(value: RDF.Quad | MessageQuad, done?: (error?: Error | null) => void): void;
     addQuads(values: Iterable<RDF.Quad | MessageQuad>): void;
     addNamespace(prefix: string, iri: string | RDF.NamedNode): void;
     addMessage(message: Iterable<RDF.Quad> | Message, metadata?: MessageMetadata): void;
+    /** Complete all RDF Messages below messageCount, adding any empty messages. */
+    finishMessages(messageCount: number): void;
     addGraph(graph: RDF.Quad_Graph, quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void;
     end(done?: WriterEndCallback): void;
+    private writeFrame;
     private addMessageQuad;
     private flushPending;
     private requireMode;
@@ -284,15 +288,17 @@ declare class Encoder {
     readonly lookup: LookupPreset;
     readonly messageSize: number;
     readonly frames: RdfStreamFrame[];
+    private readonly frameSink?;
     private readonly names;
     private readonly prefixes;
     private readonly datatypes;
     private readonly repeated;
     private rows;
     private readonly scratchRows;
+    private frameCount;
     private hasStatements;
     private finished;
-    constructor(options?: WriterOptions);
+    constructor(options?: WriterOptions, frameSink?: (frame: RdfStreamFrame) => void);
     private validateLogicalType;
     addNamespace(name: string, iri: string): void;
     addQuad(quad: RDF.Quad): void;

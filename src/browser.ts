@@ -71,12 +71,16 @@ export class StreamWriter {
   public readonly writable: WritableStream<RDF.Quad | MessageQuad>;
 
   public constructor(options: WriterOptions = {}) {
-    const writer = new Writer(options);
+    let controller: TransformStreamDefaultController<Uint8Array>;
+    const writer = new Writer({
+      write: chunk => controller.enqueue(chunk),
+      end: callback => callback?.(null),
+    }, options);
     const transform = new TransformStream<RDF.Quad | MessageQuad, Uint8Array>({
+      start: value => { controller = value; },
       transform: value => writer.addQuad(value),
-      flush: controller => writer.end((error, output) => {
+      flush: () => writer.end(error => {
         if (error) throw error;
-        if (output) controller.enqueue(output);
       }),
     });
     this.readable = transform.readable;

@@ -3352,15 +3352,18 @@ var Encoder = class {
   lookup;
   messageSize;
   frames = [];
+  frameSink;
   names;
   prefixes;
   datatypes;
   repeated = new Array(4);
   rows;
   scratchRows = [];
+  frameCount = 0;
   hasStatements = false;
   finished = false;
-  constructor(options = {}) {
+  constructor(options = {}, frameSink) {
+    this.frameSink = frameSink;
     if (options.version !== void 0 && options.version !== 2) {
       throw new JellyUnsupportedFeatureError("Writing is supported only for Jelly protocol version 2");
     }
@@ -3453,7 +3456,7 @@ var Encoder = class {
   finish() {
     this.assertOpen();
     this.finished = true;
-    if (this.rows.length > 0 || this.frames.length === 0) this.flush(void 0, true);
+    if (this.rows.length > 0 || this.frameCount === 0) this.flush(void 0, true);
     return this.frames;
   }
   appendRows(rows, statement) {
@@ -3463,7 +3466,10 @@ var Encoder = class {
   }
   flush(metadata, force = false) {
     if (force || this.rows.length > 0) {
-      this.frames.push({ rows: this.rows, metadata: metadataMap(metadata) });
+      const frame = { rows: this.rows, metadata: metadataMap(metadata) };
+      this.frameCount++;
+      if (this.frameSink) this.frameSink(frame);
+      else this.frames.push(frame);
     }
     this.rows = [];
     this.hasStatements = false;
@@ -3573,11 +3579,13 @@ var Writer = class {
   lastCompletedCounter = -1;
   mode;
   ended = false;
+  streaming;
   constructor(outputOrOptions = {}, maybeOptions = {}) {
     const options = isOutput(outputOrOptions) ? maybeOptions : outputOrOptions;
     this.output = isOutput(outputOrOptions) ? outputOrOptions : void 0;
-    this.encoder = new Encoder(options);
     this.messageEncoder = new MessageEncoder(options.delimited ?? true);
+    this.streaming = Boolean(this.output && this.messageEncoder.delimited);
+    this.encoder = new Encoder(options, this.streaming ? (frame) => this.writeFrame(frame) : void 0);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
       this.encoder.addNamespace(prefix, typeof iri === "string" ? iri : iri.value);
     }
@@ -3628,6 +3636,17 @@ var Writer = class {
       this.lastCompletedCounter++;
     }
   }
+  /** Complete all RDF Messages below messageCount, adding any empty messages. */
+  finishMessages(messageCount) {
+    this.requireMode("messages");
+    if (!Number.isInteger(messageCount) || messageCount < 0) throw new JellyConformanceError("Invalid messageCount");
+    if (this.pendingCounter !== void 0 && this.pendingCounter < messageCount) this.flushPending();
+    if (messageCount < this.lastCompletedCounter + 1) throw new JellyConformanceError("Message count cannot decrease");
+    while (this.lastCompletedCounter + 1 < messageCount) {
+      this.encoder.addMessage([]);
+      this.lastCompletedCounter++;
+    }
+  }
   addGraph(graph, quads, metadata) {
     this.requireMode("messages");
     this.flushPending();
@@ -3639,7 +3658,12 @@ var Writer = class {
       if (this.ended) throw new JellyConformanceError("Writer has already ended");
       this.ended = true;
       this.flushPending();
-      const bytes = this.messageEncoder.encodeAll(this.encoder.finish());
+      const frames = this.encoder.finish();
+      if (this.streaming) {
+        this.output.end((error) => done?.(error ?? null));
+        return;
+      }
+      const bytes = this.messageEncoder.encodeAll(frames);
       if (this.output) {
         this.output.write(bytes);
         this.output.end((error) => done?.(error ?? null, error ? void 0 : bytes));
@@ -3649,6 +3673,9 @@ var Writer = class {
       if (done) done(actual);
       else throw actual;
     }
+  }
+  writeFrame(frame) {
+    this.output.write(this.messageEncoder.encode(frame));
   }
   addMessageQuad(entry) {
     this.requireMode("messages");
@@ -3738,7 +3765,10 @@ var StreamWriter = class extends Transform2 {
   writer;
   constructor(options = {}) {
     super({ writableObjectMode: true, readableObjectMode: false });
-    this.writer = new Writer(options);
+    this.writer = new Writer({
+      write: (chunk) => this.push(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)),
+      end: (callback) => callback?.(null)
+    }, options);
   }
   import(stream) {
     stream.on("error", (error) => this.destroy(error));
@@ -3749,13 +3779,7 @@ var StreamWriter = class extends Transform2 {
     this.writer.addQuad(value, (error) => callback(error ?? void 0));
   }
   _flush(callback) {
-    this.writer.end((error, output) => {
-      if (error) callback(error);
-      else {
-        if (output) this.push(Buffer.from(output.buffer, output.byteOffset, output.byteLength));
-        callback();
-      }
-    });
+    this.writer.end((error) => callback(error ?? void 0));
   }
 };
 export {

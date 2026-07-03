@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { finished } from 'node:stream/promises';
 import type * as RDF from '@rdfjs/types';
 import { DataFactory, StreamParser, StreamWriter, Writer } from '../src';
 
@@ -25,9 +26,12 @@ describe('Node streams', () => {
 
   it('serializes an object stream', async () => {
     const chunks: Buffer[] = [];
-    for await (const chunk of Readable.from([statement, statement]).pipe(new StreamWriter())) chunks.push(chunk as Buffer);
+    const stream = Readable.from([statement, statement, statement]).pipe(new StreamWriter({ messageSize: 1 }));
+    stream.on('data', chunk => chunks.push(chunk as Buffer));
+    await finished(stream);
     const output = Buffer.concat(chunks);
+    expect(chunks.length).toBeGreaterThan(1);
     expect(output.byteLength).toBeGreaterThan(0);
-    expect((await import('../src')).Parser.prototype.parse.call(new (await import('../src')).Parser(), output)).toHaveLength(2);
+    expect((await import('../src')).Parser.prototype.parse.call(new (await import('../src')).Parser(), output)).toHaveLength(3);
   });
 });
