@@ -18,6 +18,20 @@ Node.js 24 or newer is required by the Node build. The browser bundle targets ES
 npm install rdfjs-jelly
 ```
 
+## Command line
+
+Use the package without installing it to inspect a Jelly stream or convert an
+RDF 1.2 Message Stream Log:
+
+```sh
+npx rdfjs-jelly inspect 'https://example.org/data.jelly.zst'
+npx rdfjs-jelly convert messages.log --output messages.jelly.zst
+```
+
+Both commands accept a URL, local file path, or `-` for stdin. Plain, gzip, and
+zstd-compressed input is detected from its bytes. `read` is an alias for
+`inspect`; run `npx rdfjs-jelly --help` for the complete usage.
+
 ## Parse and write
 
 ```ts

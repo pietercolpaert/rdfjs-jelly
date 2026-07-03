@@ -65,6 +65,18 @@
     .controls { display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.55rem; margin-top: 1rem; }
     .controls button { width: auto; min-width: 3.2rem; margin: 0; }
     #stop { margin-top: 0.55rem; }
+    .command-panel { margin-top: 1rem; }
+    .command-panel label { margin-top: 0; }
+    .command-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.55rem; align-items: stretch; }
+    .command-row code {
+      overflow-x: auto;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: var(--panel);
+      white-space: nowrap;
+    }
+    .command-row button { width: auto; }
     @media (max-width: 520px) { .controls { grid-template-columns: 1fr 1fr 1fr; } .controls #run { grid-column: 1 / -1; width: 100%; } }
     .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin: 1rem 0; }
     @media (max-width: 560px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -132,6 +144,14 @@
           <button id="fast-forward" class="secondary" type="button" title="Parse to the last message" aria-label="Parse all remaining messages" disabled>&gt;&gt;|</button>
         </div>
         <button id="stop" class="secondary danger" type="button" disabled>Stop</button>
+        <div id="command-panel" class="command-panel" hidden>
+          <label for="cli-command">Run the same operation from a terminal</label>
+          <div class="command-row">
+            <code id="cli-command"></code>
+            <button id="copy-command" class="secondary" type="button">Copy</button>
+          </div>
+          <p id="command-hint" class="hint"></p>
+        </div>
         <p id="status" class="status" aria-live="polite">Ready.</p>
       </form>
 
@@ -170,6 +190,10 @@
     const nextButton = document.querySelector('#next');
     const fastForwardButton = document.querySelector('#fast-forward');
     const stopButton = document.querySelector('#stop');
+    const commandPanel = document.querySelector('#command-panel');
+    const commandOutput = document.querySelector('#cli-command');
+    const copyCommandButton = document.querySelector('#copy-command');
+    const commandHint = document.querySelector('#command-hint');
     const status = document.querySelector('#status');
     const output = document.querySelector('#message-output');
     const resultTitle = document.querySelector('#result-title');
@@ -201,6 +225,7 @@
     });
     form.addEventListener('submit', event => {
       event.preventDefault();
+      showCliCommand();
       runExclusive(operationInput.value === 'convert' ? convertMessageLog : startParsing);
     });
     previousButton.addEventListener('click', () => {
@@ -211,6 +236,7 @@
     nextButton.addEventListener('click', () => runExclusive(showNextMessage));
     fastForwardButton.addEventListener('click', () => runExclusive(fastForward));
     stopButton.addEventListener('click', stopParsing);
+    copyCommandButton.addEventListener('click', copyCliCommand);
     if (initialParams.get('autostart') === '1') requestAnimationFrame(() => form.requestSubmit());
 
     async function runExclusive(operation) {
@@ -534,6 +560,45 @@
     }
 
     function selectedSource() { return form.elements.source.value; }
+
+    function showCliCommand() {
+      const fileSource = selectedSource() === 'file';
+      const input = fileSource ? fileInput.files?.[0]?.name : urlInput.value.trim();
+      if (!input) {
+        commandPanel.hidden = true;
+        return;
+      }
+      const operation = operationInput.value === 'convert' ? 'convert' : 'inspect';
+      const parts = ['npx', 'rdfjs-jelly', operation, shellQuote(input)];
+      if (operation === 'convert') parts.push('--output', shellQuote(outputFilename(inputName(input))));
+      commandOutput.textContent = parts.join(' ');
+      commandHint.textContent = fileSource ? 'Run this command from the directory containing the selected file.' : '';
+      copyCommandButton.textContent = 'Copy';
+      commandPanel.hidden = false;
+    }
+
+    async function copyCliCommand() {
+      const command = commandOutput.textContent;
+      try {
+        await navigator.clipboard.writeText(command);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(commandOutput);
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+        selection.removeAllRanges();
+      }
+      copyCommandButton.textContent = 'Copied';
+    }
+
+    function shellQuote(value) { return `'${value.replaceAll("'", `'\\''`)}'`; }
+
+    function inputName(input) {
+      try { return new URL(input, location.href).pathname.split('/').filter(Boolean).at(-1) || 'stream'; }
+      catch { return input; }
+    }
 
     function saveBytes(bytes, filename) {
       const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zstd' }));

@@ -13,6 +13,9 @@
   "browser": "./dist/browser/index.mjs",
   "unpkg": "./dist/browser/index.global.js",
   "jsdelivr": "./dist/browser/index.global.js",
+  "bin": {
+    "rdfjs-jelly": "./bin/rdfjs-jelly.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -26,7 +29,7 @@
       "default": "./dist/browser/index.mjs"
     }
   },
-  "files": ["dist", "src", "proto", "README.md", "LICENSE", "NOTICE"],
+  "files": ["bin", "dist", "src", "proto", "README.md", "LICENSE", "NOTICE"],
   "scripts": {
     "clean": "rm -rf dist coverage",
     "build": "npm run build:node && npm run build:browser",
