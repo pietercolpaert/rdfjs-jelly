@@ -26,7 +26,7 @@
     header { margin-bottom: 1.5rem; }
     h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); letter-spacing: -0.04em; }
     h2 { margin-top: 0; }
-    .lead { max-width: 75ch; color: var(--muted); font-size: 1.1rem; }
+    .lead { max-width: 78ch; color: var(--muted); font-size: 1.1rem; }
     .grid { display: grid; grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1.2fr); gap: 1rem; align-items: start; }
     @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
     form, .card {
@@ -38,7 +38,7 @@
       box-shadow: 0 20px 60px rgb(0 0 0 / 0.08);
     }
     label { display: block; margin: 0.8rem 0 0.35rem; font-weight: 700; }
-    input, button {
+    input, select, button {
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 0.75rem;
@@ -57,6 +57,11 @@
     button:disabled { cursor: not-allowed; opacity: 0.45; }
     .secondary { color: var(--accent); background: transparent; border: 1px solid var(--border); }
     .danger { color: var(--danger); }
+    fieldset { border: 0; padding: 0; margin: 0.8rem 0 0; }
+    legend { font-weight: 700; margin-bottom: 0.35rem; }
+    .source-options { display: flex; gap: 1rem; }
+    .source-options label { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-weight: 500; }
+    .source-options input { width: auto; }
     .controls { display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.55rem; margin-top: 1rem; }
     .controls button { width: auto; min-width: 3.2rem; margin: 0; }
     #stop { margin-top: 0.55rem; }
@@ -83,20 +88,42 @@
     }
     .message-head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <main>
     <header>
       <h1>rdfjs-jelly playground</h1>
-      <p class="lead">Load a Jelly stream one RDF Message at a time. Plain <code>.jelly</code> and gzip-compressed <code>.jelly.gz</code> URLs are supported. Only the most recent 20 visited messages are retained.</p>
+      <p class="lead">Inspect Jelly streams one RDF Message at a time, or convert an RDF Message Stream Log to a zstd-compressed Jelly v2 file. URLs and uploaded files may be plain, gzip-compressed, or zstd-compressed.</p>
     </header>
 
     <div class="grid">
       <form id="playground-form">
-        <label for="url">Jelly URL</label>
-        <input id="url" name="url" type="url" autocomplete="url" required>
-        <p class="hint">The bundled OSM Denmark 10K stream is selected by default. You can replace it with another URL whose server allows browser CORS access.</p>
+        <label for="operation">Operation</label>
+        <select id="operation">
+          <option value="inspect">Inspect a Jelly stream</option>
+          <option value="convert">Convert an RDF Message Stream Log to a Jelly zstd compressed file</option>
+        </select>
+
+        <fieldset>
+          <legend>Input source</legend>
+          <div class="source-options">
+            <label><input type="radio" name="source" value="url" checked> URL</label>
+            <label><input type="radio" name="source" value="file"> Upload file</label>
+          </div>
+        </fieldset>
+
+        <div id="url-fields">
+          <label for="url">Input URL</label>
+          <input id="url" name="url" type="url" autocomplete="url">
+          <p class="hint">Remote servers must allow browser CORS access.</p>
+        </div>
+        <div id="file-fields" hidden>
+          <label for="file">Input file</label>
+          <input id="file" name="file" type="file" accept=".jelly,.gz,.zst,.zstd,.ttl,.trig,.nt,.nq,text/*,application/gzip,application/zstd">
+          <p class="hint">Compression is detected from the file bytes, not its extension.</p>
+        </div>
 
         <div class="controls" aria-label="Message navigation">
           <button id="run" type="submit">Parse</button>
@@ -110,7 +137,7 @@
 
       <section class="card">
         <div class="message-head">
-          <h2>RDF Message</h2>
+          <h2 id="result-title">RDF Message</h2>
           <span id="history-note" class="hint">No message loaded</span>
         </div>
         <div class="metrics">
@@ -118,7 +145,7 @@
           <div class="metric"><strong id="message-quads">0</strong><span>quads in message</span></div>
           <div class="metric"><strong id="processed-messages">0</strong><span>messages processed</span></div>
           <div class="metric"><strong id="processed-quads">0</strong><span>quads processed</span></div>
-          <div class="metric"><strong id="downloaded">0 B</strong><span>downloaded</span></div>
+          <div class="metric"><strong id="downloaded">0 B</strong><span>input bytes read</span></div>
           <div class="metric"><strong id="elapsed">0 ms</strong><span>elapsed</span></div>
         </div>
         <pre id="message-output" aria-live="polite">Press Parse to load the first RDF Message.</pre>
@@ -128,12 +155,16 @@
 
   <script type="module">
     import { Decoder, MessageDecoder } from './dist/browser/index.mjs';
+    import { compressZstd, convertMessageLogToJelly, decompressZstd } from './dist/browser/playground.mjs';
 
     const HISTORY_LIMIT = 20;
     const INPUT_STEP_SIZE = 4096;
-
     const form = document.querySelector('#playground-form');
+    const operationInput = document.querySelector('#operation');
     const urlInput = document.querySelector('#url');
+    const fileInput = document.querySelector('#file');
+    const urlFields = document.querySelector('#url-fields');
+    const fileFields = document.querySelector('#file-fields');
     const runButton = document.querySelector('#run');
     const previousButton = document.querySelector('#previous');
     const nextButton = document.querySelector('#next');
@@ -141,6 +172,7 @@
     const stopButton = document.querySelector('#stop');
     const status = document.querySelector('#status');
     const output = document.querySelector('#message-output');
+    const resultTitle = document.querySelector('#result-title');
     const historyNote = document.querySelector('#history-note');
     const metrics = {
       messageNumber: document.querySelector('#message-number'),
@@ -158,13 +190,18 @@
     let busy = false;
 
     const initialParams = new URLSearchParams(location.hash.slice(1));
-    const initialUrl = initialParams.get('url') || new URL('./example/osm-dk-10k.jelly.gz', location.href).href;
-    urlInput.value = initialUrl;
+    urlInput.value = initialParams.get('url') || new URL('./example/osm-dk-10k.jelly.gz', location.href).href;
+    operationInput.value = initialParams.get('operation') === 'convert' ? 'convert' : 'inspect';
+    updateMode();
 
-    form.addEventListener('input', persistUrl);
+    form.addEventListener('input', event => {
+      if (event.target.name === 'source') updateSource();
+      if (event.target === operationInput) updateMode();
+      persistSettings();
+    });
     form.addEventListener('submit', event => {
       event.preventDefault();
-      runExclusive(startParsing);
+      runExclusive(operationInput.value === 'convert' ? convertMessageLog : startParsing);
     });
     previousButton.addEventListener('click', () => {
       if (historyCursor <= 0) return;
@@ -190,25 +227,22 @@
         }
       } finally {
         busy = false;
+        updateMetrics();
         updateControls();
       }
     }
 
-    async function startParsing() {
+    function beginSession(forJelly) {
       stopParsing(false);
-      const url = urlInput.value.trim();
-      if (!url) throw new Error('Enter a Jelly URL.');
       history = [];
       historyCursor = -1;
       discardedMessages = 0;
       resetMetrics();
-      output.textContent = 'Fetching stream…';
-      status.textContent = 'Fetching URL…';
       const controller = new AbortController();
       session = {
         controller,
-        framer: new MessageDecoder(),
-        decoder: new Decoder(),
+        framer: forJelly ? new MessageDecoder() : undefined,
+        decoder: forJelly ? new Decoder() : undefined,
         pendingFrames: [],
         inputChunk: undefined,
         inputOffset: 0,
@@ -220,14 +254,129 @@
         processedQuads: 0,
         startedAt: performance.now(),
       };
-      const response = await fetch(url, { signal: controller.signal });
-      if (!response.ok) throw new Error(`Fetch failed with HTTP ${response.status}.`);
-      if (!response.body) throw new Error('This browser does not expose the response as a stream.');
-      const { body, compressed } = await sniffCompression(response.body, session);
-      session.reader = body.getReader();
-      status.textContent = compressed ? 'Gzip detected. Parsing the first message…' : 'Parsing the first message…';
+      return session;
+    }
+
+    async function startParsing() {
+      const activeSession = beginSession(true);
+      output.textContent = 'Opening stream…';
+      status.textContent = 'Opening input…';
+      const source = await openInput(activeSession);
+      const decoded = await decodeCompression(source.body, activeSession);
+      activeSession.reader = decoded.body.getReader();
+      status.textContent = decoded.compression === 'none'
+        ? 'Parsing the first message…'
+        : `${decoded.compression} detected. Parsing the first message…`;
       await loadOneMessage();
       if (history.length === 0) status.textContent = 'The stream contained no RDF Messages.';
+    }
+
+    async function convertMessageLog() {
+      const activeSession = beginSession(false);
+      output.textContent = 'Reading RDF Message Stream Log…';
+      status.textContent = 'Opening input…';
+      const source = await openInput(activeSession);
+      const decoded = await decodeCompression(source.body, activeSession);
+      status.textContent = `Parsing ${decoded.compression === 'none' ? '' : `${decoded.compression}-compressed `}RDF Message Stream Log…`;
+      const input = new Uint8Array(await new Response(decoded.body).arrayBuffer());
+      if (activeSession.stopped) return;
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(input);
+      const converted = convertMessageLogToJelly(text);
+      activeSession.processedMessages = converted.messageCount;
+      activeSession.processedQuads = converted.quadCount;
+      updateMetrics();
+      status.textContent = 'Compressing Jelly output with zstd…';
+      await nextPaint();
+      const compressed = await compressZstd(converted.jelly, 3);
+      if (activeSession.stopped) return;
+      const filename = outputFilename(source.name);
+      saveBytes(compressed, filename);
+      activeSession.decoderFinished = true;
+      output.textContent = [
+        `Created ${filename}`,
+        '',
+        `RDF Messages: ${converted.messageCount.toLocaleString()}`,
+        `RDF quads: ${converted.quadCount.toLocaleString()}`,
+        `Jelly v2: ${formatSize(converted.jelly.byteLength)}`,
+        `Jelly v2 + zstd: ${formatSize(compressed.byteLength)}`,
+      ].join('\n');
+      resultTitle.textContent = 'Conversion result';
+      historyNote.textContent = 'Download started';
+      status.textContent = `Done. Saved ${filename}.`;
+    }
+
+    async function openInput(activeSession) {
+      if (selectedSource() === 'file') {
+        const file = fileInput.files?.[0];
+        if (!file) throw new Error('Choose an input file.');
+        return { body: file.stream(), name: file.name };
+      }
+      const url = urlInput.value.trim();
+      if (!url) throw new Error('Enter an input URL.');
+      const response = await fetch(url, { signal: activeSession.controller.signal });
+      if (!response.ok) throw new Error(`Fetch failed with HTTP ${response.status}.`);
+      if (!response.body) throw new Error('This browser does not expose the response as a stream.');
+      let name = 'stream';
+      try { name = new URL(url, location.href).pathname.split('/').filter(Boolean).at(-1) || name; } catch { /* use default */ }
+      return { body: response.body, name };
+    }
+
+    async function decodeCompression(body, activeSession) {
+      const reader = body.getReader();
+      const prefixChunks = [];
+      let prefixLength = 0;
+      let sourceEnded = false;
+      while (prefixLength < 4 && !sourceEnded) {
+        const result = await reader.read();
+        sourceEnded = result.done;
+        if (!result.done && result.value.byteLength > 0) {
+          prefixChunks.push(result.value);
+          prefixLength += result.value.byteLength;
+          activeSession.downloadedBytes += result.value.byteLength;
+        }
+      }
+      const prefix = new Uint8Array(Math.min(prefixLength, 4));
+      let offset = 0;
+      for (const chunk of prefixChunks) {
+        const length = Math.min(chunk.byteLength, prefix.byteLength - offset);
+        prefix.set(chunk.subarray(0, length), offset);
+        offset += length;
+        if (offset === prefix.byteLength) break;
+      }
+      const replay = new ReadableStream({
+        start(controller) {
+          for (const chunk of prefixChunks) controller.enqueue(chunk);
+          if (sourceEnded) controller.close();
+        },
+        async pull(controller) {
+          const result = await reader.read();
+          if (result.done) controller.close();
+          else {
+            activeSession.downloadedBytes += result.value.byteLength;
+            controller.enqueue(result.value);
+          }
+          updateMetrics();
+        },
+        cancel(reason) { return reader.cancel(reason); },
+      });
+      if (isGzip(prefix)) {
+        if (!globalThis.DecompressionStream) throw new Error('This browser cannot decompress gzip streams.');
+        return { body: replay.pipeThrough(new DecompressionStream('gzip')), compression: 'gzip' };
+      }
+      if (isZstd(prefix)) {
+        status.textContent = 'zstd detected. Buffering compressed input and loading the decoder…';
+        const compressed = new Uint8Array(await new Response(replay).arrayBuffer());
+        const decompressed = await decompressZstd(compressed);
+        return { body: new Blob([decompressed]).stream(), compression: 'zstd' };
+      }
+      return { body: replay, compression: 'none' };
+    }
+
+    function isGzip(bytes) { return bytes[0] === 0x1f && bytes[1] === 0x8b; }
+    function isZstd(bytes) {
+      const standard = bytes[0] === 0x28 && bytes[1] === 0xb5 && bytes[2] === 0x2f && bytes[3] === 0xfd;
+      const skippable = (bytes[0] & 0xf0) === 0x50 && bytes[1] === 0x2a && bytes[2] === 0x4d && bytes[3] === 0x18;
+      return standard || skippable;
     }
 
     async function showNextMessage() {
@@ -318,44 +467,6 @@
       updateControls();
     }
 
-    async function sniffCompression(body, activeSession) {
-      const reader = body.getReader();
-      const prefixChunks = [];
-      let prefixLength = 0;
-      let sourceEnded = false;
-      while (prefixLength < 2 && !sourceEnded) {
-        const result = await reader.read();
-        sourceEnded = result.done;
-        if (!result.done && result.value.byteLength > 0) {
-          prefixChunks.push(result.value);
-          prefixLength += result.value.byteLength;
-          activeSession.downloadedBytes += result.value.byteLength;
-        }
-      }
-      const replay = new ReadableStream({
-        start(controller) {
-          for (const chunk of prefixChunks) controller.enqueue(chunk);
-          if (sourceEnded) controller.close();
-        },
-        async pull(controller) {
-          const result = await reader.read();
-          if (result.done) controller.close();
-          else {
-            activeSession.downloadedBytes += result.value.byteLength;
-            controller.enqueue(result.value);
-          }
-          updateMetrics();
-        },
-        cancel(reason) { return reader.cancel(reason); },
-      });
-      const firstByte = prefixChunks[0]?.[0];
-      const secondByte = prefixChunks[0]?.byteLength >= 2 ? prefixChunks[0][1] : prefixChunks[1]?.[0];
-      const compressed = firstByte === 0x1f && secondByte === 0x8b;
-      if (!compressed) return { body: replay, compressed: false };
-      if (!globalThis.DecompressionStream) throw new Error('This browser cannot decompress gzip streams.');
-      return { body: replay.pipeThrough(new DecompressionStream('gzip')), compressed: true };
-    }
-
     function renderCurrentMessage() {
       const message = history[historyCursor];
       if (!message) {
@@ -390,15 +501,54 @@
 
     function updateControls() {
       runButton.disabled = busy;
-      const hasSession = Boolean(session);
+      const inspect = operationInput.value === 'inspect';
+      const hasSession = Boolean(session) && inspect;
+      previousButton.hidden = !inspect;
+      nextButton.hidden = !inspect;
+      fastForwardButton.hidden = !inspect;
       previousButton.disabled = busy || historyCursor <= 0;
       const atBufferedEnd = historyCursor >= history.length - 1;
       nextButton.disabled = busy || !hasSession || (atBufferedEnd && (session.decoderFinished || session.stopped));
       fastForwardButton.disabled = busy || !hasSession || session.decoderFinished || session.stopped;
-      stopButton.disabled = !hasSession || session.decoderFinished || session.stopped;
+      stopButton.disabled = !session || session.decoderFinished || session.stopped;
       if (historyCursor === 0 && discardedMessages > 0 && !busy) {
         status.textContent = `The ${discardedMessages.toLocaleString()} earlier messages were discarded; history is limited to ${HISTORY_LIMIT}.`;
       }
+    }
+
+    function updateMode() {
+      const inspect = operationInput.value === 'inspect';
+      runButton.textContent = inspect ? 'Parse' : 'Convert & save .jelly.zst';
+      resultTitle.textContent = inspect ? 'RDF Message' : 'Conversion result';
+      output.textContent = inspect
+        ? 'Press Parse to load the first RDF Message.'
+        : 'Choose an RDF Message Stream Log and press Convert.';
+      historyNote.textContent = inspect ? 'No message loaded' : 'No conversion run';
+      updateControls();
+    }
+
+    function updateSource() {
+      const file = selectedSource() === 'file';
+      urlFields.hidden = file;
+      fileFields.hidden = !file;
+    }
+
+    function selectedSource() { return form.elements.source.value; }
+
+    function saveBytes(bytes, filename) {
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zstd' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    }
+
+    function outputFilename(inputName) {
+      const base = inputName.replace(/\.(?:gz|zst|zstd)$/i, '').replace(/\.(?:ttl|trig|nt|nq|rdf|log)$/i, '') || 'messages';
+      return `${base}.jelly.zst`;
     }
 
     function formatQuad(quad) {
@@ -430,8 +580,9 @@
       return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
     }
 
-    function persistUrl() {
-      window.history.replaceState(null, '', `${location.pathname}${location.search}#${new URLSearchParams({ url: urlInput.value })}`);
+    function persistSettings() {
+      const params = new URLSearchParams({ url: urlInput.value, operation: operationInput.value });
+      window.history.replaceState(null, '', `${location.pathname}${location.search}#${params}`);
     }
 
     function resetMetrics() {
@@ -441,12 +592,10 @@
       metrics.processedQuads.textContent = '0';
       metrics.downloaded.textContent = '0 B';
       metrics.elapsed.textContent = '0 ms';
-      historyNote.textContent = 'No message loaded';
+      historyNote.textContent = operationInput.value === 'inspect' ? 'No message loaded' : 'Conversion in progress';
     }
 
-    function nextPaint() {
-      return new Promise(resolve => requestAnimationFrame(() => resolve()));
-    }
+    function nextPaint() { return new Promise(resolve => requestAnimationFrame(resolve)); }
   </script>
 </body>
 </html>

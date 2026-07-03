@@ -22,6 +22,12 @@ async function build() {
   await Promise.all([
     esbuild.build({ ...common, format: 'esm', outfile: path.join(outdir, 'index.mjs') }),
     esbuild.build({ ...common, format: 'iife', globalName: 'RDFJSJelly', outfile: path.join(outdir, 'index.global.js') }),
+    esbuild.build({
+      ...common,
+      entryPoints: [path.join(root, 'src', 'playground.ts')],
+      format: 'esm',
+      outfile: path.join(outdir, 'playground.mjs'),
+    }),
   ]);
   const generatedTypes = path.join(root, 'dist', 'browser-types', 'browser.d.mts');
   const declarations = fs.readFileSync(generatedTypes, 'utf8');

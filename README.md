@@ -95,17 +95,39 @@ npm run build:browser
 python3 -m http.server 8000
 ```
 
-The bundled `example/osm-dk-10k.jelly.gz` dataset is selected by default, while
-the URL remains editable. The playground detects gzip from the response bytes,
-steps through one RDF Message at a time, can fast-forward to the end, and
-retains a rolling history of 20 messages.
+The bundled `example/osm-dk-10k.jelly.gz` dataset is selected by default. The
+playground accepts URLs and uploaded files, and detects plain, gzip, and zstd
+input from its magic bytes rather than the filename. It steps through one Jelly
+RDF Message at a time, can fast-forward to the end, and retains a rolling
+history of 20 messages.
+
+The conversion mode parses an RDF 1.2 Message Stream Log with `rdf-parser-ts`,
+preserves empty message boundaries, writes Jelly protocol version 2, compresses
+the result as a standard zstd frame, and saves a `.jelly.zst` file. The zstd
+WASM API works on complete buffers, so zstd input and conversion output are held
+in memory; gzip and uncompressed Jelly inspection remain streaming.
 
 ## Compression
 
-Transport compression is intentionally separate from Jelly framing. Compose the
-Node streams with gzip or Brotli transforms from `node:zlib`, or browser streams
-with `CompressionStream`/`DecompressionStream` where the selected format is
-supported.
+Transport compression is intentionally separate from Jelly framing. Node.js
+22.15/23.8 and newer expose `createZstdCompress()` and
+`createZstdDecompress()` in `node:zlib`, alongside gzip and Brotli transforms:
+
+```ts
+import { createReadStream } from 'node:fs';
+import { createZstdDecompress } from 'node:zlib';
+import { StreamParser } from 'rdfjs-jelly';
+
+const quads = createReadStream('data.jelly.zst')
+  .pipe(createZstdDecompress())
+  .pipe(new StreamParser());
+```
+
+Browser `CompressionStream` and `DecompressionStream` do not currently expose
+zstd. The playground therefore uses `@hpcc-js/wasm-zstd` for zstd compression
+and decompression, while retaining the native browser stream API for gzip. The
+WASM codec is isolated in `dist/browser/playground.mjs`, so it does not increase
+the normal `dist/browser/index.mjs` parser bundle.
 
 ## Performance
 

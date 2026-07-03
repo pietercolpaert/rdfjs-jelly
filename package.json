@@ -47,8 +47,10 @@
     "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs"
   },
   "dependencies": {
+    "@hpcc-js/wasm-zstd": "^1.13.2",
     "@rdfjs/types": "^2.0.1",
-    "protobufjs": "^8.6.5"
+    "protobufjs": "^8.6.5",
+    "rdf-parser-ts": "^0.2.6"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
