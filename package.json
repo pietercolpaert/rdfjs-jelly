@@ -1,6 +1,6 @@
 {
   "name": "rdfjs-jelly",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Jelly-RDF parser and writer for RDF/JS in Node.js and browsers",
   "keywords": ["rdf", "rdf-js", "jelly", "protobuf", "streaming"],
   "license": "Apache-2.0",
