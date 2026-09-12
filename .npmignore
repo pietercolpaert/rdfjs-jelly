@@ -4,3 +4,4 @@ PLAN.md
 vitest.config.mts
 tsconfig.json
 example/
+docs/
