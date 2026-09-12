@@ -1,8 +1,14 @@
 {
   "name": "rdfjs-jelly",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Jelly-RDF parser and writer for RDF/JS in Node.js and browsers",
-  "keywords": ["rdf", "rdf-js", "jelly", "protobuf", "streaming"],
+  "keywords": [
+    "rdf",
+    "rdf-js",
+    "jelly",
+    "protobuf",
+    "streaming"
+  ],
   "license": "Apache-2.0",
   "author": "Pieter Colpaert",
   "type": "commonjs",
@@ -29,7 +35,16 @@
       "default": "./dist/browser/index.mjs"
     }
   },
-  "files": ["bin", "dist", "src", "proto", "README.md", "LICENSE", "NOTICE"],
+  "files": [
+    "bin",
+    "dist/index.*",
+    "dist/browser/index.*",
+    "src",
+    "proto",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "scripts": {
     "clean": "rm -rf dist coverage",
     "build": "npm run build:node && npm run build:browser",
@@ -47,21 +62,24 @@
     "perf:quick": "npm run build && node perf/bench.mjs 10000",
     "perf:profile": "npm run build && node --expose-gc perf/profile-breakdown.mjs",
     "perf:profile:writer": "npm run build && node --expose-gc perf/profile-writer.mjs",
-    "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs"
+    "perf:compare:rdf-parser": "npm run build && node --expose-gc perf/compare-rdf-parser.mjs",
+    "perf:compare:messages": "npm run build && node perf/compare-message-formats.mjs"
   },
   "dependencies": {
-    "@hpcc-js/wasm-zstd": "^1.13.2",
     "@rdfjs/types": "^2.0.1",
     "protobufjs": "^8.6.5",
-    "rdf-parser-ts": "^0.2.6"
+    "rdf-parser-ts": "^0.3.2"
   },
   "devDependencies": {
+    "@hpcc-js/wasm-zstd": "^1.13.2",
     "@types/node": "^24.0.0",
-    "esbuild": "^0.27.7",
+    "esbuild": "^0.28.2",
     "protobufjs-cli": "^2.5.5",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.8"
   },
-  "engines": { "node": ">=24.0.0" }
+  "engines": {
+    "node": ">=24.0.0"
+  }
 }

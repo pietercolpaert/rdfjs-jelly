@@ -1,13 +1,13 @@
 import { performance } from 'node:perf_hooks';
-import { pathToFileURL } from 'node:url';
-import { resolve } from 'node:path';
-import { brotliCompressSync, brotliDecompressSync, gzipSync, gunzipSync } from 'node:zlib';
+import {
+  brotliCompressSync, brotliDecompressSync, gzipSync, gunzipSync, zstdCompressSync, zstdDecompressSync,
+} from 'node:zlib';
 import { DataFactory, Parser as JellyParser, PhysicalStreamType, Writer as JellyWriter } from '../dist/index.mjs';
+import { loadRdfParserTs } from './rdf-parser-ts.mjs';
 
 const count = Number(process.argv[2] ?? 100_000);
 const runs = Number(process.argv[3] ?? 7);
-const rdfParserEntry = resolve(process.env.RDF_PARSER_TS_PATH ?? '../rdf-parser.ts/dist/index.mjs');
-const { Parser: TextParser, Writer: TextWriter } = await import(pathToFileURL(rdfParserEntry).href);
+const { Parser: TextParser, Writer: TextWriter } = await loadRdfParserTs();
 const { namedNode, literal, quad } = DataFactory;
 
 const quads = Array.from({ length: count }, (_, index) => quad(
@@ -39,10 +39,17 @@ function writeNTriples() {
 
 const jelly = writeJelly();
 const ntriples = writeNTriples();
-const jellyGzip = gzipSync(jelly);
-const ntriplesGzip = gzipSync(ntriples);
-const jellyBrotli = brotliCompressSync(jelly);
-const ntriplesBrotli = brotliCompressSync(ntriples);
+const CODECS = [
+  { name: '', compress: input => input, decompress: input => input },
+  { name: ' + gzip', compress: gzipSync, decompress: gunzipSync },
+  { name: ' + zstd', compress: zstdCompressSync, decompress: zstdDecompressSync },
+  { name: ' + Brotli', compress: brotliCompressSync, decompress: brotliDecompressSync },
+];
+const encoded = CODECS.map(codec => ({
+  codec,
+  jelly: codec.compress(jelly),
+  ntriples: codec.compress(Buffer.from(ntriples)),
+}));
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -88,41 +95,31 @@ const verifyNTriples = output => {
   if (Buffer.byteLength(output) !== Buffer.byteLength(ntriples)) throw new Error('N-Triples output size mismatch');
 };
 
-const parsing = measureSuite([
-  { name: 'rdfjsJelly', operation: () => new JellyParser().parse(jelly), verify: verifyStatements },
-  { name: 'rdfParserTs', operation: () => new TextParser({ format: 'N-Triples' }).parse(ntriples), verify: verifyStatements },
-  { name: 'rdfjsJellyGzip', operation: () => new JellyParser().parse(gunzipSync(jellyGzip)), verify: verifyStatements },
-  {
-    name: 'rdfParserTsGzip',
-    operation: () => new TextParser({ format: 'N-Triples' }).parse(gunzipSync(ntriplesGzip).toString()),
+const parsingCases = [];
+for (const entry of encoded) {
+  parsingCases.push({
+    name: `rdfjs-jelly|Jelly${entry.codec.name}`,
+    bytes: entry.jelly.byteLength,
+    operation: () => new JellyParser().parse(entry.codec.decompress(entry.jelly)),
     verify: verifyStatements,
-  },
-  { name: 'rdfjsJellyBrotli', operation: () => new JellyParser().parse(brotliDecompressSync(jellyBrotli)), verify: verifyStatements },
-  {
-    name: 'rdfParserTsBrotli',
-    operation: () => new TextParser({ format: 'N-Triples' }).parse(brotliDecompressSync(ntriplesBrotli).toString()),
+  });
+  parsingCases.push({
+    name: `rdf-parser-ts|N-Triples${entry.codec.name}`,
+    bytes: entry.ntriples.byteLength,
+    operation: () => new TextParser({ format: 'N-Triples' }).parse(entry.codec.decompress(entry.ntriples).toString()),
     verify: verifyStatements,
-  },
-]);
+  });
+}
+const parsing = measureSuite(parsingCases);
 const writing = measureSuite([
   { name: 'rdfjsJelly', operation: writeJelly, verify: verifyJelly },
   { name: 'rdfParserTs', operation: writeNTriples, verify: verifyNTriples },
 ]);
-const { rdfjsJelly: jellyResult, rdfParserTs: textResult, rdfjsJellyGzip: jellyGzipResult,
-  rdfParserTsGzip: textGzipResult, rdfjsJellyBrotli: jellyBrotliResult,
-  rdfParserTsBrotli: textBrotliResult } = parsing;
 const { rdfjsJelly: jellyWriteResult, rdfParserTs: textWriteResult } = writing;
 const result = {
   statements: count,
   runs,
-  input: {
-    jellyBytes: jelly.byteLength,
-    ntriplesBytes: Buffer.byteLength(ntriples),
-    jellyGzipBytes: jellyGzip.byteLength,
-    ntriplesGzipBytes: ntriplesGzip.byteLength,
-    jellyBrotliBytes: jellyBrotli.byteLength,
-    ntriplesBrotliBytes: ntriplesBrotli.byteLength,
-  },
+  input: Object.fromEntries(parsingCases.map(testCase => [testCase.name, testCase.bytes])),
   parsing,
   writing,
 };
@@ -131,14 +128,13 @@ console.log(JSON.stringify(result, null, 2));
 console.log('\nParsing');
 console.log('| Parser | Format | Input size | Median | Throughput |');
 console.log('| --- | --- | ---: | ---: | ---: |');
-console.log(`| rdfjs-jelly | Jelly | ${jelly.byteLength} B | ${jellyResult.milliseconds.toFixed(1)} ms | ${(jellyResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdf-parser.ts | N-Triples | ${Buffer.byteLength(ntriples)} B | ${textResult.milliseconds.toFixed(1)} ms | ${(textResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdfjs-jelly | Jelly + gzip | ${jellyGzip.byteLength} B | ${jellyGzipResult.milliseconds.toFixed(1)} ms | ${(jellyGzipResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdf-parser.ts | N-Triples + gzip | ${ntriplesGzip.byteLength} B | ${textGzipResult.milliseconds.toFixed(1)} ms | ${(textGzipResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdfjs-jelly | Jelly + Brotli | ${jellyBrotli.byteLength} B | ${jellyBrotliResult.milliseconds.toFixed(1)} ms | ${(jellyBrotliResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdf-parser.ts | N-Triples + Brotli | ${ntriplesBrotli.byteLength} B | ${textBrotliResult.milliseconds.toFixed(1)} ms | ${(textBrotliResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
+for (const testCase of parsingCases) {
+  const [parser, format] = testCase.name.split('|');
+  const measured = parsing[testCase.name];
+  console.log(`| ${parser} | ${format} | ${testCase.bytes} B | ${measured.milliseconds.toFixed(1)} ms | ${(measured.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
+}
 console.log('\nWriting');
 console.log('| Writer | Format | Output size | Median | Throughput |');
 console.log('| --- | --- | ---: | ---: | ---: |');
 console.log(`| rdfjs-jelly | Jelly | ${jelly.byteLength} B | ${jellyWriteResult.milliseconds.toFixed(1)} ms | ${(jellyWriteResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
-console.log(`| rdf-parser.ts | N-Triples | ${Buffer.byteLength(ntriples)} B | ${textWriteResult.milliseconds.toFixed(1)} ms | ${(textWriteResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);
+console.log(`| rdf-parser-ts | N-Triples | ${Buffer.byteLength(ntriples)} B | ${textWriteResult.milliseconds.toFixed(1)} ms | ${(textWriteResult.statementsPerSecond / 1e6).toFixed(2)} M statements/s |`);

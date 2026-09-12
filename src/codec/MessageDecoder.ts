@@ -10,23 +10,46 @@ import {
 } from '../generated/rdf_pb';
 import type { BinaryInput, ParserOptions } from '../types';
 import type { Message } from '../types';
-import { asUint8Array, concatBytes } from './bytes';
+import { asUint8Array } from './bytes';
 
 const DEFAULT_MAX_MESSAGE_SIZE = 64 * 1024 * 1024;
+const INITIAL_CAPACITY = 8192;
+const EMPTY_BYTES = new Uint8Array();
+
+function delimitedHint(first: number, second: number, third: number): boolean {
+  return first !== 0x0a || (second === 0x0a && third !== 0x0a);
+}
 
 export function delimitedJellyHint(input: Uint8Array): boolean {
-  return input.byteLength >= 3 && (input[0] !== 0x0a || (input[1] === 0x0a && input[2] !== 0x0a));
+  return input.byteLength >= 3 && delimitedHint(input[0]!, input[1]!, input[2]!);
 }
 
 type FrameDecoder<Frame> = (input: Uint8Array) => Frame;
 type ReaderFrameDecoder<Frame> = (reader: Reader, length: number) => Frame;
-type FrameConsumer<Frame> = (frame: Frame) => void;
 
+/**
+ * Receives one decoded frame. Returning `false` means "accepted, but stop
+ * delivering" — the remaining bytes stay buffered until `resumeEach()`, which is
+ * how a slow consumer applies backpressure without the decoder running ahead.
+ */
+type FrameConsumer<Frame> = (frame: Frame) => boolean | void;
+
+/**
+ * Incomplete frames accumulate in one amortised-growth buffer rather than being
+ * re-concatenated per chunk. Bytes already consumed are skipped with an offset,
+ * and the live region is only moved when the buffer has to grow or make room, so
+ * total copying is linear in the input rather than quadratic in the frame size.
+ */
 class FramedMessageDecoder<Frame> {
-  private buffer: Uint8Array<ArrayBufferLike> = new Uint8Array();
+  private buffer: Uint8Array<ArrayBufferLike> = EMPTY_BYTES;
+  private start = 0;
+  private filled = 0;
   private delimited: boolean | undefined;
   private readonly mode: boolean | 'auto';
   private readonly maxMessageSize: number;
+  private finalising = false;
+  private stopped = false;
+  private delivered = false;
 
   public constructor(
     options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>,
@@ -38,44 +61,68 @@ class FramedMessageDecoder<Frame> {
     this.maxMessageSize = options.maxMessageSize ?? DEFAULT_MAX_MESSAGE_SIZE;
   }
 
+  private get retained(): number {
+    return this.filled - this.start;
+  }
+
+  /** Bytes held back because a consumer paused or a frame is still incomplete. */
+  public get bufferedBytes(): number {
+    return this.retained;
+  }
+
+  public get paused(): boolean {
+    return this.stopped;
+  }
+
   public write(chunk: BinaryInput): Frame[] {
     const frames: Frame[] = [];
-    this.writeEach(chunk, frame => frames.push(frame));
+    this.writeEach(chunk, frame => { frames.push(frame); });
     return frames;
   }
 
   public end(chunk?: BinaryInput): Frame[] {
     const frames: Frame[] = [];
-    this.endEach(frame => frames.push(frame), chunk);
+    this.endEach(frame => { frames.push(frame); }, chunk);
     return frames;
   }
 
   public decode(input: BinaryInput): Frame[] {
     const frames: Frame[] = [];
-    this.decodeEach(input, frame => frames.push(frame));
+    this.decodeEach(input, frame => { frames.push(frame); });
     return frames;
   }
 
-  public writeEach(chunk: BinaryInput, consume: FrameConsumer<Frame>): void {
+  /** Returns false when the consumer paused delivery; call resumeEach() to continue. */
+  public writeEach(chunk: BinaryInput, consume: FrameConsumer<Frame>): boolean {
     const bytes = asUint8Array(chunk);
-    this.buffer = this.buffer.byteLength === 0 ? bytes : concatBytes([this.buffer, bytes]);
-    if (this.delimited === undefined && this.buffer.byteLength >= 3) this.delimited = delimitedJellyHint(this.buffer);
-    if (this.delimited) this.readDelimited(false, consume);
+    this.detect(bytes);
+    if (this.delimited === true && this.retained === 0 && !this.stopped) {
+      // Nothing is held back, so complete frames are read out of the caller's
+      // chunk without copying it first; only an unread tail is retained.
+      const offset = this.readFrames(bytes, 0, bytes.byteLength, false, consume);
+      if (offset < bytes.byteLength) this.append(bytes, offset);
+      return !this.stopped;
+    }
+    this.append(bytes, 0);
+    return this.pump(false, consume);
   }
 
-  public endEach(consume: FrameConsumer<Frame>, chunk?: BinaryInput): void {
-    if (chunk) this.writeEach(chunk, consume);
-    if (this.delimited === undefined) {
-      if (this.mode === 'auto') this.delimited = this.buffer.byteLength > 0 && delimitedJellyHint(this.buffer);
-      else this.delimited = this.mode;
+  public endEach(consume: FrameConsumer<Frame>, chunk?: BinaryInput): boolean {
+    // End of input is the last chance to drain, so a consumer that paused
+    // earlier is resumed here rather than left holding buffered frames.
+    this.stopped = false;
+    if (chunk !== undefined && !this.writeEach(chunk, consume)) {
+      this.finalising = true;
+      return false;
     }
-    if (this.delimited) this.readDelimited(true, consume);
-    else {
-      if (this.buffer.byteLength > this.maxMessageSize) throw new JellyConformanceError('Jelly message exceeds configured size limit');
-      if (this.buffer.byteLength === 0) throw new JellyConformanceError('Jelly input is empty');
-      consume(this.decodeFrame(this.buffer));
-      this.buffer = new Uint8Array();
-    }
+    this.finalising = true;
+    return this.pump(true, consume);
+  }
+
+  /** Continue after a consumer paused delivery by returning false. */
+  public resumeEach(consume: FrameConsumer<Frame>): boolean {
+    this.stopped = false;
+    return this.pump(this.finalising, consume);
   }
 
   public decodeEach(input: BinaryInput, consume: FrameConsumer<Frame>): void {
@@ -83,14 +130,64 @@ class FramedMessageDecoder<Frame> {
     this.endEach(consume);
   }
 
-  private readDelimited(final: boolean, consume: FrameConsumer<Frame>): void {
-    let offset = 0;
-    while (offset < this.buffer.byteLength) {
+  /** Framing is decided from the first three bytes, wherever they happen to sit. */
+  private detect(bytes: Uint8Array): void {
+    if (this.delimited !== undefined) return;
+    const retained = this.retained;
+    if (retained + bytes.byteLength < 3) return;
+    const at = (index: number): number => index < retained
+      ? this.buffer[this.start + index]!
+      : bytes[index - retained]!;
+    this.delimited = delimitedHint(at(0), at(1), at(2));
+  }
+
+  private pump(final: boolean, consume: FrameConsumer<Frame>): boolean {
+    if (this.stopped) return false;
+    if (this.delimited === undefined) {
+      if (!final) return true;
+      this.delimited = this.mode === 'auto'
+        ? this.retained > 0 && delimitedJellyHint(this.buffer.subarray(this.start, this.filled))
+        : this.mode;
+    }
+    if (this.delimited) {
+      this.start = this.readFrames(this.buffer, this.start, this.filled, final, consume);
+      if (this.start === this.filled) {
+        this.start = 0;
+        this.filled = 0;
+      }
+      if (this.stopped) return false;
+      if (final && this.retained !== 0) throw new JellyConformanceError('Truncated delimited Jelly message');
+      return true;
+    }
+    if (!final || this.delivered) return true;
+    if (this.retained === 0) throw new JellyConformanceError('Jelly input is empty');
+    const frame = this.decodeFrame(this.buffer.subarray(this.start, this.filled));
+    this.delivered = true;
+    this.buffer = EMPTY_BYTES;
+    this.start = 0;
+    this.filled = 0;
+    if (consume(frame) === false) {
+      this.stopped = true;
+      return false;
+    }
+    return true;
+  }
+
+  /** Returns the offset after the last frame handed to the consumer. */
+  private readFrames(
+    buffer: Uint8Array,
+    from: number,
+    end: number,
+    final: boolean,
+    consume: FrameConsumer<Frame>,
+  ): number {
+    let offset = from;
+    while (offset < end) {
       let size: number;
       let prefixSize: number;
       let reader: Reader;
       try {
-        reader = Reader.create(this.buffer.subarray(offset));
+        reader = Reader.create(buffer.subarray(offset, end));
         size = reader.uint32();
         prefixSize = reader.pos;
       } catch (error) {
@@ -101,15 +198,46 @@ class FramedMessageDecoder<Frame> {
       }
       if (size > this.maxMessageSize) throw new JellyConformanceError('Jelly message exceeds configured size limit');
       const payloadOffset = offset + prefixSize;
-      const end = payloadOffset + size;
-      if (end > this.buffer.byteLength) break;
-      consume(this.decodeReader
+      const frameEnd = payloadOffset + size;
+      if (frameEnd > end) break;
+      const frame = this.decodeReader
         ? this.decodeReader(reader, size)
-        : this.decodeFrame(this.buffer.subarray(payloadOffset, end)));
-      offset = end;
+        : this.decodeFrame(buffer.subarray(payloadOffset, frameEnd));
+      // Advance before delivering, so pausing here resumes at the next frame.
+      offset = frameEnd;
+      if (consume(frame) === false) {
+        this.stopped = true;
+        break;
+      }
     }
-    this.buffer = this.buffer.slice(offset);
-    if (final && this.buffer.byteLength !== 0) throw new JellyConformanceError('Truncated delimited Jelly message');
+    return offset;
+  }
+
+  private append(bytes: Uint8Array, from: number): void {
+    const addition = bytes.byteLength - from;
+    if (addition <= 0) return;
+    const live = this.retained;
+    const required = live + addition;
+    if (required > this.buffer.byteLength) {
+      let capacity = this.buffer.byteLength || INITIAL_CAPACITY;
+      while (capacity < required) capacity *= 2;
+      const grown = new Uint8Array(capacity);
+      if (live > 0) grown.set(this.buffer.subarray(this.start, this.filled));
+      this.buffer = grown;
+      this.start = 0;
+      this.filled = live;
+    } else if (this.filled + addition > this.buffer.byteLength) {
+      this.buffer.copyWithin(0, this.start, this.filled);
+      this.start = 0;
+      this.filled = live;
+    }
+    this.buffer.set(from === 0 ? bytes : bytes.subarray(from), this.filled);
+    this.filled += addition;
+    // Non-delimited input has no length prefix to check, so the limit is
+    // enforced as the payload accumulates rather than only at end of input.
+    if (this.delimited === false && this.retained > this.maxMessageSize) {
+      throw new JellyConformanceError('Jelly message exceeds configured size limit');
+    }
   }
 }
 

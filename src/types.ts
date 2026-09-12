@@ -68,6 +68,12 @@ export interface ParserOptions {
   messages?: boolean;
   rdfMessages?: boolean;
   maxMessageSize?: number;
+  /**
+   * Largest lookup table size this parser accepts from a stream's options row.
+   * Defaults to `MAX_DECODED_LOOKUP_SIZE`. The specification sets no maximum, so
+   * this only guards against a hostile stream declaring an absurd table.
+   */
+  maxLookupTableSize?: number;
 }
 
 export interface StreamParserOptions extends ParserOptions, TransformOptions {}

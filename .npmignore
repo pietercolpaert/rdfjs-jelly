@@ -1,6 +1,6 @@
 test/
 perf/
 PLAN.md
-vitest.config.ts
+vitest.config.mts
 tsconfig.json
 example/

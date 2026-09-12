@@ -67,6 +67,10 @@ export function decodeProtoTripleWire(reader: Reader, length: number): ProtoTrip
   return decodeTriple(reader, length, undefined, 2, undefined) as ProtoTriple;
 }
 
+export function decodeProtoQuadWire(reader: Reader, length: number): ProtoQuad {
+  return decodeQuad(reader, length, undefined, 2, undefined) as ProtoQuad;
+}
+
 function decodeRowField(field: number, reader: Reader, length: number, target: unknown): unknown {
   switch (field) {
     case ProtoRowKind.OPTIONS: return decodeOptions(reader, length, undefined, 2, target);
@@ -93,8 +97,9 @@ function decodeProtoRow(reader: Reader, length: number, consume: ProtoRowConsume
   const firstField = firstTag >>> 3;
   const firstWireType = firstTag & 7;
   if (firstWireType === 2 && (
-    firstField === ProtoRowKind.TRIPLE || firstField === ProtoRowKind.NAME ||
-    firstField === ProtoRowKind.PREFIX || firstField === ProtoRowKind.DATATYPE
+    firstField === ProtoRowKind.TRIPLE || firstField === ProtoRowKind.QUAD ||
+    firstField === ProtoRowKind.NAME || firstField === ProtoRowKind.PREFIX ||
+    firstField === ProtoRowKind.DATATYPE
   )) {
     const nestedLength = reader.uint32();
     if (reader.pos + nestedLength === end) {
@@ -137,12 +142,9 @@ function decodeMetadataEntry(reader: Reader, length: number, metadata: Map<strin
     const field = tag >>> 3;
     const wireType = tag & 7;
     if (field === 1 && wireType === 2) key = reader.string();
-    else if (field === 2 && wireType === 2) {
-      const bytes = reader.bytes();
-      value = bytes instanceof Uint8Array && bytes.constructor === Uint8Array
-        ? bytes
-        : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    }
+    // protobufjs hands back a view into the reader's buffer, which the framing
+    // layer reuses across frames, so metadata has to own its bytes.
+    else if (field === 2 && wireType === 2) value = new Uint8Array(reader.bytes());
     else reader.skipType(wireType);
   }
   if (reader.pos !== end) throw new RangeError('Invalid Jelly metadata entry length');
@@ -547,7 +549,9 @@ export function encodeDelimitedRdfStreamFrame(frame: RdfStreamFrame): Uint8Array
 export function decodeRdfStreamFrame(input: Uint8Array): RdfStreamFrame {
   try {
     const frame = decodeProtoRdfStreamFrame(input);
-    return { rows: frame.rows.map(row => fromRow(row as ProtoRow)), metadata: new Map(Object.entries(frame.metadata)) };
+    const metadata = new Map<string, Uint8Array>();
+    for (const [key, value] of Object.entries(frame.metadata)) metadata.set(key, new Uint8Array(value));
+    return { rows: frame.rows.map(row => fromRow(row as ProtoRow)), metadata };
   } catch (error) {
     throw new JellyConformanceError('Invalid Jelly protobuf frame', {
       cause: error instanceof Error ? error : undefined,

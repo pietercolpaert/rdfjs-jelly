@@ -1,0 +1,119 @@
+{
+  "node": "v25.9.0",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-1265U",
+  "rounds": 13,
+  "messageSize": 250,
+  "statements": 300656,
+  "messages": 1203,
+  "isolation": "one child process per case",
+  "cases": [
+    {
+      "name": "Jelly",
+      "format": "Jelly",
+      "codec": "none",
+      "bytes": 10125493,
+      "medianMs": 113.9,
+      "minMs": 109.88,
+      "statementsPerSecond": 2639623
+    },
+    {
+      "name": "Jelly + gzip",
+      "format": "Jelly",
+      "codec": "gzip",
+      "bytes": 2816906,
+      "medianMs": 134.57,
+      "minMs": 127.46,
+      "statementsPerSecond": 2234232
+    },
+    {
+      "name": "Jelly + zstd",
+      "format": "Jelly",
+      "codec": "zstd",
+      "bytes": 2709361,
+      "medianMs": 127.05,
+      "minMs": 119.65,
+      "statementsPerSecond": 2366364
+    },
+    {
+      "name": "Jelly + brotli",
+      "format": "Jelly",
+      "codec": "brotli",
+      "bytes": 1732080,
+      "medianMs": 143.53,
+      "minMs": 140.01,
+      "statementsPerSecond": 2094666
+    },
+    {
+      "name": "N-Quads",
+      "format": "N-Quads",
+      "codec": "none",
+      "bytes": 47271481,
+      "medianMs": 295.31,
+      "minMs": 279.78,
+      "statementsPerSecond": 1018104
+    },
+    {
+      "name": "N-Quads + gzip",
+      "format": "N-Quads",
+      "codec": "gzip",
+      "bytes": 3311694,
+      "medianMs": 322.31,
+      "minMs": 307.2,
+      "statementsPerSecond": 932805
+    },
+    {
+      "name": "N-Quads + zstd",
+      "format": "N-Quads",
+      "codec": "zstd",
+      "bytes": 3507962,
+      "medianMs": 325.24,
+      "minMs": 320.9,
+      "statementsPerSecond": 924422
+    },
+    {
+      "name": "N-Quads + brotli",
+      "format": "N-Quads",
+      "codec": "brotli",
+      "bytes": 2036742,
+      "medianMs": 336.14,
+      "minMs": 322.79,
+      "statementsPerSecond": 894432
+    },
+    {
+      "name": "TriG",
+      "format": "TriG",
+      "codec": "none",
+      "bytes": 27868407,
+      "medianMs": 1065.01,
+      "minMs": 961.28,
+      "statementsPerSecond": 282304
+    },
+    {
+      "name": "TriG + gzip",
+      "format": "TriG",
+      "codec": "gzip",
+      "bytes": 2452051,
+      "medianMs": 1094.48,
+      "minMs": 948.6,
+      "statementsPerSecond": 274702
+    },
+    {
+      "name": "TriG + zstd",
+      "format": "TriG",
+      "codec": "zstd",
+      "bytes": 2555916,
+      "medianMs": 1088.51,
+      "minMs": 935.39,
+      "statementsPerSecond": 276209
+    },
+    {
+      "name": "TriG + brotli",
+      "format": "TriG",
+      "codec": "brotli",
+      "bytes": 1493574,
+      "medianMs": 1088.5,
+      "minMs": 971.18,
+      "statementsPerSecond": 276212
+    }
+  ]
+}

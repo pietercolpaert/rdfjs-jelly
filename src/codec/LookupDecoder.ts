@@ -1,16 +1,19 @@
 import { JellyConformanceError } from '../errors';
-import { MAX_LOOKUP_SIZE } from '../options';
+import { MAX_DECODED_LOOKUP_SIZE } from '../options';
 
 export class LookupDecoder {
-  private readonly data: Array<string | undefined>;
+  /**
+   * Grown on demand rather than allocated at the declared size, so a stream may
+   * declare a large table without the parser paying for entries it never fills.
+   */
+  private readonly data: Array<string | undefined> = [];
   private lastAssignedIndex = 0;
   private lastReusedIndex = 0;
 
-  public constructor(public readonly size: number) {
-    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError(`Lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+  public constructor(public readonly size: number, limit: number = MAX_DECODED_LOOKUP_SIZE) {
+    if (!Number.isInteger(size) || size < 0 || size > limit) {
+      throw new JellyConformanceError(`Lookup size must be between 0 and ${limit}`);
     }
-    this.data = new Array<string | undefined>(size);
   }
 
   public assign(index: number, value: string): void {
@@ -18,13 +21,22 @@ export class LookupDecoder {
     if (resolved < 1 || resolved > this.size) {
       throw new JellyConformanceError(`Lookup entry index ${resolved} is outside table size ${this.size}`);
     }
+    if (resolved > this.data.length) this.reserve(resolved);
     this.data[resolved - 1] = value;
     this.lastAssignedIndex = resolved;
   }
 
+  /** Extend the backing array by doubling, staying packed and capped at the table size. */
+  private reserve(required: number): void {
+    let capacity = this.data.length || 16;
+    while (capacity < required) capacity *= 2;
+    if (capacity > this.size) capacity = this.size;
+    for (let index = this.data.length; index < capacity; index++) this.data.push(undefined);
+  }
+
   private at(index: number): string {
     if (index < 1 || index > this.size) throw new JellyConformanceError(`Invalid lookup index ${index}`);
-    const value = this.data[index - 1];
+    const value = index <= this.data.length ? this.data[index - 1] : undefined;
     if (value === undefined) throw new JellyConformanceError(`Lookup index ${index} has not been assigned`);
     this.lastReusedIndex = index;
     return value;
@@ -46,4 +58,3 @@ export class LookupDecoder {
     return this.at(index);
   }
 }
-

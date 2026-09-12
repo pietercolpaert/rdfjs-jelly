@@ -2,6 +2,7 @@ import * as RDF from '@rdfjs/types';
 import { Reader } from 'protobufjs/minimal.js';
 
 declare const MIN_NAME_LOOKUP_SIZE = 8;
+/** Largest lookup table this writer will build. */
 declare const MAX_LOOKUP_SIZE = 4096;
 declare const XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 declare const RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
@@ -64,6 +65,12 @@ interface ParserOptions {
     messages?: boolean;
     rdfMessages?: boolean;
     maxMessageSize?: number;
+    /**
+     * Largest lookup table size this parser accepts from a stream's options row.
+     * Defaults to `MAX_DECODED_LOOKUP_SIZE`. The specification sets no maximum, so
+     * this only guards against a hostile stream declaring an absurd table.
+     */
+    maxLookupTableSize?: number;
 }
 interface WriterOptions {
     physicalType?: PhysicalStreamType;
@@ -108,6 +115,12 @@ declare class Writer {
     private mode;
     private ended;
     private readonly streaming;
+    /**
+     * Delimited output with no sink is serialised frame by frame as each one
+     * completes, so finished rows and terms become garbage immediately instead of
+     * being retained until end().
+     */
+    private readonly chunks?;
     constructor(options?: WriterOptions);
     constructor(output: BinaryOutput, options?: WriterOptions);
     addQuad(value: RDF.Quad | MessageQuad, done?: (error?: Error | null) => void): void;
@@ -118,6 +131,7 @@ declare class Writer {
     finishMessages(messageCount: number): void;
     addGraph(graph: RDF.Quad_Graph, quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void;
     end(done?: WriterEndCallback): void;
+    private collectChunks;
     private writeFrame;
     private addMessageQuad;
     private flushPending;
@@ -234,6 +248,7 @@ declare class Decoder {
     private readonly factory;
     private readonly strict;
     private readonly maxSupportedVersion;
+    private readonly maxLookupTableSize;
     private names?;
     private prefixes?;
     private datatypes?;
@@ -256,6 +271,13 @@ declare class Decoder {
     private emitQuad;
     private decodeWireLookupEntry;
     private decodeWireTriple;
+    /**
+     * Quad rows read straight off the wire, mirroring decodeWireTriple with the
+     * graph slot (fields 13-16) added. Falls back to the generated protobuf
+     * decoder when a slot repeats, which is where merge semantics matter.
+     */
+    private decodeWireQuad;
+    private decodeWireGraphTerm;
     private decodeWireTerm;
     private decodeWireIri;
     private decodeWireLiteral;
@@ -318,11 +340,17 @@ declare class Encoder {
 
 declare class LookupDecoder {
     readonly size: number;
+    /**
+     * Grown on demand rather than allocated at the declared size, so a stream may
+     * declare a large table without the parser paying for entries it never fills.
+     */
     private readonly data;
     private lastAssignedIndex;
     private lastReusedIndex;
-    constructor(size: number);
+    constructor(size: number, limit?: number);
     assign(index: number, value: string): void;
+    /** Extend the backing array by doubling, staying packed and capped at the table size. */
+    private reserve;
     private at;
     prefix(index: number): string;
     name(index: number): string;
@@ -363,22 +391,50 @@ declare class LookupEncoder {
 declare function delimitedJellyHint(input: Uint8Array): boolean;
 type FrameDecoder<Frame> = (input: Uint8Array) => Frame;
 type ReaderFrameDecoder<Frame> = (reader: Reader, length: number) => Frame;
-type FrameConsumer<Frame> = (frame: Frame) => void;
+/**
+ * Receives one decoded frame. Returning `false` means "accepted, but stop
+ * delivering" — the remaining bytes stay buffered until `resumeEach()`, which is
+ * how a slow consumer applies backpressure without the decoder running ahead.
+ */
+type FrameConsumer<Frame> = (frame: Frame) => boolean | void;
+/**
+ * Incomplete frames accumulate in one amortised-growth buffer rather than being
+ * re-concatenated per chunk. Bytes already consumed are skipped with an offset,
+ * and the live region is only moved when the buffer has to grow or make room, so
+ * total copying is linear in the input rather than quadratic in the frame size.
+ */
 declare class FramedMessageDecoder<Frame> {
     private readonly decodeFrame;
     private readonly decodeReader?;
     private buffer;
+    private start;
+    private filled;
     private delimited;
     private readonly mode;
     private readonly maxMessageSize;
+    private finalising;
+    private stopped;
+    private delivered;
     constructor(options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>, decodeFrame: FrameDecoder<Frame>, decodeReader?: ReaderFrameDecoder<Frame> | undefined);
+    private get retained();
+    /** Bytes held back because a consumer paused or a frame is still incomplete. */
+    get bufferedBytes(): number;
+    get paused(): boolean;
     write(chunk: BinaryInput): Frame[];
     end(chunk?: BinaryInput): Frame[];
     decode(input: BinaryInput): Frame[];
-    writeEach(chunk: BinaryInput, consume: FrameConsumer<Frame>): void;
-    endEach(consume: FrameConsumer<Frame>, chunk?: BinaryInput): void;
+    /** Returns false when the consumer paused delivery; call resumeEach() to continue. */
+    writeEach(chunk: BinaryInput, consume: FrameConsumer<Frame>): boolean;
+    endEach(consume: FrameConsumer<Frame>, chunk?: BinaryInput): boolean;
+    /** Continue after a consumer paused delivery by returning false. */
+    resumeEach(consume: FrameConsumer<Frame>): boolean;
     decodeEach(input: BinaryInput, consume: FrameConsumer<Frame>): void;
-    private readDelimited;
+    /** Framing is decided from the first three bytes, wherever they happen to sit. */
+    private detect;
+    private pump;
+    /** Returns the offset after the last frame handed to the consumer. */
+    private readFrames;
+    private append;
 }
 declare class MessageDecoder extends FramedMessageDecoder<RdfStreamFrame> {
     constructor(options?: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>);

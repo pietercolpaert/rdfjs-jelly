@@ -1890,6 +1890,9 @@ var decodeDatatype = proto.RdfDatatypeEntry.decode;
 function decodeProtoTripleWire(reader, length) {
   return decodeTriple(reader, length, void 0, 2, void 0);
 }
+function decodeProtoQuadWire(reader, length) {
+  return decodeQuad(reader, length, void 0, 2, void 0);
+}
 function decodeRowField(field, reader, length, target) {
   switch (field) {
     case 1 /* OPTIONS */:
@@ -1924,7 +1927,7 @@ function decodeProtoRow(reader, length, consume) {
   const firstTag = reader.uint32();
   const firstField = firstTag >>> 3;
   const firstWireType = firstTag & 7;
-  if (firstWireType === 2 && (firstField === 2 /* TRIPLE */ || firstField === 9 /* NAME */ || firstField === 10 /* PREFIX */ || firstField === 11 /* DATATYPE */)) {
+  if (firstWireType === 2 && (firstField === 2 /* TRIPLE */ || firstField === 3 /* QUAD */ || firstField === 9 /* NAME */ || firstField === 10 /* PREFIX */ || firstField === 11 /* DATATYPE */)) {
     const nestedLength = reader.uint32();
     if (reader.pos + nestedLength === end) {
       consume(firstField, void 0, reader, nestedLength);
@@ -1961,10 +1964,8 @@ function decodeMetadataEntry(reader, length, metadata) {
     const field = tag >>> 3;
     const wireType = tag & 7;
     if (field === 1 && wireType === 2) key = reader.string();
-    else if (field === 2 && wireType === 2) {
-      const bytes = reader.bytes();
-      value = bytes instanceof Uint8Array && bytes.constructor === Uint8Array ? bytes : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    } else reader.skipType(wireType);
+    else if (field === 2 && wireType === 2) value = new Uint8Array(reader.bytes());
+    else reader.skipType(wireType);
   }
   if (reader.pos !== end) throw new RangeError("Invalid Jelly metadata entry length");
   metadata.set(key, value);
@@ -2221,7 +2222,9 @@ function encodeDelimitedRdfStreamFrame(frame) {
 function decodeRdfStreamFrame(input) {
   try {
     const frame = decodeProtoRdfStreamFrame(input);
-    return { rows: frame.rows.map((row) => fromRow(row)), metadata: new Map(Object.entries(frame.metadata)) };
+    const metadata = /* @__PURE__ */ new Map();
+    for (const [key, value] of Object.entries(frame.metadata)) metadata.set(key, new Uint8Array(value));
+    return { rows: frame.rows.map((row) => fromRow(row)), metadata };
   } catch (error) {
     throw new JellyConformanceError("Invalid Jelly protobuf frame", {
       cause: error instanceof Error ? error : void 0
@@ -2240,7 +2243,9 @@ function decodeProtoRdfStreamFrame(input) {
 
 // src/options.ts
 var MIN_NAME_LOOKUP_SIZE = 8;
+var MIN_PREFIX_LOOKUP_SIZE = 4;
 var MAX_LOOKUP_SIZE = 4096;
+var MAX_DECODED_LOOKUP_SIZE = 1048576;
 var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
 var DEFAULT_LOOKUP_PRESET = Object.freeze({
@@ -2263,6 +2268,11 @@ function normalizeLookupPreset(value = {}) {
       throw new JellyConformanceError(`${name} lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
     }
   }
+  if (preset.maxPrefixes > 0 && preset.maxPrefixes < MIN_PREFIX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(
+      `Prefix lookup size ${preset.maxPrefixes} cannot encode a statement whose terms use more prefixes than the table holds; use 0 to disable the prefix lookup or at least ${MIN_PREFIX_LOOKUP_SIZE}`
+    );
+  }
   return preset;
 }
 
@@ -2281,7 +2291,6 @@ var NamedNode = class {
   constructor(value) {
     this.value = value;
   }
-  value;
   termType = "NamedNode";
   equals(other) {
     return sameTerm(this, other);
@@ -2291,7 +2300,6 @@ var BlankNode = class {
   constructor(value) {
     this.value = value;
   }
-  value;
   termType = "BlankNode";
   equals(other) {
     return sameTerm(this, other);
@@ -2301,7 +2309,6 @@ var Variable = class {
   constructor(value) {
     this.value = value;
   }
-  value;
   termType = "Variable";
   equals(other) {
     return sameTerm(this, other);
@@ -2321,10 +2328,6 @@ var Literal = class {
     this.datatype = datatype;
     this.direction = direction;
   }
-  value;
-  language;
-  datatype;
-  direction;
   termType = "Literal";
   equals(other) {
     return sameTerm(this, other);
@@ -2337,10 +2340,6 @@ var Quad = class {
     this.object = object;
     this.graph = graph;
   }
-  subject;
-  predicate;
-  object;
-  graph;
   termType = "Quad";
   value = "";
   equals(other) {
@@ -2424,7 +2423,6 @@ var Message = class _Message extends Array {
     for (const quad of quads) this.push(quad);
     this.metadata = metadata instanceof Map ? metadata : new Map(Object.entries(metadata));
   }
-  messageCounter;
   static get [Symbol.species]() {
     return Array;
   }
@@ -2453,15 +2451,17 @@ function toMessages(output, messageCount) {
 
 // src/codec/LookupDecoder.ts
 var LookupDecoder = class {
-  constructor(size) {
+  constructor(size, limit = MAX_DECODED_LOOKUP_SIZE) {
     this.size = size;
-    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError(`Lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+    if (!Number.isInteger(size) || size < 0 || size > limit) {
+      throw new JellyConformanceError(`Lookup size must be between 0 and ${limit}`);
     }
-    this.data = new Array(size);
   }
-  size;
-  data;
+  /**
+   * Grown on demand rather than allocated at the declared size, so a stream may
+   * declare a large table without the parser paying for entries it never fills.
+   */
+  data = [];
   lastAssignedIndex = 0;
   lastReusedIndex = 0;
   assign(index, value) {
@@ -2469,12 +2469,20 @@ var LookupDecoder = class {
     if (resolved < 1 || resolved > this.size) {
       throw new JellyConformanceError(`Lookup entry index ${resolved} is outside table size ${this.size}`);
     }
+    if (resolved > this.data.length) this.reserve(resolved);
     this.data[resolved - 1] = value;
     this.lastAssignedIndex = resolved;
   }
+  /** Extend the backing array by doubling, staying packed and capped at the table size. */
+  reserve(required) {
+    let capacity = this.data.length || 16;
+    while (capacity < required) capacity *= 2;
+    if (capacity > this.size) capacity = this.size;
+    for (let index = this.data.length; index < capacity; index++) this.data.push(void 0);
+  }
   at(index) {
     if (index < 1 || index > this.size) throw new JellyConformanceError(`Invalid lookup index ${index}`);
-    const value = this.data[index - 1];
+    const value = index <= this.data.length ? this.data[index - 1] : void 0;
     if (value === void 0) throw new JellyConformanceError(`Lookup index ${index} has not been assigned`);
     this.lastReusedIndex = index;
     return value;
@@ -2500,6 +2508,7 @@ var Decoder = class {
   factory;
   strict;
   maxSupportedVersion;
+  maxLookupTableSize;
   names;
   prefixes;
   datatypes;
@@ -2517,6 +2526,7 @@ var Decoder = class {
     this.factory = options.factory ?? DataFactory;
     this.strict = options.strict ?? true;
     this.maxSupportedVersion = options.maxSupportedVersion ?? 2;
+    this.maxLookupTableSize = options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
     this.events = events;
     this.defaultGraph = this.factory.defaultGraph();
   }
@@ -2616,6 +2626,10 @@ var Decoder = class {
       try {
         if (kind === 2 /* TRIPLE */) {
           this.emitQuad(this.decodeWireTriple(wireReader, wireLength), message, output);
+          return;
+        }
+        if (kind === 3 /* QUAD */) {
+          this.emitQuad(this.decodeWireQuad(wireReader, wireLength), message, output);
           return;
         }
         if (kind === 9 /* NAME */) this.decodeWireLookupEntry(wireReader, wireLength, this.names);
@@ -2735,6 +2749,98 @@ var Decoder = class {
     }
     return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
+  /**
+   * Quad rows read straight off the wire, mirroring decodeWireTriple with the
+   * graph slot (fields 13-16) added. Falls back to the generated protobuf
+   * decoder when a slot repeats, which is where merge semantics matter.
+   */
+  decodeWireQuad(reader, length) {
+    if (this.streamOptions.physicalType !== 2 /* QUADS */) {
+      throw new JellyConformanceError("Quad row is invalid in this physical stream type");
+    }
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError("Truncated Jelly quad");
+    let subjectField = 0;
+    let subjectPosition = 0;
+    let predicateField = 0;
+    let predicatePosition = 0;
+    let objectField = 0;
+    let objectPosition = 0;
+    let graphField = 0;
+    let graphPosition = 0;
+    let duplicateField = false;
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field >= 1 && field <= 16 && wireType === 2) {
+        const position = reader.pos;
+        const termLength = reader.uint32();
+        reader.pos += termLength;
+        if (reader.pos > end) throw new RangeError("Invalid Jelly quad term length");
+        if (field <= 4) {
+          duplicateField ||= subjectField === field;
+          subjectField = field;
+          subjectPosition = position;
+        } else if (field <= 8) {
+          duplicateField ||= predicateField === field;
+          predicateField = field;
+          predicatePosition = position;
+        } else if (field <= 12) {
+          duplicateField ||= objectField === field;
+          objectField = field;
+          objectPosition = position;
+        } else {
+          duplicateField ||= graphField === field;
+          graphField = field;
+          graphPosition = position;
+        }
+      } else {
+        reader.skipType(wireType);
+        if (reader.pos > end) throw new RangeError("Invalid Jelly quad field length");
+      }
+    }
+    if (reader.pos !== end) throw new RangeError("Invalid Jelly quad length");
+    if (duplicateField) {
+      reader.pos = end - length;
+      return this.decodeProtoQuad(decodeProtoQuadWire(reader, length));
+    }
+    const subject = subjectField ? this.decodeWireTerm(reader, subjectField, subjectPosition) : this.repeated[0];
+    if (!subject) throw new JellyConformanceError("First Jelly statement must set slot 0");
+    if (subject.termType !== "NamedNode" && subject.termType !== "BlankNode") {
+      throw new JellyConformanceError("Invalid RDF subject term");
+    }
+    const predicate = predicateField ? this.decodeWireTerm(reader, predicateField, predicatePosition) : this.repeated[1];
+    if (!predicate) throw new JellyConformanceError("First Jelly statement must set slot 1");
+    if (predicate.termType !== "NamedNode") throw new JellyConformanceError("Invalid RDF predicate term");
+    const object = objectField ? this.decodeWireTerm(reader, objectField, objectPosition) : this.repeated[2];
+    if (!object) throw new JellyConformanceError("First Jelly statement must set slot 2");
+    if (object.termType !== "NamedNode" && object.termType !== "BlankNode" && object.termType !== "Literal") {
+      throw new JellyConformanceError("Invalid RDF object term");
+    }
+    const graph = graphField ? this.decodeWireGraphTerm(reader, graphField, graphPosition) : this.repeated[3];
+    if (!graph) throw new JellyConformanceError("First Jelly quad must set its graph");
+    if (graph.termType !== "NamedNode" && graph.termType !== "BlankNode" && graph.termType !== "DefaultGraph") {
+      throw new JellyConformanceError("Invalid RDF graph term");
+    }
+    reader.pos = end;
+    this.repeated[0] = subject;
+    this.repeated[1] = predicate;
+    this.repeated[2] = object;
+    this.repeated[3] = graph;
+    return this.factory.quad(subject, predicate, object, graph);
+  }
+  decodeWireGraphTerm(reader, field, position) {
+    const kind = field - 13;
+    reader.pos = position;
+    if (kind === 0) return this.decodeWireIri(reader, reader.uint32());
+    if (kind === 1) return this.factory.blankNode(reader.string());
+    if (kind === 2) {
+      reader.pos += reader.uint32();
+      return this.defaultGraph;
+    }
+    return this.decodeWireLiteral(reader, reader.uint32());
+  }
   decodeWireTerm(reader, field, position) {
     const kind = field - 1 & 3;
     reader.pos = position;
@@ -2801,11 +2907,11 @@ var Decoder = class {
     }
     if (raw.rdfStar) throw new JellyUnsupportedFeatureError("RDF-star Jelly streams are not supported");
     if (raw.generalizedStatements) throw new JellyUnsupportedFeatureError("Generalized RDF Jelly streams are not supported");
-    if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > MAX_LOOKUP_SIZE) {
+    if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > this.maxLookupTableSize) {
       throw new JellyConformanceError(`Invalid name lookup size ${raw.maxNameTableSize}`);
     }
-    if (raw.maxPrefixTableSize > MAX_LOOKUP_SIZE || raw.maxDatatypeTableSize > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError("Jelly lookup size exceeds the supported maximum");
+    if (raw.maxPrefixTableSize > this.maxLookupTableSize || raw.maxDatatypeTableSize > this.maxLookupTableSize) {
+      throw new JellyConformanceError("Jelly lookup size exceeds the configured maximum");
     }
     if (![1 /* TRIPLES */, 2 /* QUADS */, 3 /* GRAPHS */].includes(raw.physicalType)) {
       throw new JellyConformanceError(`Invalid physical stream type ${raw.physicalType}`);
@@ -2822,9 +2928,9 @@ var Decoder = class {
       maxDatatypeTableSize: raw.maxDatatypeTableSize,
       version: raw.version
     };
-    this.names = new LookupDecoder(raw.maxNameTableSize);
-    this.prefixes = new LookupDecoder(raw.maxPrefixTableSize);
-    this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize);
+    this.names = new LookupDecoder(raw.maxNameTableSize, this.maxLookupTableSize);
+    this.prefixes = new LookupDecoder(raw.maxPrefixTableSize, this.maxLookupTableSize);
+    this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize, this.maxLookupTableSize);
     this.events.options?.(this.streamOptions);
   }
   validateLogicalType(physical, logical) {
@@ -3032,8 +3138,13 @@ function asUint8Array(input) {
 
 // src/codec/MessageDecoder.ts
 var DEFAULT_MAX_MESSAGE_SIZE = 64 * 1024 * 1024;
+var INITIAL_CAPACITY = 8192;
+var EMPTY_BYTES = new Uint8Array();
+function delimitedHint(first, second, third) {
+  return first !== 10 || second === 10 && third !== 10;
+}
 function delimitedJellyHint(input) {
-  return input.byteLength >= 3 && (input[0] !== 10 || input[1] === 10 && input[2] !== 10);
+  return input.byteLength >= 3 && delimitedHint(input[0], input[1], input[2]);
 }
 var FramedMessageDecoder = class {
   constructor(options, decodeFrame, decodeReader) {
@@ -3043,59 +3154,122 @@ var FramedMessageDecoder = class {
     this.delimited = typeof this.mode === "boolean" ? this.mode : void 0;
     this.maxMessageSize = options.maxMessageSize ?? DEFAULT_MAX_MESSAGE_SIZE;
   }
-  decodeFrame;
-  decodeReader;
-  buffer = new Uint8Array();
+  buffer = EMPTY_BYTES;
+  start = 0;
+  filled = 0;
   delimited;
   mode;
   maxMessageSize;
+  finalising = false;
+  stopped = false;
+  delivered = false;
+  get retained() {
+    return this.filled - this.start;
+  }
+  /** Bytes held back because a consumer paused or a frame is still incomplete. */
+  get bufferedBytes() {
+    return this.retained;
+  }
+  get paused() {
+    return this.stopped;
+  }
   write(chunk) {
     const frames = [];
-    this.writeEach(chunk, (frame) => frames.push(frame));
+    this.writeEach(chunk, (frame) => {
+      frames.push(frame);
+    });
     return frames;
   }
   end(chunk) {
     const frames = [];
-    this.endEach((frame) => frames.push(frame), chunk);
+    this.endEach((frame) => {
+      frames.push(frame);
+    }, chunk);
     return frames;
   }
   decode(input) {
     const frames = [];
-    this.decodeEach(input, (frame) => frames.push(frame));
+    this.decodeEach(input, (frame) => {
+      frames.push(frame);
+    });
     return frames;
   }
+  /** Returns false when the consumer paused delivery; call resumeEach() to continue. */
   writeEach(chunk, consume) {
     const bytes = asUint8Array(chunk);
-    this.buffer = this.buffer.byteLength === 0 ? bytes : concatBytes([this.buffer, bytes]);
-    if (this.delimited === void 0 && this.buffer.byteLength >= 3) this.delimited = delimitedJellyHint(this.buffer);
-    if (this.delimited) this.readDelimited(false, consume);
+    this.detect(bytes);
+    if (this.delimited === true && this.retained === 0 && !this.stopped) {
+      const offset = this.readFrames(bytes, 0, bytes.byteLength, false, consume);
+      if (offset < bytes.byteLength) this.append(bytes, offset);
+      return !this.stopped;
+    }
+    this.append(bytes, 0);
+    return this.pump(false, consume);
   }
   endEach(consume, chunk) {
-    if (chunk) this.writeEach(chunk, consume);
-    if (this.delimited === void 0) {
-      if (this.mode === "auto") this.delimited = this.buffer.byteLength > 0 && delimitedJellyHint(this.buffer);
-      else this.delimited = this.mode;
+    this.stopped = false;
+    if (chunk !== void 0 && !this.writeEach(chunk, consume)) {
+      this.finalising = true;
+      return false;
     }
-    if (this.delimited) this.readDelimited(true, consume);
-    else {
-      if (this.buffer.byteLength > this.maxMessageSize) throw new JellyConformanceError("Jelly message exceeds configured size limit");
-      if (this.buffer.byteLength === 0) throw new JellyConformanceError("Jelly input is empty");
-      consume(this.decodeFrame(this.buffer));
-      this.buffer = new Uint8Array();
-    }
+    this.finalising = true;
+    return this.pump(true, consume);
+  }
+  /** Continue after a consumer paused delivery by returning false. */
+  resumeEach(consume) {
+    this.stopped = false;
+    return this.pump(this.finalising, consume);
   }
   decodeEach(input, consume) {
     this.writeEach(input, consume);
     this.endEach(consume);
   }
-  readDelimited(final, consume) {
-    let offset = 0;
-    while (offset < this.buffer.byteLength) {
+  /** Framing is decided from the first three bytes, wherever they happen to sit. */
+  detect(bytes) {
+    if (this.delimited !== void 0) return;
+    const retained = this.retained;
+    if (retained + bytes.byteLength < 3) return;
+    const at = (index) => index < retained ? this.buffer[this.start + index] : bytes[index - retained];
+    this.delimited = delimitedHint(at(0), at(1), at(2));
+  }
+  pump(final, consume) {
+    if (this.stopped) return false;
+    if (this.delimited === void 0) {
+      if (!final) return true;
+      this.delimited = this.mode === "auto" ? this.retained > 0 && delimitedJellyHint(this.buffer.subarray(this.start, this.filled)) : this.mode;
+    }
+    if (this.delimited) {
+      this.start = this.readFrames(this.buffer, this.start, this.filled, final, consume);
+      if (this.start === this.filled) {
+        this.start = 0;
+        this.filled = 0;
+      }
+      if (this.stopped) return false;
+      if (final && this.retained !== 0) throw new JellyConformanceError("Truncated delimited Jelly message");
+      return true;
+    }
+    if (!final || this.delivered) return true;
+    if (this.retained === 0) throw new JellyConformanceError("Jelly input is empty");
+    const frame = this.decodeFrame(this.buffer.subarray(this.start, this.filled));
+    this.delivered = true;
+    this.buffer = EMPTY_BYTES;
+    this.start = 0;
+    this.filled = 0;
+    if (consume(frame) === false) {
+      this.stopped = true;
+      return false;
+    }
+    return true;
+  }
+  /** Returns the offset after the last frame handed to the consumer. */
+  readFrames(buffer, from, end, final, consume) {
+    let offset = from;
+    while (offset < end) {
       let size;
       let prefixSize;
       let reader;
       try {
-        reader = Reader2.create(this.buffer.subarray(offset));
+        reader = Reader2.create(buffer.subarray(offset, end));
         size = reader.uint32();
         prefixSize = reader.pos;
       } catch (error) {
@@ -3106,13 +3280,40 @@ var FramedMessageDecoder = class {
       }
       if (size > this.maxMessageSize) throw new JellyConformanceError("Jelly message exceeds configured size limit");
       const payloadOffset = offset + prefixSize;
-      const end = payloadOffset + size;
-      if (end > this.buffer.byteLength) break;
-      consume(this.decodeReader ? this.decodeReader(reader, size) : this.decodeFrame(this.buffer.subarray(payloadOffset, end)));
-      offset = end;
+      const frameEnd = payloadOffset + size;
+      if (frameEnd > end) break;
+      const frame = this.decodeReader ? this.decodeReader(reader, size) : this.decodeFrame(buffer.subarray(payloadOffset, frameEnd));
+      offset = frameEnd;
+      if (consume(frame) === false) {
+        this.stopped = true;
+        break;
+      }
     }
-    this.buffer = this.buffer.slice(offset);
-    if (final && this.buffer.byteLength !== 0) throw new JellyConformanceError("Truncated delimited Jelly message");
+    return offset;
+  }
+  append(bytes, from) {
+    const addition = bytes.byteLength - from;
+    if (addition <= 0) return;
+    const live = this.retained;
+    const required = live + addition;
+    if (required > this.buffer.byteLength) {
+      let capacity = this.buffer.byteLength || INITIAL_CAPACITY;
+      while (capacity < required) capacity *= 2;
+      const grown = new Uint8Array(capacity);
+      if (live > 0) grown.set(this.buffer.subarray(this.start, this.filled));
+      this.buffer = grown;
+      this.start = 0;
+      this.filled = live;
+    } else if (this.filled + addition > this.buffer.byteLength) {
+      this.buffer.copyWithin(0, this.start, this.filled);
+      this.start = 0;
+      this.filled = live;
+    }
+    this.buffer.set(from === 0 ? bytes : bytes.subarray(from), this.filled);
+    this.filled += addition;
+    if (this.delimited === false && this.retained > this.maxMessageSize) {
+      throw new JellyConformanceError("Jelly message exceeds configured size limit");
+    }
   }
 };
 var MessageDecoder = class extends FramedMessageDecoder {
@@ -3232,7 +3433,6 @@ var LookupEncoder = class {
     this.older = new Int32Array(size + 1);
     this.newer = new Int32Array(size + 1);
   }
-  size;
   data = /* @__PURE__ */ new Map();
   values;
   older;
@@ -3554,7 +3754,6 @@ var MessageEncoder = class {
   constructor(delimited = true) {
     this.delimited = delimited;
   }
-  delimited;
   encode(frame) {
     return this.delimited ? encodeDelimitedRdfStreamFrame(frame) : encodeRdfStreamFrame(frame);
   }
@@ -3580,12 +3779,20 @@ var Writer = class {
   mode;
   ended = false;
   streaming;
+  /**
+   * Delimited output with no sink is serialised frame by frame as each one
+   * completes, so finished rows and terms become garbage immediately instead of
+   * being retained until end().
+   */
+  chunks;
   constructor(outputOrOptions = {}, maybeOptions = {}) {
     const options = isOutput(outputOrOptions) ? maybeOptions : outputOrOptions;
     this.output = isOutput(outputOrOptions) ? outputOrOptions : void 0;
     this.messageEncoder = new MessageEncoder(options.delimited ?? true);
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
-    this.encoder = new Encoder(options, this.streaming ? (frame) => this.writeFrame(frame) : void 0);
+    const buffered = !this.output && this.messageEncoder.delimited;
+    if (buffered) this.chunks = [];
+    this.encoder = new Encoder(options, this.streaming ? (frame) => this.writeFrame(frame) : buffered ? (frame) => this.chunks.push(this.messageEncoder.encode(frame)) : void 0);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
       this.encoder.addNamespace(prefix, typeof iri === "string" ? iri : iri.value);
     }
@@ -3663,7 +3870,7 @@ var Writer = class {
         this.output.end((error) => done?.(error ?? null));
         return;
       }
-      const bytes = this.messageEncoder.encodeAll(frames);
+      const bytes = this.chunks ? this.collectChunks() : this.messageEncoder.encodeAll(frames);
       if (this.output) {
         this.output.write(bytes);
         this.output.end((error) => done?.(error ?? null, error ? void 0 : bytes));
@@ -3673,6 +3880,12 @@ var Writer = class {
       if (done) done(actual);
       else throw actual;
     }
+  }
+  collectChunks() {
+    const chunks = this.chunks;
+    const output = chunks.length === 1 ? chunks[0] : concatBytes(chunks);
+    chunks.length = 0;
+    return output;
   }
   writeFrame(frame) {
     this.output.write(this.messageEncoder.encode(frame));
@@ -3716,6 +3929,9 @@ var StreamParser = class extends Transform {
   messageReader;
   decoder;
   messageMode;
+  pending = [];
+  pendingIndex = 0;
+  busy = false;
   constructor(options = {}) {
     super({ ...options, readableObjectMode: true, writableObjectMode: false });
     this.messageMode = options.messages === true || options.rdfMessages === true;
@@ -3731,31 +3947,79 @@ var StreamParser = class extends Transform {
     return this;
   }
   _transform(chunk, _encoding, callback) {
+    this.busy = true;
     try {
-      this.messageReader.writeEach(chunk, (message) => this.pushMessage(message));
-      callback();
+      if (this.flushPending() && this.messageReader.paused) {
+        this.messageReader.resumeEach((message) => this.accept(message));
+      }
+      this.messageReader.writeEach(chunk, (message) => this.accept(message));
     } catch (error) {
+      this.busy = false;
       callback(error instanceof Error ? error : new Error(String(error)));
+      return;
     }
+    this.busy = false;
+    callback();
   }
   _flush(callback) {
+    this.busy = true;
     try {
-      this.messageReader.endEach((message) => this.pushMessage(message));
+      this.drainPending();
+      this.messageReader.endEach((message) => {
+        this.enqueue(message);
+        this.drainPending();
+        return true;
+      });
       this.decoder.finish();
-      callback();
     } catch (error) {
+      this.busy = false;
       callback(error instanceof Error ? error : new Error(String(error)));
+      return;
     }
+    this.busy = false;
+    callback();
   }
-  pushMessage(message) {
+  _read(size) {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      if (this.flushPending() && this.messageReader.paused) {
+        this.messageReader.resumeEach((message) => this.accept(message));
+      }
+    } catch (error) {
+      this.busy = false;
+      this.destroy(error instanceof Error ? error : new Error(String(error)));
+      return;
+    }
+    this.busy = false;
+    if (!this.messageReader.paused && this.pendingIndex >= this.pending.length) super._read(size);
+  }
+  /** Returns false when the readable side is full and decoding should pause. */
+  accept(message) {
+    this.enqueue(message);
+    return this.flushPending();
+  }
+  enqueue(message) {
     this.emit("message", message);
     for (const quad of message) {
       if (this.messageMode) {
-        const entry = { quad, messageCounter: message.messageCounter };
         this.emit("messageCounter", message.messageCounter, quad);
-        this.push(entry);
-      } else this.push(quad);
+        this.pending.push({ quad, messageCounter: message.messageCounter });
+      } else this.pending.push(quad);
     }
+  }
+  flushPending() {
+    while (this.pendingIndex < this.pending.length) {
+      if (!this.push(this.pending[this.pendingIndex++])) return false;
+    }
+    this.pending.length = 0;
+    this.pendingIndex = 0;
+    return true;
+  }
+  drainPending() {
+    while (this.pendingIndex < this.pending.length) this.push(this.pending[this.pendingIndex++]);
+    this.pending.length = 0;
+    this.pendingIndex = 0;
   }
 };
 

@@ -1,4 +1,5 @@
 import type * as RDF from '@rdfjs/types';
+import { concatBytes } from '../codec/bytes';
 import { Encoder } from '../codec/Encoder';
 import { MessageEncoder } from '../codec/MessageEncoder';
 import { JellyConformanceError } from '../errors';
@@ -27,6 +28,12 @@ export class Writer {
   private mode: 'plain' | 'messages' | undefined;
   private ended = false;
   private readonly streaming: boolean;
+  /**
+   * Delimited output with no sink is serialised frame by frame as each one
+   * completes, so finished rows and terms become garbage immediately instead of
+   * being retained until end().
+   */
+  private readonly chunks?: Uint8Array[];
 
   public constructor(options?: WriterOptions);
   public constructor(output: BinaryOutput, options?: WriterOptions);
@@ -35,7 +42,11 @@ export class Writer {
     this.output = isOutput(outputOrOptions) ? outputOrOptions : undefined;
     this.messageEncoder = new MessageEncoder(options.delimited ?? true);
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
-    this.encoder = new Encoder(options, this.streaming ? frame => this.writeFrame(frame) : undefined);
+    const buffered = !this.output && this.messageEncoder.delimited;
+    if (buffered) this.chunks = [];
+    this.encoder = new Encoder(options, this.streaming
+      ? frame => this.writeFrame(frame)
+      : buffered ? frame => this.chunks!.push(this.messageEncoder.encode(frame)) : undefined);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
       this.encoder.addNamespace(prefix, typeof iri === 'string' ? iri : iri.value);
     }
@@ -119,7 +130,7 @@ export class Writer {
         this.output!.end(error => done?.(error ?? null));
         return;
       }
-      const bytes = this.messageEncoder.encodeAll(frames);
+      const bytes = this.chunks ? this.collectChunks() : this.messageEncoder.encodeAll(frames);
       if (this.output) {
         this.output.write(bytes);
         this.output.end(error => done?.(error ?? null, error ? undefined : bytes));
@@ -128,6 +139,13 @@ export class Writer {
       const actual = error instanceof Error ? error : new Error(String(error));
       if (done) done(actual); else throw actual;
     }
+  }
+
+  private collectChunks(): Uint8Array {
+    const chunks = this.chunks!;
+    const output = chunks.length === 1 ? chunks[0]! : concatBytes(chunks);
+    chunks.length = 0;
+    return output;
   }
 
   private writeFrame(frame: Parameters<MessageEncoder['encode']>[0]): void {

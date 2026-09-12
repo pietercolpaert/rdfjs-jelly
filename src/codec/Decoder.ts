@@ -1,7 +1,12 @@
 import type * as RDF from '@rdfjs/types';
 import type { Reader } from 'protobufjs/minimal.js';
 import { JellyConformanceError, JellyUnsupportedFeatureError } from '../errors';
-import { ProtoRowKind, decodeProtoRdfStreamFrameRows, decodeProtoTripleWire } from '../generated/rdf_pb';
+import {
+  ProtoRowKind,
+  decodeProtoRdfStreamFrameRows,
+  decodeProtoQuadWire,
+  decodeProtoTripleWire,
+} from '../generated/rdf_pb';
 import type {
   ProtoFrame,
   ProtoGraphStart,
@@ -20,7 +25,7 @@ import type {
   RdfTerm,
   RdfTriple,
 } from '../generated/rdf_pb';
-import { MAX_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, RDF_LANG_STRING, XSD_STRING } from '../options';
+import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, RDF_LANG_STRING, XSD_STRING } from '../options';
 import { DataFactory } from '../rdfjs/adapter';
 import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type StreamOptions } from '../types';
 import { LookupDecoder } from './LookupDecoder';
@@ -38,6 +43,7 @@ export class Decoder {
   private readonly factory: RDF.DataFactory;
   private readonly strict: boolean;
   private readonly maxSupportedVersion: number;
+  private readonly maxLookupTableSize: number;
   private names?: LookupDecoder;
   private prefixes?: LookupDecoder;
   private datatypes?: LookupDecoder;
@@ -56,6 +62,7 @@ export class Decoder {
     this.factory = options.factory ?? DataFactory;
     this.strict = options.strict ?? true;
     this.maxSupportedVersion = options.maxSupportedVersion ?? 2;
+    this.maxLookupTableSize = options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
     this.events = events;
     this.defaultGraph = this.factory.defaultGraph();
   }
@@ -148,6 +155,10 @@ export class Decoder {
       try {
         if (kind === ProtoRowKind.TRIPLE) {
           this.emitQuad(this.decodeWireTriple(wireReader, wireLength), message, output);
+          return;
+        }
+        if (kind === ProtoRowKind.QUAD) {
+          this.emitQuad(this.decodeWireQuad(wireReader, wireLength), message, output);
           return;
         }
         if (kind === ProtoRowKind.NAME) this.decodeWireLookupEntry(wireReader, wireLength, this.names!);
@@ -280,6 +291,111 @@ export class Decoder {
     return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
 
+  /**
+   * Quad rows read straight off the wire, mirroring decodeWireTriple with the
+   * graph slot (fields 13-16) added. Falls back to the generated protobuf
+   * decoder when a slot repeats, which is where merge semantics matter.
+   */
+  private decodeWireQuad(reader: Reader, length: number): RDF.Quad {
+    if (this.streamOptions!.physicalType !== PhysicalStreamType.QUADS) {
+      throw new JellyConformanceError('Quad row is invalid in this physical stream type');
+    }
+
+    const end = reader.pos + length;
+    if (end > reader.len) throw new RangeError('Truncated Jelly quad');
+    let subjectField = 0;
+    let subjectPosition = 0;
+    let predicateField = 0;
+    let predicatePosition = 0;
+    let objectField = 0;
+    let objectPosition = 0;
+    let graphField = 0;
+    let graphPosition = 0;
+    let duplicateField = false;
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      const field = tag >>> 3;
+      const wireType = tag & 7;
+      if (field >= 1 && field <= 16 && wireType === 2) {
+        const position = reader.pos;
+        const termLength = reader.uint32();
+        reader.pos += termLength;
+        if (reader.pos > end) throw new RangeError('Invalid Jelly quad term length');
+        if (field <= 4) {
+          duplicateField ||= subjectField === field;
+          subjectField = field;
+          subjectPosition = position;
+        } else if (field <= 8) {
+          duplicateField ||= predicateField === field;
+          predicateField = field;
+          predicatePosition = position;
+        } else if (field <= 12) {
+          duplicateField ||= objectField === field;
+          objectField = field;
+          objectPosition = position;
+        } else {
+          duplicateField ||= graphField === field;
+          graphField = field;
+          graphPosition = position;
+        }
+      } else {
+        reader.skipType(wireType);
+        if (reader.pos > end) throw new RangeError('Invalid Jelly quad field length');
+      }
+    }
+    if (reader.pos !== end) throw new RangeError('Invalid Jelly quad length');
+    if (duplicateField) {
+      reader.pos = end - length;
+      return this.decodeProtoQuad(decodeProtoQuadWire(reader, length));
+    }
+
+    const subject = subjectField
+      ? this.decodeWireTerm(reader, subjectField, subjectPosition)
+      : this.repeated[0];
+    if (!subject) throw new JellyConformanceError('First Jelly statement must set slot 0');
+    if (subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') {
+      throw new JellyConformanceError('Invalid RDF subject term');
+    }
+    const predicate = predicateField
+      ? this.decodeWireTerm(reader, predicateField, predicatePosition)
+      : this.repeated[1];
+    if (!predicate) throw new JellyConformanceError('First Jelly statement must set slot 1');
+    if (predicate.termType !== 'NamedNode') throw new JellyConformanceError('Invalid RDF predicate term');
+    const object = objectField
+      ? this.decodeWireTerm(reader, objectField, objectPosition)
+      : this.repeated[2];
+    if (!object) throw new JellyConformanceError('First Jelly statement must set slot 2');
+    if (object.termType !== 'NamedNode' && object.termType !== 'BlankNode' && object.termType !== 'Literal') {
+      throw new JellyConformanceError('Invalid RDF object term');
+    }
+    const graph = graphField
+      ? this.decodeWireGraphTerm(reader, graphField, graphPosition)
+      : this.repeated[3];
+    if (!graph) throw new JellyConformanceError('First Jelly quad must set its graph');
+    if (graph.termType !== 'NamedNode' && graph.termType !== 'BlankNode' && graph.termType !== 'DefaultGraph') {
+      throw new JellyConformanceError('Invalid RDF graph term');
+    }
+
+    reader.pos = end;
+    this.repeated[0] = subject;
+    this.repeated[1] = predicate;
+    this.repeated[2] = object;
+    this.repeated[3] = graph;
+    return this.factory.quad(subject, predicate, object, graph);
+  }
+
+  private decodeWireGraphTerm(reader: Reader, field: number, position: number): RDF.Term {
+    const kind = field - 13;
+    reader.pos = position;
+    if (kind === 0) return this.decodeWireIri(reader, reader.uint32());
+    if (kind === 1) return this.factory.blankNode(reader.string());
+    if (kind === 2) {
+      reader.pos += reader.uint32();
+      return this.defaultGraph;
+    }
+    return this.decodeWireLiteral(reader, reader.uint32());
+  }
+
   private decodeWireTerm(reader: Reader, field: number, position: number): RDF.Term {
     const kind = (field - 1) & 3;
     reader.pos = position;
@@ -350,11 +466,11 @@ export class Decoder {
     }
     if (raw.rdfStar) throw new JellyUnsupportedFeatureError('RDF-star Jelly streams are not supported');
     if (raw.generalizedStatements) throw new JellyUnsupportedFeatureError('Generalized RDF Jelly streams are not supported');
-    if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > MAX_LOOKUP_SIZE) {
+    if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > this.maxLookupTableSize) {
       throw new JellyConformanceError(`Invalid name lookup size ${raw.maxNameTableSize}`);
     }
-    if (raw.maxPrefixTableSize > MAX_LOOKUP_SIZE || raw.maxDatatypeTableSize > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError('Jelly lookup size exceeds the supported maximum');
+    if (raw.maxPrefixTableSize > this.maxLookupTableSize || raw.maxDatatypeTableSize > this.maxLookupTableSize) {
+      throw new JellyConformanceError('Jelly lookup size exceeds the configured maximum');
     }
     if (![PhysicalStreamType.TRIPLES, PhysicalStreamType.QUADS, PhysicalStreamType.GRAPHS].includes(raw.physicalType)) {
       throw new JellyConformanceError(`Invalid physical stream type ${raw.physicalType}`);
@@ -371,9 +487,9 @@ export class Decoder {
       maxDatatypeTableSize: raw.maxDatatypeTableSize,
       version: raw.version,
     };
-    this.names = new LookupDecoder(raw.maxNameTableSize);
-    this.prefixes = new LookupDecoder(raw.maxPrefixTableSize);
-    this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize);
+    this.names = new LookupDecoder(raw.maxNameTableSize, this.maxLookupTableSize);
+    this.prefixes = new LookupDecoder(raw.maxPrefixTableSize, this.maxLookupTableSize);
+    this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize, this.maxLookupTableSize);
     this.events.options?.(this.streamOptions);
   }
 

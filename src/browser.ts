@@ -8,6 +8,13 @@ import type { Message, MessageQuad, ParserOutputItem, StreamOptions, WriterOptio
 import type { ParserOptions } from './types';
 
 export type BrowserStreamChunk = Uint8Array | ArrayBuffer;
+
+/**
+ * Objects the readable side buffers before the parser stops decoding. A
+ * TransformStream defaults to zero here, which would pause after every message;
+ * a small queue keeps throughput up while still bounding memory.
+ */
+const READABLE_QUEUE = 256;
 type BrowserParserEvent = 'options' | 'namespace' | 'message' | 'messageCounter';
 type Listener = (...args: any[]) => void;
 
@@ -23,7 +30,14 @@ export class StreamParser {
       namespace: (prefix, iri) => this.emit('namespace', prefix, iri),
     });
     const reader = new DirectMessageDecoder(options, decoder);
-    const push = (message: Message, controller: TransformStreamDefaultController<ParserOutputItem>): void => {
+    // Returns false once the readable side is full, which stops frame decoding
+    // until the next chunk or the final flush. Undecoded bytes stay in `reader`,
+    // so what is held in memory is bounded by one Jelly message.
+    const deliver = (
+      message: Message,
+      controller: TransformStreamDefaultController<ParserOutputItem>,
+      always: boolean,
+    ): boolean => {
       this.emit('message', message);
       for (const quad of message) {
         if (messageMode) {
@@ -32,16 +46,23 @@ export class StreamParser {
           controller.enqueue(entry);
         } else controller.enqueue(quad);
       }
+      return always || controller.desiredSize === null || controller.desiredSize > 0;
     };
-    const transform = new TransformStream<BrowserStreamChunk, ParserOutputItem>({
-      transform: (chunk, controller) => {
-        reader.writeEach(chunk, message => push(message, controller));
+    const transform = new TransformStream<BrowserStreamChunk, ParserOutputItem>(
+      {
+        transform: (chunk, controller) => {
+          const consume = (message: Message): boolean => deliver(message, controller, false);
+          if (reader.paused) reader.resumeEach(consume);
+          reader.writeEach(chunk, consume);
+        },
+        flush: controller => {
+          reader.endEach(message => deliver(message, controller, true));
+          decoder.finish();
+        },
       },
-      flush: controller => {
-        reader.endEach(message => push(message, controller));
-        decoder.finish();
-      },
-    });
+      undefined,
+      { highWaterMark: READABLE_QUEUE },
+    );
     this.readable = transform.readable;
     this.writable = transform.writable;
   }
