@@ -1,119 +1,368 @@
 {
+  "recorded": "2026-09-12",
   "node": "v25.9.0",
   "cpu": "12th Gen Intel(R) Core(TM) i7-1265U",
   "rounds": 13,
-  "messageSize": 250,
   "statements": 300656,
-  "messages": 1203,
-  "isolation": "one child process per case",
+  "messages": 10000,
+  "blankNodes": 1500,
+  "minStatementsPerMessage": 4,
+  "maxStatementsPerMessage": 8899,
+  "boundaries": "original source frames (SUBJECT_GRAPHS); no source blank node crosses a boundary",
+  "verification": "every ordered term and message counter; bijective blank-node renaming per message",
+  "isolation": "one process per case",
+  "dependencies": {
+    "rdf-parser-ts": "0.3.2",
+    "protobufjs": "8.8.0"
+  },
   "cases": [
     {
       "name": "Jelly",
       "format": "Jelly",
       "codec": "none",
-      "bytes": 10125493,
-      "medianMs": 113.9,
-      "minMs": 109.88,
-      "statementsPerSecond": 2639623
+      "bytes": 10143067,
+      "medianMs": 139.32,
+      "minMs": 121.05,
+      "statementsPerSecond": 2157960,
+      "samplesMs": [
+        124.21547099999998,
+        135.12457999999992,
+        148.165344,
+        212.6320340000002,
+        141.01552400000014,
+        139.32415000000037,
+        149.84090500000002,
+        131.0892899999999,
+        171.543858,
+        143.70922699999983,
+        131.41279399999985,
+        121.04955299999983,
+        129.3732869999999
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "Jelly + gzip",
       "format": "Jelly",
       "codec": "gzip",
-      "bytes": 2816906,
-      "medianMs": 134.57,
-      "minMs": 127.46,
-      "statementsPerSecond": 2234232
+      "bytes": 2835802,
+      "medianMs": 154,
+      "minMs": 138.04,
+      "statementsPerSecond": 1952318,
+      "samplesMs": [
+        175.18034000000011,
+        143.59414100000004,
+        172.28229499999998,
+        184.45091100000036,
+        159.5790619999998,
+        154.04538699999966,
+        152.636027,
+        138.03820899999982,
+        147.49427500000002,
+        153.99949100000003,
+        142.84906600000022,
+        141.93829099999994,
+        173.24458800000048
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "Jelly + zstd",
       "format": "Jelly",
       "codec": "zstd",
-      "bytes": 2709361,
-      "medianMs": 127.05,
-      "minMs": 119.65,
-      "statementsPerSecond": 2366364
+      "bytes": 2708855,
+      "medianMs": 141.55,
+      "minMs": 131.89,
+      "statementsPerSecond": 2124026,
+      "samplesMs": [
+        227.14428500000008,
+        175.97530699999993,
+        153.08447699999988,
+        240.87023699999963,
+        137.58437800000002,
+        229.82425300000023,
+        151.7711089999998,
+        141.55008099999986,
+        137.1575210000001,
+        132.78111000000035,
+        136.14149400000042,
+        131.89078300000074,
+        137.581588
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "Jelly + brotli",
       "format": "Jelly",
       "codec": "brotli",
-      "bytes": 1732080,
-      "medianMs": 143.53,
-      "minMs": 140.01,
-      "statementsPerSecond": 2094666
+      "bytes": 1745378,
+      "medianMs": 143.03,
+      "minMs": 139.33,
+      "statementsPerSecond": 2102082,
+      "samplesMs": [
+        146.0954989999991,
+        144.72214299999905,
+        143.95804099999805,
+        149.96915399999853,
+        141.3645089999991,
+        142.2089190000006,
+        140.88023299999986,
+        139.98290799999813,
+        143.97451699999874,
+        139.33061600000292,
+        142.648121000002,
+        144.86137999999846,
+        143.027693
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "N-Quads",
       "format": "N-Quads",
       "codec": "none",
-      "bytes": 47271481,
-      "medianMs": 295.31,
-      "minMs": 279.78,
-      "statementsPerSecond": 1018104
+      "bytes": 47341857,
+      "medianMs": 307.34,
+      "minMs": 291.51,
+      "statementsPerSecond": 978259,
+      "samplesMs": [
+        307.3378200000002,
+        319.83185300000014,
+        314.3116500000001,
+        303.6343909999996,
+        306.70379300000013,
+        307.72967100000005,
+        303.43797799999993,
+        311.34152300000005,
+        306.91319900000053,
+        304.24268799999936,
+        313.6115229999996,
+        291.5083169999998,
+        320.98434799999995
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "N-Quads + gzip",
       "format": "N-Quads",
       "codec": "gzip",
-      "bytes": 3311694,
-      "medianMs": 322.31,
-      "minMs": 307.2,
-      "statementsPerSecond": 932805
+      "bytes": 3301268,
+      "medianMs": 328.88,
+      "minMs": 318.86,
+      "statementsPerSecond": 914176,
+      "samplesMs": [
+        334.01146200000017,
+        340.64032599999973,
+        328.881797,
+        331.90735700000005,
+        333.3406580000001,
+        322.25129000000015,
+        324.9558589999997,
+        327.8682340000005,
+        318.86209600000075,
+        335.00782400000026,
+        323.94399800000065,
+        325.6031700000003,
+        335.0953560000007
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "N-Quads + zstd",
       "format": "N-Quads",
       "codec": "zstd",
-      "bytes": 3507962,
-      "medianMs": 325.24,
-      "minMs": 320.9,
-      "statementsPerSecond": 924422
+      "bytes": 3492350,
+      "medianMs": 325.22,
+      "minMs": 318.05,
+      "statementsPerSecond": 924470,
+      "samplesMs": [
+        319.7493529999999,
+        321.58404500000006,
+        319.89447800000016,
+        324.20537000000013,
+        325.5926840000002,
+        325.2198930000004,
+        327.66831,
+        318.0525950000001,
+        326.24819000000025,
+        323.49300200000016,
+        325.3992760000001,
+        333.91377900000043,
+        325.3716860000004
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "N-Quads + brotli",
       "format": "N-Quads",
       "codec": "brotli",
-      "bytes": 2036742,
-      "medianMs": 336.14,
-      "minMs": 322.79,
-      "statementsPerSecond": 894432
+      "bytes": 2028767,
+      "medianMs": 334.49,
+      "minMs": 329.18,
+      "statementsPerSecond": 898844,
+      "samplesMs": [
+        340.75528399999894,
+        329.17737799999304,
+        360.85747699999774,
+        330.40962500000023,
+        362.9399950000079,
+        333.77724700000545,
+        331.3109079999995,
+        332.06349200000113,
+        333.88472600000387,
+        336.5109749999974,
+        334.49175900001137,
+        338.65961299999617,
+        336.0092149999982
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "TriG",
       "format": "TriG",
       "codec": "none",
-      "bytes": 27868407,
-      "medianMs": 1065.01,
-      "minMs": 961.28,
-      "statementsPerSecond": 282304
+      "bytes": 27894691,
+      "medianMs": 975.76,
+      "minMs": 922.1,
+      "statementsPerSecond": 308125,
+      "samplesMs": [
+        999.6617729999998,
+        946.1960049999998,
+        1179.4006689999997,
+        922.0955700000004,
+        981.245957000001,
+        936.5113880000008,
+        940.7398130000001,
+        1181.3997899999995,
+        1139.9632389999988,
+        975.7597019999994,
+        940.5349249999999,
+        946.3735180000003,
+        1070.4399710000034
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "TriG + gzip",
       "format": "TriG",
       "codec": "gzip",
-      "bytes": 2452051,
-      "medianMs": 1094.48,
-      "minMs": 948.6,
-      "statementsPerSecond": 274702
+      "bytes": 2444307,
+      "medianMs": 1070.15,
+      "minMs": 954.83,
+      "statementsPerSecond": 280947,
+      "samplesMs": [
+        1022.5834829999999,
+        1169.714089,
+        1031.2538529999993,
+        1048.6247079999994,
+        1089.2075859999986,
+        958.8237009999993,
+        1121.210524,
+        954.830453999999,
+        1088.6260089999996,
+        1070.1539209999974,
+        959.9868979999992,
+        1092.5763310000002,
+        1094.026858000001
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "TriG + zstd",
       "format": "TriG",
       "codec": "zstd",
-      "bytes": 2555916,
-      "medianMs": 1088.51,
-      "minMs": 935.39,
-      "statementsPerSecond": 276209
+      "bytes": 2534628,
+      "medianMs": 981.36,
+      "minMs": 954.14,
+      "statementsPerSecond": 306365,
+      "samplesMs": [
+        1028.356506,
+        1085.1225359999999,
+        954.1364050000002,
+        954.5202130000007,
+        1123.0020940000013,
+        988.0367410000017,
+        981.3643979999997,
+        1089.9562160000005,
+        977.8710950000004,
+        964.3007359999974,
+        962.8678509999991,
+        978.9122720000014,
+        1076.478954000002
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     },
     {
       "name": "TriG + brotli",
       "format": "TriG",
       "codec": "brotli",
-      "bytes": 1493574,
-      "medianMs": 1088.5,
-      "minMs": 971.18,
-      "statementsPerSecond": 276212
+      "bytes": 1483290,
+      "medianMs": 954.16,
+      "minMs": 937.52,
+      "statementsPerSecond": 315102,
+      "samplesMs": [
+        1028.7106730000014,
+        968.3600450000013,
+        937.5217760000014,
+        961.5370739999998,
+        952.0646889999989,
+        947.8549469999998,
+        952.6864500000011,
+        949.957448000001,
+        954.1556329999949,
+        943.1422039999961,
+        987.6201639999999,
+        955.2348249999995,
+        1096.5685329999978
+      ],
+      "verified": {
+        "statements": 300656,
+        "messages": 10000,
+        "blankNodes": 1500
+      }
     }
   ]
 }

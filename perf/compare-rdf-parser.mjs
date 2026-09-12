@@ -110,6 +110,14 @@ for (const entry of encoded) {
     verify: verifyStatements,
   });
 }
+// Full ordered validation before timing, rather than statement counts alone.
+for (const testCase of parsingCases) {
+  const output = testCase.operation();
+  verifyStatements(output);
+  for (let i = 0; i < count; i++) {
+    if (!output[i].equals(quads[i])) throw new Error(`${testCase.name}: statement mismatch at ${i}`);
+  }
+}
 const parsing = measureSuite(parsingCases);
 const writing = measureSuite([
   { name: 'rdfjsJelly', operation: writeJelly, verify: verifyJelly },

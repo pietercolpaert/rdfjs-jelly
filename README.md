@@ -61,7 +61,26 @@ writer.end((error, bytes) => {
 
 ## Messages
 
-One Jelly `RdfStreamFrame` is exposed as one `Message`. `Message` extends `Array<RDF.Quad>` and carries `messageCounter` and binary `metadata`.
+The API exposes one Jelly `RdfStreamFrame` as one `Message` container.
+`Message` extends `Array<RDF.Quad>` and carries `messageCounter` and binary
+`metadata`. This API mapping does not make every frame an independent RDF Message.
+
+A Jelly frame is a serialization boundary. Frames in a flat stream can share
+blank-node scope. An RDF Message is a semantic boundary: blank-node identifiers
+are local to that message. Equal labels in different RDF Messages do not identify
+the same blank node. See the [Jelly blank-node rules](https://jelly-rdf.github.io/1.1.x/specification/serialization/#blank-nodes)
+and [RDF Messages specification](https://w3c-cg.github.io/rsp/spec/messages).
+
+Currently, `parseMessages()` and `messages: true` expose frame boundaries and
+preserve the decoded blank-node labels; they do not assign fresh identities per
+frame. Consumers must distinguish transport frames from independent RDF Messages
+and retain the appropriate scope when interpreting those labels.
+
+When representing independent RDF Messages, supply their actual boundaries to
+`addMessage()`. Do not divide a connected blank-node structure into independent
+messages merely to meet a batch size: that can change the RDF's meaning.
+Automatic framing of a flat stream can split such a structure because its
+blank-node scope continues across frames.
 
 ```ts
 const writer = new Writer();
@@ -104,6 +123,13 @@ for await (const quad of response.body!.pipeThrough(new StreamParser())) {
 
 The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and Node parsers emit `options`, `namespace`, `message`, and `messageCounter` events.
 
+The browser parser resumes buffered decoding as its reader consumes output, even
+while input stays open. It queues at most 256 output items, including during
+closure; a decoded frame and unread input bytes occupy additional memory. When
+using the writable side directly, consume the readable side concurrently: writes
+and closure can wait for reader demand. Cancelling the reader stops pending
+writes and propagates cancellation upstream when piping.
+
 ## Browser playground
 
 Build the browser bundle, serve the repository, and open `/index.html`:
@@ -145,11 +171,10 @@ const quads = createReadStream('data.jelly.zst')
   .pipe(new StreamParser());
 ```
 
-On the 300,656-statement dataset measured below, zstd is the best trade of the
-three for Jelly: 2.71 MB against gzip's 2.82 MB, and 8 ms cheaper to decompress.
-Brotli is 36% smaller again at 1.73 MB but the slowest to decompress, costing
-Jelly 26% in end-to-end parse time against 12% for zstd. Pick on wire size and
-CPU budget; none of the three changes which format parses fastest.
+The benchmarks below use Node's default gzip, zstd, and Brotli settings.
+Compressed parsing includes decompression; compression and network transfer time
+are outside the measured region. The size/speed tradeoff depends on the workload
+and codec settings.
 
 Browser `CompressionStream` and `DecompressionStream` do not currently expose
 zstd. The playground therefore uses `@hpcc-js/wasm-zstd` for incremental zstd
@@ -165,147 +190,117 @@ These are local microbenchmarks, not universal rankings. Recorded on 2026-09-12
 with Node.js 25.9.0 on Linux, using an Intel Core i7-1265U and 30 GiB RAM,
 against `rdf-parser-ts` 0.3.2 and `protobufjs` 8.8.0. Parsing timings include
 constructing the result RDF/JS objects and decompressing where the case is
-compressed; compression itself happens before the timed section. Every case is
-verified to reproduce the source statements, in order, before it is timed.
+compressed; compression itself happens before the timed section. Before timing,
+the harness validates every statement in order. Message validation checks every
+message counter and permits a bijective blank-node renaming within each message,
+so a parser cannot pass by splitting or merging identities.
 
 ### Message-based parsing, compared with rdf-parser-ts
 
-The same 300,656 real statements (the bundled `example/osm-dk-10k.jelly.gz`
-OpenStreetMap extract) split into 1,203 messages of 250 statements, parsed in
-message mode on both sides so message boundaries are preserved. `rdfjs-jelly`
-reads Jelly; `rdf-parser-ts` reads the N-Quads and TriG serialisations of the RDF
-1.2 Message Stream Log. This reflects the format choice as much as the parser
-implementation.
+Medians of 13 measured runs after one warm-up run, with explicit garbage
+collection before each run. [Recorded samples and validation summaries](perf/compare-message-formats.json)
+include all 12 cases.
+
+The bundled `example/osm-dk-10k.jelly.gz` OpenStreetMap extract declares a
+subject-graph stream and contains 10,000 source frames. The benchmark preserves
+those original message boundaries: 300,656 statements in messages of 4–8,899
+statements. Each source graph is written as a dataset containing its default
+graph; Jelly uses QUADS with logical type DATASETS. Both text formats receive
+the same messages, in the same order.
+
+All 1,500 source blank nodes are confined to one source message each. The
+workload and each parser's output are checked for that property. Consequently,
+message-local scoping preserves the same 1,500 distinct blank-node identities,
+up to renaming, without changing production decoder behaviour.
+
+This replaces the previous benchmark's arbitrary groups of 250 statements,
+which split blank-node connections. The results below are from the corrected
+workload. `rdfjs-jelly` reads Jelly; `rdf-parser-ts` reads the N-Quads and TriG
+serializations of the RDF Message Stream Log. The comparison measures these
+format/implementation combinations, rather than an intrinsic ranking of formats.
 
 ```
 Parsing speed - thousand statements per second (higher is better)
 
-Jelly             ████████████████████████████████████████████  2640
-Jelly + gzip      █████████████████████████████████████         2234
-Jelly + zstd      ███████████████████████████████████████       2366
-Jelly + Brotli    ███████████████████████████████████           2095
-N-Quads           █████████████████                             1018
-N-Quads + gzip    ████████████████                               933
-N-Quads + zstd    ███████████████                                924
-N-Quads + Brotli  ███████████████                                894
-TriG              █████                                          282
-TriG + gzip       █████                                          275
-TriG + zstd       █████                                          276
-TriG + Brotli     █████                                          276
+Jelly             ████████████████████████████████████████████   2158
+Jelly + gzip      ████████████████████████████████████████       1952
+Jelly + zstd      ███████████████████████████████████████████    2124
+Jelly + Brotli    ███████████████████████████████████████████    2102
+N-Quads           ████████████████████                            978
+N-Quads + gzip    ███████████████████                             914
+N-Quads + zstd    ███████████████████                             924
+N-Quads + Brotli  ██████████████████                              899
+TriG              ██████                                          308
+TriG + gzip       ██████                                          281
+TriG + zstd       ██████                                          306
+TriG + Brotli     ██████                                          315
 ```
 
 ```
 Encoded size - megabytes (lower is better)
 
-N-Quads           ████████████████████████████████████████████  47.27
-TriG              ██████████████████████████                    27.87
-Jelly             █████████                                     10.13
-N-Quads + zstd    ███                                            3.51
-N-Quads + gzip    ███                                            3.31
-Jelly + gzip      ███                                            2.82
-Jelly + zstd      ███                                            2.71
-TriG + zstd       ██                                             2.56
-TriG + gzip       ██                                             2.45
-N-Quads + Brotli  ██                                             2.04
-Jelly + Brotli    ██                                             1.73
-TriG + Brotli     █                                              1.49
+N-Quads           ████████████████████████████████████████████   47.34
+TriG              ██████████████████████████                     27.89
+Jelly             █████████                                      10.14
+N-Quads + zstd    ███                                             3.49
+N-Quads + gzip    ███                                             3.30
+Jelly + gzip      ███                                             2.84
+Jelly + zstd      ███                                             2.71
+TriG + zstd       ██                                              2.53
+TriG + gzip       ██                                              2.44
+N-Quads + Brotli  ██                                              2.03
+Jelly + Brotli    ██                                              1.75
+TriG + Brotli     █                                               1.48
 ```
 
-Put side by side, the two charts are the whole argument. Compression reorders the
-size chart completely and barely moves the speed chart: within each format the
-four bars are the same length, while between formats they differ by 9×.
-
-| Format | Size | Median | Throughput | Relative |
+| Format | Size | Median | Throughput | Relative latency |
 | --- | ---: | ---: | ---: | ---: |
-| Jelly | 10.13 MB | 114 ms | 2.64 M statements/s | 1.00× |
-| Jelly + gzip | 2.82 MB | 135 ms | 2.23 M statements/s | 1.18× |
-| Jelly + zstd | 2.71 MB | 127 ms | 2.37 M statements/s | 1.12× |
-| Jelly + Brotli | 1.73 MB | 144 ms | 2.09 M statements/s | 1.26× |
-| N-Quads | 47.27 MB | 295 ms | 1.02 M statements/s | 2.59× |
-| N-Quads + gzip | 3.31 MB | 322 ms | 0.93 M statements/s | 2.83× |
-| N-Quads + zstd | 3.51 MB | 325 ms | 0.92 M statements/s | 2.86× |
-| N-Quads + Brotli | 2.04 MB | 336 ms | 0.89 M statements/s | 2.95× |
-| TriG | 27.87 MB | 1065 ms | 0.28 M statements/s | 9.35× |
-| TriG + gzip | 2.45 MB | 1094 ms | 0.27 M statements/s | 9.61× |
-| TriG + zstd | 2.56 MB | 1089 ms | 0.28 M statements/s | 9.56× |
-| TriG + Brotli | 1.49 MB | 1089 ms | 0.28 M statements/s | 9.56× |
+| Jelly | 10.14 MB | 139.3 ms | 2.16 M statements/s | 1.00× |
+| Jelly + gzip | 2.84 MB | 154.0 ms | 1.95 M statements/s | 1.11× |
+| Jelly + zstd | 2.71 MB | 141.6 ms | 2.12 M statements/s | 1.02× |
+| Jelly + Brotli | 1.75 MB | 143.0 ms | 2.10 M statements/s | 1.03× |
+| N-Quads | 47.34 MB | 307.3 ms | 0.98 M statements/s | 2.21× |
+| N-Quads + gzip | 3.30 MB | 328.9 ms | 0.91 M statements/s | 2.36× |
+| N-Quads + zstd | 3.49 MB | 325.2 ms | 0.92 M statements/s | 2.33× |
+| N-Quads + Brotli | 2.03 MB | 334.5 ms | 0.90 M statements/s | 2.40× |
+| TriG | 27.89 MB | 975.8 ms | 0.31 M statements/s | 7.00× |
+| TriG + gzip | 2.44 MB | 1070.2 ms | 0.28 M statements/s | 7.68× |
+| TriG + zstd | 2.53 MB | 981.4 ms | 0.31 M statements/s | 7.04× |
+| TriG + Brotli | 1.48 MB | 954.2 ms | 0.32 M statements/s | 6.85× |
 
 Caveats worth knowing before reusing these numbers. This dataset is entirely in
-the default graph, so its N-Quads output is also valid N-Triples and its TriG
-output is also valid Turtle; a dataset with many named graphs would shift both
-text formats. Each case runs in its own process, because the text cases allocate
-28-47 MB strings and co-residency alone inflated the Jelly case by nearly 2×.
+the default graph. Its statement payloads use N-Triples/Turtle-compatible
+syntax, but the complete logs also contain message delimiters. A dataset with
+named graphs would exercise different paths in both text formats. Each case runs
+in its own process to avoid retaining other formats' large intermediate strings.
+Cases run sequentially; small timing differences can reflect runtime variation.
 Every case is handed a freshly allocated input buffer inside the timed region,
 since decompression inherently produces one and reusing a long-lived buffer would
 credit the uncompressed cases with allocation work a real reader still performs.
 
-### Why the binary format beats compressed text
+### Interpreting the comparison
 
-Compressed N-Quads is within 18% of compressed Jelly on the wire, and gzipped
-TriG is 13% smaller than it. They are still 2.4× and 8.1× slower to parse. The
-reason is that **compression removes bytes from the network, not work from the
-parser.**
+Jelly can omit repeated terms and resolve references through lookup tables while
+parsing. Transport compression reduces transmitted bytes, but the receiver
+still decodes the underlying format after decompression. These mechanisms help
+explain the measurements; they do not isolate the cost of string decoding,
+object construction, garbage collection, or decompression itself.
 
-1. **Decompression restores every byte before parsing starts.** A 3.3 MB gzipped
-   N-Quads file still becomes 47.3 MB of text that has to be scanned character by
-   character. Compression is undone precisely so the parser can see the
-   redundancy again. Jelly's compactness instead survives into parsing: what is
-   removed from the encoding is never reconstructed.
+Length prefixes locate Jelly frame boundaries. They locate RDF Message
+boundaries here because this benchmark explicitly writes one frame per source
+message. That mapping is a workload choice, not a general property of Jelly.
 
-2. **Redundancy is eliminated at the term level, not the byte level.** Jelly
-   keeps prefix, name, and datatype lookup tables, so a repeated IRI travels as
-   two varints and resolves to a string the decoder already holds. gzip finds the
-   same repetition in the byte stream, but its decompressor must materialise all
-   47 MB again, and the parser must then re-tokenise and re-allocate each
-   occurrence.
-
-3. **Repeated terms are omitted structurally.** When a statement's subject,
-   predicate, object, or graph equals the previous statement's in the same slot,
-   Jelly omits it entirely and the decoder reuses the RDF/JS term object it
-   already built. A run of statements about one subject carries that subject once
-   and allocates it once. Together the two mechanisms mean only **9.5% of the
-   779,490 IRI positions in this dataset are ever written out as text**: 53.0%
-   are dropped as repeated terms, and 79.7% of what is left resolves against the
-   lookup tables. N-Quads spells out all 779,490, and compression does not change
-   that — it only makes them cheaper to transmit.
-
-4. **Structure is framed, not inferred.** Protobuf fields are tag-plus-length, so
-   the decoder jumps over a term whose slot it does not need and never looks for
-   token boundaries. A text parser must find them: quoting, `\u` escapes,
-   language tags, datatype suffixes, and, in Turtle-family syntaxes, deciding
-   whether `1.` is an integer or the start of a decimal.
-
-5. **Decompression is a small constant; the format is not.** Across all nine
-   compressed cases above, decompressing costs between 13 ms and 41 ms. Choosing
-   TriG over Jelly costs 950 ms. Compression buys a 3.6-23× reduction on the wire
-   and changes parse time by between 2% and 26%, so it cannot rescue a format
-   that is expensive to read — and it is not what makes Jelly fast either, since
-   uncompressed Jelly is the fastest case in the table.
-
-6. **What remains is object construction, which every format pays.** Garbage
-   collection is about 31% of Jelly's own parse time; the rest is materialising
-   300,656 RDF/JS quads and their terms, not reading bytes. That floor is shared,
-   so a text format pays it *plus* the string and tokenisation work above. It is
-   also why Jelly's advantage is much larger on data with repetition than on the
-   synthetic workload below.
-
-7. **Message boundaries cost nothing to find.** A Jelly message is a
-   length-prefixed frame, so a consumer can split a stream into messages without
-   parsing their content. In the text formats the `MESSAGE` and `@message .`
-   markers are tokens the parser has to reach in document order.
-
-Point 4 also explains the shape of the table: TriG is 41% smaller than N-Quads
-and 3.6× slower to parse. Predicate-object lists, `;` and `,` continuations,
-prefixed names, graph blocks, and numeric shorthands buy bytes at the cost of a
-much larger grammar. Fewer bytes is not the same as less work — which is exactly
-the trade Jelly avoids by being both smaller than N-Quads and faster than either.
+These synchronous benchmarks do not measure network streaming, slow-consumer
+backpressure, or browser performance. The retained flat-mode profile's GC
+percentage is not a cost breakdown for the message benchmark, and subtracting
+two end-to-end medians does not isolate decompression time.
 
 ### Flat parsing, compared with rdf-parser-ts
 
-A contrasting workload: 100,000 generated triples with unique subjects and
+The earlier flat-mode snapshot uses a contrasting workload: 100,000 generated triples with unique subjects and
 literals and one repeated predicate, parsed flat rather than in message mode.
-Unique subjects mean repeated-term omission and the lookup tables have almost
-nothing to exploit, which is close to the worst case for Jelly.
+Unique subjects reduce reuse, although the constant predicate and shared IRI
+prefixes still benefit from Jelly compression.
 
 | Parser | Format | Input size | Median | Throughput |
 | --- | --- | ---: | ---: | ---: |
@@ -318,12 +313,10 @@ nothing to exploit, which is close to the worst case for Jelly.
 | rdfjs-jelly | Jelly + Brotli | 128,277 B | 44.3 ms | 2.26 M statements/s |
 | rdf-parser-ts | N-Triples + Brotli | 117,438 B | 41.2 ms | 2.43 M statements/s |
 
-Parsing is within about 3% across all four transport variants here, with
+Parsing is within about 2–8% across the four transport variants here, with
 `rdf-parser-ts` marginally ahead, while uncompressed Jelly is 60% smaller. This
-is the honest complement to the message-based table: Jelly's advantage comes from
-exploiting repetition, and a dataset engineered to have none reduces it to
-parity. Note also how well this workload compresses — zstd takes N-Triples to
-41,638 B — which is a property of the synthetic data, not of either format.
+shows a smaller gap than the message workload. Note also how well this workload
+compresses — zstd takes N-Triples to 41,638 B — which is a property of the synthetic data, not of either format.
 
 Writing remains the weaker side: Jelly writes this workload in 76.9 ms
 (1.30 M statements/s) against 40.9 ms for N-Triples, because it maintains lookup
@@ -347,7 +340,7 @@ frames directly from Jelly rows without building a second protobuf object graph.
 ### Reproduce
 
 ```sh
-npm run perf:compare:messages        # message-based Jelly vs N-Quads vs TriG
+npm run perf:compare:messages -- 13  # message-based Jelly vs N-Quads vs TriG
 npm run perf:compare:rdf-parser      # flat Jelly vs N-Triples
 npm run perf:profile -- 100000 7
 npm run perf:profile:writer -- 100000 7

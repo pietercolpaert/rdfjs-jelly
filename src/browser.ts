@@ -10,9 +10,8 @@ import type { ParserOptions } from './types';
 export type BrowserStreamChunk = Uint8Array | ArrayBuffer;
 
 /**
- * Objects the readable side buffers before the parser stops decoding. A
- * TransformStream defaults to zero here, which would pause after every message;
- * a small queue keeps throughput up while still bounding memory.
+ * Maximum number of output items queued on the readable side. A decoded frame
+ * and unread input bytes are retained separately while consumer demand pauses.
  */
 const READABLE_QUEUE = 256;
 type BrowserParserEvent = 'options' | 'namespace' | 'message' | 'messageCounter';
@@ -25,46 +24,107 @@ export class StreamParser {
 
   public constructor(options: ParserOptions = {}) {
     const messageMode = options.messages === true || options.rdfMessages === true;
-    const decoder = new Decoder(options, {
+    let decoder: Decoder | undefined = new Decoder(options, {
       options: value => this.emit('options', value),
       namespace: (prefix, iri) => this.emit('namespace', prefix, iri),
     });
-    const reader = new DirectMessageDecoder(options, decoder);
-    // Returns false once the readable side is full, which stops frame decoding
-    // until the next chunk or the final flush. Undecoded bytes stay in `reader`,
-    // so what is held in memory is bounded by one Jelly message.
-    const deliver = (
-      message: Message,
-      controller: TransformStreamDefaultController<ParserOutputItem>,
-      always: boolean,
-    ): boolean => {
-      this.emit('message', message);
-      for (const quad of message) {
-        if (messageMode) {
-          const entry: MessageQuad = { quad, messageCounter: message.messageCounter };
-          this.emit('messageCounter', message.messageCounter, quad);
-          controller.enqueue(entry);
-        } else controller.enqueue(quad);
-      }
-      return always || controller.desiredSize === null || controller.desiredSize > 0;
+    let reader: DirectMessageDecoder | undefined = new DirectMessageDecoder(options, decoder);
+    let output: ReadableStreamDefaultController<ParserOutputItem>;
+    let input: WritableStreamDefaultController;
+    let pending: Message | undefined;
+    let index = 0;
+    let stopped = false;
+    let failure: unknown;
+    let wake: (() => void) | undefined;
+    const release = (): void => {
+      pending = undefined;
+      reader = undefined;
+      decoder = undefined;
     };
-    const transform = new TransformStream<BrowserStreamChunk, ParserOutputItem>(
-      {
-        transform: (chunk, controller) => {
-          const consume = (message: Message): boolean => deliver(message, controller, false);
-          if (reader.paused) reader.resumeEach(consume);
-          reader.writeEach(chunk, consume);
-        },
-        flush: controller => {
-          reader.endEach(message => deliver(message, controller, true));
-          decoder.finish();
-        },
+    const fail = (reason: unknown, errorInput = true): void => {
+      if (stopped) return;
+      stopped = true;
+      failure = reason;
+      release();
+      output.error(reason);
+      if (errorInput) input.error(reason);
+      wake?.();
+      wake = undefined;
+    };
+    const accept = (message: Message): false => {
+      pending = message;
+      index = 0;
+      this.emit('message', message);
+      return false;
+    };
+    // Stop after each frame so a large frame can also be delivered a quad at a
+    // time. A pending write owns the drain; pull only wakes it when space opens.
+    const drain = async (): Promise<void> => {
+      while (true) {
+        if (stopped) throw failure;
+        if (pending && index < pending.length) {
+          if (output.desiredSize! <= 0) {
+            await new Promise<void>(resolve => { wake = resolve; });
+            continue;
+          }
+          const quad = pending[index++]!;
+          if (messageMode) {
+            const entry: MessageQuad = { quad, messageCounter: pending.messageCounter };
+            this.emit('messageCounter', pending.messageCounter, quad);
+            if (stopped) throw failure;
+            output.enqueue(entry);
+          } else output.enqueue(quad);
+        } else {
+          pending = undefined;
+          if (!reader!.paused) return;
+          // Do not decode another frame while the output queue is full.
+          if (output.desiredSize! <= 0) {
+            await new Promise<void>(resolve => { wake = resolve; });
+            continue;
+          }
+          reader!.resumeEach(accept);
+        }
+      }
+    };
+    this.readable = new ReadableStream<ParserOutputItem>({
+      start: controller => { output = controller; },
+      pull: () => {
+        wake?.();
+        wake = undefined;
       },
-      undefined,
-      { highWaterMark: READABLE_QUEUE },
-    );
-    this.readable = transform.readable;
-    this.writable = transform.writable;
+      cancel: reason => { fail(reason); },
+    }, { highWaterMark: READABLE_QUEUE });
+    this.writable = new WritableStream<BrowserStreamChunk>({
+      start: controller => {
+        input = controller;
+        // abort() waits for an in-flight write; its signal must wake that write
+        // immediately if it is waiting for a reader that will never consume.
+        controller.signal.addEventListener('abort', () => fail(controller.signal.reason, false), { once: true });
+      },
+      write: async chunk => {
+        try {
+          reader!.writeEach(chunk, accept);
+          await drain();
+        } catch (error) {
+          fail(error);
+          throw error;
+        }
+      },
+      close: async () => {
+        try {
+          reader!.endEach(accept);
+          await drain();
+          decoder!.finish();
+          output.close();
+          stopped = true;
+          release();
+        } catch (error) {
+          fail(error);
+          throw error;
+        }
+      },
+      abort: reason => { fail(reason); },
+    });
   }
 
   public import(stream: ReadableStream<BrowserStreamChunk>): ReadableStream<ParserOutputItem> {
