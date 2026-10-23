@@ -9,42 +9,12 @@ var JellyConformanceError = class extends JellyError {
 };
 var JellyUnsupportedFeatureError = class extends JellyError {
 };
-
-// src/options.ts
-var MIN_NAME_LOOKUP_SIZE = 8;
-var MIN_PREFIX_LOOKUP_SIZE = 4;
-var MAX_LOOKUP_SIZE = 4096;
-var MAX_DECODED_LOOKUP_SIZE = 1048576;
-var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
-var RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString";
-var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
-var DEFAULT_LOOKUP_PRESET = Object.freeze({
-  maxNames: 4e3,
-  maxPrefixes: 150,
-  maxDatatypes: 32
-});
-var SMALL_LOOKUP_PRESET = Object.freeze({
-  maxNames: 128,
-  maxPrefixes: 32,
-  maxDatatypes: 32
-});
-function normalizeLookupPreset(value = {}) {
-  const preset = { ...DEFAULT_LOOKUP_PRESET, ...value };
-  if (!Number.isInteger(preset.maxNames) || preset.maxNames < MIN_NAME_LOOKUP_SIZE || preset.maxNames > MAX_LOOKUP_SIZE) {
-    throw new JellyConformanceError(`Name lookup size must be between ${MIN_NAME_LOOKUP_SIZE} and ${MAX_LOOKUP_SIZE}`);
+var JellySparqlResultError = class extends JellyError {
+  constructor(resultIndex, message) {
+    super(message);
+    this.resultIndex = resultIndex;
   }
-  for (const [name, size] of [["Prefix", preset.maxPrefixes], ["Datatype", preset.maxDatatypes]]) {
-    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError(`${name} lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
-    }
-  }
-  if (preset.maxPrefixes > 0 && preset.maxPrefixes < MIN_PREFIX_LOOKUP_SIZE) {
-    throw new JellyConformanceError(
-      `Prefix lookup size ${preset.maxPrefixes} cannot encode a statement whose terms use more prefixes than the table holds; use 0 to disable the prefix lookup or at least ${MIN_PREFIX_LOOKUP_SIZE}`
-    );
-  }
-  return preset;
-}
+};
 
 // src/types.ts
 var PhysicalStreamType = /* @__PURE__ */ ((PhysicalStreamType2) => {
@@ -109,6 +79,51 @@ function toMessages(output, messageCount) {
     return [];
   }
   return messages;
+}
+
+// src/options.ts
+var MIN_NAME_LOOKUP_SIZE = 8;
+var MIN_PREFIX_LOOKUP_SIZE = 4;
+var MAX_LOOKUP_SIZE = 4096;
+var MAX_DECODED_LOOKUP_SIZE = 1048576;
+var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
+var RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString";
+var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+var DEFAULT_LOOKUP_PRESET = Object.freeze({
+  maxNames: 4e3,
+  maxPrefixes: 150,
+  maxDatatypes: 32
+});
+var SMALL_LOOKUP_PRESET = Object.freeze({
+  maxNames: 128,
+  maxPrefixes: 32,
+  maxDatatypes: 32
+});
+function normalizeLookupPreset(value = {}) {
+  const preset = { ...DEFAULT_LOOKUP_PRESET, ...value };
+  if (!Number.isInteger(preset.maxNames) || preset.maxNames < MIN_NAME_LOOKUP_SIZE || preset.maxNames > MAX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(`Name lookup size must be between ${MIN_NAME_LOOKUP_SIZE} and ${MAX_LOOKUP_SIZE}`);
+  }
+  for (const [name, size] of [["Prefix", preset.maxPrefixes], ["Datatype", preset.maxDatatypes]]) {
+    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
+      throw new JellyConformanceError(`${name} lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+    }
+  }
+  if (preset.maxPrefixes > 0 && preset.maxPrefixes < MIN_PREFIX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(
+      `Prefix lookup size ${preset.maxPrefixes} cannot encode a statement whose terms use more prefixes than the table holds; use 0 to disable the prefix lookup or at least ${MIN_PREFIX_LOOKUP_SIZE}`
+    );
+  }
+  return preset;
+}
+function normalizeColumnLookupPreset(value = {}) {
+  const preset = normalizeLookupPreset({ ...value, maxPrefixes: 0 });
+  const maxPrefixes = value.maxPrefixes ?? DEFAULT_LOOKUP_PRESET.maxPrefixes;
+  if (!Number.isInteger(maxPrefixes) || maxPrefixes < 0 || maxPrefixes > MAX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(`Prefix lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+  }
+  if (preset.maxNames < 128) throw new JellyConformanceError("Column streams require a name lookup size of at least 128");
+  return { ...preset, maxPrefixes };
 }
 
 // src/rdfjs/adapter.ts
@@ -284,134 +299,35 @@ var LookupDecoder = class {
   }
 };
 
-// src/codec/ColumnDecoder.ts
+// src/codec/ColumnTermDecoder.ts
 function fail(message) {
   throw new JellyConformanceError(message);
 }
-var ColumnDecoder = class {
-  constructor(options, events) {
+var ColumnTermDecoder = class {
+  constructor(options = {}) {
     this.options = options;
-    this.events = events;
     this.factory = options.factory ?? DataFactory;
     if (options.maxRowsPerBatch !== void 0 && (!Number.isInteger(options.maxRowsPerBatch) || options.maxRowsPerBatch < 0)) fail("maxRowsPerBatch must be a nonnegative integer");
   }
-  streamOptions;
-  namespaces = /* @__PURE__ */ Object.create(null);
   factory;
   names;
   prefixes;
   datatypes;
-  current = [];
-  counter = 0;
-  blankNodes = /* @__PURE__ */ new Map();
-  usedBlankLabels = /* @__PURE__ */ new Set();
-  decode(frame) {
-    const out = [];
-    const metadata = new Map(Object.entries(frame.metadata).map(([k, v]) => [k, new Uint8Array(v)]));
-    const endMessage = () => {
-      out.push(new Message(this.counter++, this.current, metadata));
-      this.current = [];
-    };
-    if (frame.rows.length > 1) fail("Column layout permits only one options row per frame");
-    for (const row of frame.rows) {
-      const kind = row.$row ?? row.row;
-      if (kind !== "options") fail("Row layout data is invalid in a column stream");
-      const raw = row.options;
-      const old = this.streamOptions;
-      if (raw.version !== 3) fail("Cannot change Jelly layout within a stream");
-      if (raw.generalizedStatements || raw.rdfStar || raw.logicalType) fail("Row layout options are invalid in a column stream");
-      if (raw.physicalType !== 1 && raw.physicalType !== 2) fail("Column streams require physical type TRIPLES or QUADS");
-      if (raw.streamType !== 0 && raw.streamType !== 1) fail(`Unknown RDF stream type ${raw.streamType}`);
-      if (raw.rdfVersion < 0 || raw.rdfVersion > 3) fail(`Unknown RDF version ${raw.rdfVersion}`);
-      if (old && (raw.physicalType !== old.physicalType || raw.streamType !== old.streamType)) fail("Restated options must preserve physical type, stream type, and version");
-      if (old?.streamType === 1) {
-        if (this.current.length) endMessage();
-        this.blankNodes.clear();
-      }
-      const limit2 = this.options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
-      if (raw.maxNameTableSize < 128) fail("Column streams require a name lookup size of at least 128");
-      this.names = new LookupDecoder(raw.maxNameTableSize, limit2);
-      this.prefixes = new LookupDecoder(raw.maxPrefixTableSize, limit2);
-      this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize, limit2);
-      this.streamOptions = {
-        streamName: raw.streamName,
-        physicalType: raw.physicalType,
-        logicalType: 0,
-        generalizedStatements: false,
-        rdfStar: false,
-        maxNameTableSize: raw.maxNameTableSize,
-        maxPrefixTableSize: raw.maxPrefixTableSize,
-        maxDatatypeTableSize: raw.maxDatatypeTableSize,
-        version: 3,
-        streamType: raw.streamType,
-        rdfVersion: raw.rdfVersion
-      };
-      this.events.options?.(this.streamOptions);
-    }
-    const b = frame.columns;
-    if (!b) return out;
-    if (!this.streamOptions) fail("Column batch before stream options");
-    const n = b.rowCount;
-    const limit = this.options.maxRowsPerBatch ?? 1048576;
-    if (n > 134217727 || n > limit) fail("Column row_count exceeds configured size limit");
-    for (const [entries, table] of [[b.names, this.names], [b.prefixes, this.prefixes], [b.datatypes, this.datatypes]]) {
-      for (const rawEntry of entries) {
-        const entry = rawEntry;
-        for (let j = 0; j < entry.values.length; j++) table.assign(j === 0 ? entry.id : 0, entry.values[j]);
-      }
-    }
-    const nsState = [0, 0];
-    for (const rawNs of b.namespaces) {
-      const ns = rawNs;
-      const term = this.iri(ns.value ?? {}, nsState);
-      this.namespaces[ns.name] = term;
-      this.events.namespace?.(ns.name, term);
-    }
-    if (this.streamOptions.physicalType === 1 && b.graphs) fail("Graphs column in a TRIPLES stream");
-    const columns = [b.subjects, b.predicates, b.objects, b.graphs].map((c) => this.column(c, n));
-    const lengths = b.messageLengths;
-    if (this.streamOptions.streamType === 0 && lengths.length) fail("Message boundaries in a FLAT stream");
-    if (lengths.reduce((sum, v) => sum + v, 0) > n) fail("Message lengths exceed row_count");
-    let pos = 0;
-    const append = (count) => {
-      for (const end = pos + count; pos < end; pos++) {
-        const [s, p, o, g] = columns.map((c) => c[pos]);
-        if (!s || s.termType !== "NamedNode" && s.termType !== "BlankNode") fail("Invalid or unbound subject in column");
-        if (!p || p.termType !== "NamedNode") fail("Invalid or unbound predicate in column");
-        if (!o) fail("Unbound object in column");
-        if (g && g.termType !== "NamedNode" && g.termType !== "BlankNode") fail("Invalid graph in column");
-        this.current.push(this.factory.quad(this.scoped(s), p, this.scoped(o), g ? this.scoped(g) : this.factory.defaultGraph()));
-      }
-    };
-    for (const length of lengths) {
-      append(length);
-      endMessage();
-      this.blankNodes.clear();
-    }
-    append(n - pos);
-    if (this.streamOptions.streamType === 0) endMessage();
-    return out;
+  resetLookups(raw) {
+    const limit = this.options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
+    if (raw.maxNameTableSize < 128) fail("Column streams require a name lookup size of at least 128");
+    this.names = new LookupDecoder(raw.maxNameTableSize, limit);
+    this.prefixes = new LookupDecoder(raw.maxPrefixTableSize, limit);
+    this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize, limit);
   }
-  finish() {
-    if (!this.streamOptions) fail("No Jelly stream options row was found");
-    if (!this.current.length) return [];
-    const out = new Message(this.counter++, this.current);
-    this.current = [];
-    return [out];
-  }
-  scoped(term) {
-    if (this.streamOptions.streamType !== 1) return term;
-    if (term.termType === "Quad") return this.factory.quad(this.scoped(term.subject), term.predicate, this.scoped(term.object));
-    if (term.termType !== "BlankNode") return term;
-    let node = this.blankNodes.get(term.value);
-    if (!node) {
-      let label = term.value;
-      while (this.usedBlankLabels.has(label)) label = `jelly${this.counter}_${label}`;
-      this.usedBlankLabels.add(label);
-      node = this.factory.blankNode(label);
-      this.blankNodes.set(term.value, node);
+  applyLookups(groups) {
+    for (const [entries, table] of groups) for (const entry of entries) {
+      const values = entry.values ?? [];
+      for (let j = 0; j < values.length; j++) table.assign(j === 0 ? entry.id ?? 0 : 0, values[j]);
     }
-    return node;
+  }
+  checkRowCount(n) {
+    if (n > 134217727 || n > (this.options.maxRowsPerBatch ?? 1048576)) fail("Column row_count exceeds configured size limit");
   }
   iri(value, state) {
     state[0] = value.prefixId || state[0];
@@ -515,6 +431,121 @@ var ColumnDecoder = class {
     while (i < values.length) cells.push(values[i++]);
     cells.length = n;
     return cells;
+  }
+};
+
+// src/codec/ColumnDecoder.ts
+function fail2(message) {
+  throw new JellyConformanceError(message);
+}
+var ColumnDecoder = class extends ColumnTermDecoder {
+  constructor(options, events) {
+    super(options);
+    this.events = events;
+  }
+  streamOptions;
+  namespaces = /* @__PURE__ */ Object.create(null);
+  current = [];
+  counter = 0;
+  blankNodes = /* @__PURE__ */ new Map();
+  usedBlankLabels = /* @__PURE__ */ new Set();
+  decode(frame) {
+    const out = [];
+    const metadata = new Map(Object.entries(frame.metadata).map(([k, v]) => [k, new Uint8Array(v)]));
+    const endMessage = () => {
+      out.push(new Message(this.counter++, this.current, metadata));
+      this.current = [];
+    };
+    if (frame.rows.length > 1) fail2("Column layout permits only one options row per frame");
+    for (const row of frame.rows) {
+      const kind = row.$row ?? row.row;
+      if (kind !== "options") fail2("Row layout data is invalid in a column stream");
+      const raw = row.options;
+      const old = this.streamOptions;
+      if (raw.version !== 3) fail2("Cannot change Jelly layout within a stream");
+      if (raw.generalizedStatements || raw.rdfStar || raw.logicalType) fail2("Row layout options are invalid in a column stream");
+      if (raw.physicalType !== 1 && raw.physicalType !== 2) fail2("Column streams require physical type TRIPLES or QUADS");
+      if (raw.streamType !== 0 && raw.streamType !== 1) fail2(`Unknown RDF stream type ${raw.streamType}`);
+      if (raw.rdfVersion < 0 || raw.rdfVersion > 3) fail2(`Unknown RDF version ${raw.rdfVersion}`);
+      if (old && (raw.physicalType !== old.physicalType || raw.streamType !== old.streamType)) fail2("Restated options must preserve physical type, stream type, and version");
+      if (old?.streamType === 1) {
+        if (this.current.length) endMessage();
+        this.blankNodes.clear();
+      }
+      this.resetLookups(raw);
+      this.streamOptions = {
+        streamName: raw.streamName,
+        physicalType: raw.physicalType,
+        logicalType: 0,
+        generalizedStatements: false,
+        rdfStar: false,
+        maxNameTableSize: raw.maxNameTableSize,
+        maxPrefixTableSize: raw.maxPrefixTableSize,
+        maxDatatypeTableSize: raw.maxDatatypeTableSize,
+        version: 3,
+        streamType: raw.streamType,
+        rdfVersion: raw.rdfVersion
+      };
+      this.events.options?.(this.streamOptions);
+    }
+    const b = frame.columns;
+    if (!b) return out;
+    if (!this.streamOptions) fail2("Column batch before stream options");
+    const n = b.rowCount;
+    this.checkRowCount(n);
+    this.applyLookups([[b.names, this.names], [b.prefixes, this.prefixes], [b.datatypes, this.datatypes]]);
+    const nsState = [0, 0];
+    for (const rawNs of b.namespaces) {
+      const ns = rawNs;
+      const term = this.iri(ns.value ?? {}, nsState);
+      this.namespaces[ns.name] = term;
+      this.events.namespace?.(ns.name, term);
+    }
+    if (this.streamOptions.physicalType === 1 && b.graphs) fail2("Graphs column in a TRIPLES stream");
+    const columns = [b.subjects, b.predicates, b.objects, b.graphs].map((c) => this.column(c, n));
+    const lengths = b.messageLengths;
+    if (this.streamOptions.streamType === 0 && lengths.length) fail2("Message boundaries in a FLAT stream");
+    if (lengths.reduce((sum, v) => sum + v, 0) > n) fail2("Message lengths exceed row_count");
+    let pos = 0;
+    const append = (count) => {
+      for (const end = pos + count; pos < end; pos++) {
+        const [s, p, o, g] = columns.map((c) => c[pos]);
+        if (!s || s.termType !== "NamedNode" && s.termType !== "BlankNode") fail2("Invalid or unbound subject in column");
+        if (!p || p.termType !== "NamedNode") fail2("Invalid or unbound predicate in column");
+        if (!o) fail2("Unbound object in column");
+        if (g && g.termType !== "NamedNode" && g.termType !== "BlankNode") fail2("Invalid graph in column");
+        this.current.push(this.factory.quad(this.scoped(s), p, this.scoped(o), g ? this.scoped(g) : this.factory.defaultGraph()));
+      }
+    };
+    for (const length of lengths) {
+      append(length);
+      endMessage();
+      this.blankNodes.clear();
+    }
+    append(n - pos);
+    if (this.streamOptions.streamType === 0) endMessage();
+    return out;
+  }
+  finish() {
+    if (!this.streamOptions) fail2("No Jelly stream options row was found");
+    if (!this.current.length) return [];
+    const out = new Message(this.counter++, this.current);
+    this.current = [];
+    return [out];
+  }
+  scoped(term) {
+    if (this.streamOptions.streamType !== 1) return term;
+    if (term.termType === "Quad") return this.factory.quad(this.scoped(term.subject), term.predicate, this.scoped(term.object));
+    if (term.termType !== "BlankNode") return term;
+    let node = this.blankNodes.get(term.value);
+    if (!node) {
+      let label = term.value;
+      while (this.usedBlankLabels.has(label)) label = `jelly${this.counter}_${label}`;
+      this.usedBlankLabels.add(label);
+      node = this.factory.blankNode(label);
+      this.blankNodes.set(term.value, node);
+    }
+    return node;
   }
 };
 
@@ -3432,6 +3463,636 @@ var eu = $root.eu = (() => {
               };
               return RdfStreamRow;
             })();
+            v1.sparql = (function() {
+              const sparql = {};
+              sparql.SparqlResultsOptions = (function() {
+                const SparqlResultsOptions = function(properties) {
+                  if (properties) {
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                      if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+                  }
+                };
+                SparqlResultsOptions.prototype.streamName = "";
+                SparqlResultsOptions.prototype.streamType = 0;
+                SparqlResultsOptions.prototype.rdfVersion = 0;
+                SparqlResultsOptions.prototype.maxNameTableSize = 0;
+                SparqlResultsOptions.prototype.maxPrefixTableSize = 0;
+                SparqlResultsOptions.prototype.maxDatatypeTableSize = 0;
+                SparqlResultsOptions.prototype.version = 0;
+                SparqlResultsOptions.create = function(properties) {
+                  return new SparqlResultsOptions(properties);
+                };
+                SparqlResultsOptions.encode = function(message, writer, _depth) {
+                  if (!writer)
+                    writer = $Writer.create();
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
+                    writer.uint32(
+                      /* id 1, wireType 2 =*/
+                      10
+                    ).string(message.streamName);
+                  if (message.streamType != null && $Object.hasOwnProperty.call(message, "streamType") && message.streamType !== 0)
+                    writer.uint32(
+                      /* id 2, wireType 0 =*/
+                      16
+                    ).int32(message.streamType);
+                  if (message.rdfVersion != null && $Object.hasOwnProperty.call(message, "rdfVersion") && message.rdfVersion !== 0)
+                    writer.uint32(
+                      /* id 5, wireType 0 =*/
+                      40
+                    ).int32(message.rdfVersion);
+                  if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
+                    writer.uint32(
+                      /* id 9, wireType 0 =*/
+                      72
+                    ).uint32(message.maxNameTableSize);
+                  if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
+                    writer.uint32(
+                      /* id 10, wireType 0 =*/
+                      80
+                    ).uint32(message.maxPrefixTableSize);
+                  if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
+                    writer.uint32(
+                      /* id 11, wireType 0 =*/
+                      88
+                    ).uint32(message.maxDatatypeTableSize);
+                  if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
+                    writer.uint32(
+                      /* id 15, wireType 0 =*/
+                      120
+                    ).uint32(message.version);
+                  if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                      writer.raw(message.$unknowns[i]);
+                  return writer;
+                };
+                SparqlResultsOptions.encodeDelimited = function(message, writer) {
+                  return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                };
+                SparqlResultsOptions.decode = function(reader, length, _end, _depth, _target) {
+                  if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  let end, message, value;
+                  if (length === $undefined)
+                    end = reader.len;
+                  else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                      throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                  }
+                  message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions();
+                  while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                      _end = $undefined;
+                      break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                      case 1: {
+                        if (wireType !== 2)
+                          break;
+                        if ((value = reader.stringVerify()).length)
+                          message.streamName = value;
+                        else
+                          delete message.streamName;
+                        continue;
+                      }
+                      case 2: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.int32())
+                          message.streamType = value;
+                        else
+                          delete message.streamType;
+                        continue;
+                      }
+                      case 5: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.int32())
+                          message.rdfVersion = value;
+                        else
+                          delete message.rdfVersion;
+                        continue;
+                      }
+                      case 9: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.uint32())
+                          message.maxNameTableSize = value;
+                        else
+                          delete message.maxNameTableSize;
+                        continue;
+                      }
+                      case 10: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.uint32())
+                          message.maxPrefixTableSize = value;
+                        else
+                          delete message.maxPrefixTableSize;
+                        continue;
+                      }
+                      case 11: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.uint32())
+                          message.maxDatatypeTableSize = value;
+                        else
+                          delete message.maxDatatypeTableSize;
+                        continue;
+                      }
+                      case 15: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.uint32())
+                          message.version = value;
+                        else
+                          delete message.version;
+                        continue;
+                      }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                      $util.makeProp(message, "$unknowns", false);
+                      (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                  }
+                  if (length !== $undefined) {
+                    if (reader.pos !== end)
+                      throw $RangeError("index out of range");
+                    reader.len = length;
+                  }
+                  if (_end !== $undefined)
+                    throw $Error("missing end group");
+                  return message;
+                };
+                SparqlResultsOptions.decodeDelimited = function(reader) {
+                  if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                  return this.decode(reader, reader.uint32());
+                };
+                return SparqlResultsOptions;
+              })();
+              sparql.SparqlStreamType = (function() {
+                const valuesById = {}, values = $Object.create(valuesById);
+                values[valuesById[0] = "SPARQL_STREAM_TYPE_FLAT"] = 0;
+                values[valuesById[1] = "SPARQL_STREAM_TYPE_PUNCTUATED"] = 1;
+                return values;
+              })();
+              sparql.SparqlAskResult = (function() {
+                const SparqlAskResult = function(properties) {
+                  if (properties) {
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                      if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+                  }
+                };
+                SparqlAskResult.prototype.value = false;
+                SparqlAskResult.create = function(properties) {
+                  return new SparqlAskResult(properties);
+                };
+                SparqlAskResult.encode = function(message, writer, _depth) {
+                  if (!writer)
+                    writer = $Writer.create();
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  if (message.value != null && $Object.hasOwnProperty.call(message, "value") && message.value !== false)
+                    writer.uint32(
+                      /* id 1, wireType 0 =*/
+                      8
+                    ).bool(message.value);
+                  if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                      writer.raw(message.$unknowns[i]);
+                  return writer;
+                };
+                SparqlAskResult.encodeDelimited = function(message, writer) {
+                  return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                };
+                SparqlAskResult.decode = function(reader, length, _end, _depth, _target) {
+                  if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  let end, message, value;
+                  if (length === $undefined)
+                    end = reader.len;
+                  else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                      throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                  }
+                  message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult();
+                  while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                      _end = $undefined;
+                      break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                      case 1: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.bool())
+                          message.value = value;
+                        else
+                          delete message.value;
+                        continue;
+                      }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                      $util.makeProp(message, "$unknowns", false);
+                      (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                  }
+                  if (length !== $undefined) {
+                    if (reader.pos !== end)
+                      throw $RangeError("index out of range");
+                    reader.len = length;
+                  }
+                  if (_end !== $undefined)
+                    throw $Error("missing end group");
+                  return message;
+                };
+                SparqlAskResult.decodeDelimited = function(reader) {
+                  if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                  return this.decode(reader, reader.uint32());
+                };
+                return SparqlAskResult;
+              })();
+              sparql.SparqlResultsTrailer = (function() {
+                const SparqlResultsTrailer = function(properties) {
+                  if (properties) {
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                      if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+                  }
+                };
+                SparqlResultsTrailer.prototype.error = "";
+                SparqlResultsTrailer.create = function(properties) {
+                  return new SparqlResultsTrailer(properties);
+                };
+                SparqlResultsTrailer.encode = function(message, writer, _depth) {
+                  if (!writer)
+                    writer = $Writer.create();
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  if (message.error != null && $Object.hasOwnProperty.call(message, "error") && message.error !== "")
+                    writer.uint32(
+                      /* id 1, wireType 2 =*/
+                      10
+                    ).string(message.error);
+                  if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                      writer.raw(message.$unknowns[i]);
+                  return writer;
+                };
+                SparqlResultsTrailer.encodeDelimited = function(message, writer) {
+                  return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                };
+                SparqlResultsTrailer.decode = function(reader, length, _end, _depth, _target) {
+                  if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  let end, message, value;
+                  if (length === $undefined)
+                    end = reader.len;
+                  else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                      throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                  }
+                  message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer();
+                  while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                      _end = $undefined;
+                      break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                      case 1: {
+                        if (wireType !== 2)
+                          break;
+                        if ((value = reader.stringVerify()).length)
+                          message.error = value;
+                        else
+                          delete message.error;
+                        continue;
+                      }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                      $util.makeProp(message, "$unknowns", false);
+                      (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                  }
+                  if (length !== $undefined) {
+                    if (reader.pos !== end)
+                      throw $RangeError("index out of range");
+                    reader.len = length;
+                  }
+                  if (_end !== $undefined)
+                    throw $Error("missing end group");
+                  return message;
+                };
+                SparqlResultsTrailer.decodeDelimited = function(reader) {
+                  if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                  return this.decode(reader, reader.uint32());
+                };
+                return SparqlResultsTrailer;
+              })();
+              sparql.SparqlResultsFrame = (function() {
+                const SparqlResultsFrame = function(properties) {
+                  this.variables = [];
+                  this.names = [];
+                  this.prefixes = [];
+                  this.datatypes = [];
+                  this.columns = [];
+                  this.metadata = {};
+                  if (properties) {
+                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                      if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+                  }
+                };
+                SparqlResultsFrame.prototype.options = null;
+                SparqlResultsFrame.prototype.variables = $util.emptyArray;
+                SparqlResultsFrame.prototype.rowCount = 0;
+                SparqlResultsFrame.prototype.names = $util.emptyArray;
+                SparqlResultsFrame.prototype.prefixes = $util.emptyArray;
+                SparqlResultsFrame.prototype.datatypes = $util.emptyArray;
+                SparqlResultsFrame.prototype.columns = $util.emptyArray;
+                SparqlResultsFrame.prototype.askResult = null;
+                SparqlResultsFrame.prototype.trailer = null;
+                SparqlResultsFrame.prototype.metadata = $util.emptyObject;
+                SparqlResultsFrame.create = function(properties) {
+                  return new SparqlResultsFrame(properties);
+                };
+                SparqlResultsFrame.encode = function(message, writer, _depth) {
+                  if (!writer)
+                    writer = $Writer.create();
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $util.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  if (message.options != null && $Object.hasOwnProperty.call(message, "options"))
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.encode(message.options, writer.uint32(
+                      /* id 1, wireType 2 =*/
+                      10
+                    ).fork(), _depth + 1).ldelim();
+                  if (message.variables != null && message.variables.length)
+                    for (let i = 0; i < message.variables.length; ++i)
+                      writer.uint32(
+                        /* id 2, wireType 2 =*/
+                        18
+                      ).string(message.variables[i]);
+                  if (message.rowCount != null && $Object.hasOwnProperty.call(message, "rowCount") && message.rowCount !== 0)
+                    writer.uint32(
+                      /* id 3, wireType 0 =*/
+                      24
+                    ).uint32(message.rowCount);
+                  if (message.names != null && message.names.length)
+                    for (let i = 0; i < message.names.length; ++i)
+                      $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.names[i], writer.uint32(
+                        /* id 4, wireType 2 =*/
+                        34
+                      ).fork(), _depth + 1).ldelim();
+                  if (message.prefixes != null && message.prefixes.length)
+                    for (let i = 0; i < message.prefixes.length; ++i)
+                      $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.prefixes[i], writer.uint32(
+                        /* id 5, wireType 2 =*/
+                        42
+                      ).fork(), _depth + 1).ldelim();
+                  if (message.datatypes != null && message.datatypes.length)
+                    for (let i = 0; i < message.datatypes.length; ++i)
+                      $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.datatypes[i], writer.uint32(
+                        /* id 6, wireType 2 =*/
+                        50
+                      ).fork(), _depth + 1).ldelim();
+                  if (message.columns != null && message.columns.length)
+                    for (let i = 0; i < message.columns.length; ++i)
+                      $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.columns[i], writer.uint32(
+                        /* id 7, wireType 2 =*/
+                        58
+                      ).fork(), _depth + 1).ldelim();
+                  if (message.askResult != null && $Object.hasOwnProperty.call(message, "askResult"))
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.encode(message.askResult, writer.uint32(
+                      /* id 8, wireType 2 =*/
+                      66
+                    ).fork(), _depth + 1).ldelim();
+                  if (message.trailer != null && $Object.hasOwnProperty.call(message, "trailer"))
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.encode(message.trailer, writer.uint32(
+                      /* id 9, wireType 2 =*/
+                      74
+                    ).fork(), _depth + 1).ldelim();
+                  if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
+                    for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
+                      writer.uint32(
+                        /* id 15, wireType 2 =*/
+                        122
+                      ).fork().uint32(
+                        /* id 1, wireType 2 =*/
+                        10
+                      ).string(keys[i]).uint32(
+                        /* id 2, wireType 2 =*/
+                        18
+                      ).bytes(message.metadata[keys[i]]).ldelim();
+                  if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                    for (let i = 0; i < message.$unknowns.length; ++i)
+                      writer.raw(message.$unknowns[i]);
+                  return writer;
+                };
+                SparqlResultsFrame.encodeDelimited = function(message, writer) {
+                  return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                };
+                SparqlResultsFrame.decode = function(reader, length, _end, _depth, _target) {
+                  if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                  if (_depth === $undefined)
+                    _depth = 0;
+                  if (_depth > $Reader.recursionLimit)
+                    throw $Error("max depth exceeded");
+                  let end, message, key, value;
+                  if (length === $undefined)
+                    end = reader.len;
+                  else {
+                    end = reader.pos + length;
+                    if (end > reader.len)
+                      throw $RangeError("index out of range");
+                    length = reader.len;
+                    reader.len = end;
+                  }
+                  message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame();
+                  while (reader.pos < end) {
+                    let start = reader.pos;
+                    let tag = reader.tag();
+                    if (tag === _end) {
+                      _end = $undefined;
+                      break;
+                    }
+                    let wireType = tag & 7;
+                    switch (tag >>>= 3) {
+                      case 1: {
+                        if (wireType !== 2)
+                          break;
+                        message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                        continue;
+                      }
+                      case 2: {
+                        if (wireType !== 2)
+                          break;
+                        if (!(message.variables && message.variables.length))
+                          message.variables = [];
+                        message.variables.push(reader.stringVerify());
+                        continue;
+                      }
+                      case 3: {
+                        if (wireType !== 0)
+                          break;
+                        if (value = reader.uint32())
+                          message.rowCount = value;
+                        else
+                          delete message.rowCount;
+                        continue;
+                      }
+                      case 4: {
+                        if (wireType !== 2)
+                          break;
+                        if (!(message.names && message.names.length))
+                          message.names = [];
+                        message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                      }
+                      case 5: {
+                        if (wireType !== 2)
+                          break;
+                        if (!(message.prefixes && message.prefixes.length))
+                          message.prefixes = [];
+                        message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                      }
+                      case 6: {
+                        if (wireType !== 2)
+                          break;
+                        if (!(message.datatypes && message.datatypes.length))
+                          message.datatypes = [];
+                        message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                      }
+                      case 7: {
+                        if (wireType !== 2)
+                          break;
+                        if (!(message.columns && message.columns.length))
+                          message.columns = [];
+                        message.columns.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                      }
+                      case 8: {
+                        if (wireType !== 2)
+                          break;
+                        message.askResult = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.decode(reader, reader.uint32(), $undefined, _depth + 1, message.askResult);
+                        continue;
+                      }
+                      case 9: {
+                        if (wireType !== 2)
+                          break;
+                        message.trailer = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.decode(reader, reader.uint32(), $undefined, _depth + 1, message.trailer);
+                        continue;
+                      }
+                      case 15: {
+                        if (wireType !== 2)
+                          break;
+                        if (message.metadata === $util.emptyObject)
+                          message.metadata = {};
+                        let end2 = reader.uint32() + reader.pos;
+                        if (end2 > reader.len)
+                          throw $RangeError("index out of range");
+                        reader.len = end2;
+                        key = "";
+                        value = [];
+                        while (reader.pos < end2) {
+                          let tag2 = reader.tag();
+                          wireType = tag2 & 7;
+                          switch (tag2 >>>= 3) {
+                            case 1:
+                              if (wireType !== 2)
+                                break;
+                              key = reader.stringVerify();
+                              continue;
+                            case 2:
+                              if (wireType !== 2)
+                                break;
+                              value = reader.bytes();
+                              continue;
+                          }
+                          reader.skipType(wireType, _depth, tag2);
+                        }
+                        if (reader.pos !== end2)
+                          throw $RangeError("index out of range");
+                        reader.len = end;
+                        if (key === "__proto__")
+                          $util.makeProp(message.metadata, key);
+                        message.metadata[key] = value;
+                        continue;
+                      }
+                    }
+                    reader.skipType(wireType, _depth, tag);
+                    if (!reader.discardUnknown) {
+                      $util.makeProp(message, "$unknowns", false);
+                      (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                    }
+                  }
+                  if (length !== $undefined) {
+                    if (reader.pos !== end)
+                      throw $RangeError("index out of range");
+                    reader.len = length;
+                  }
+                  if (_end !== $undefined)
+                    throw $Error("missing end group");
+                  return message;
+                };
+                SparqlResultsFrame.decodeDelimited = function(reader) {
+                  if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                  return this.decode(reader, reader.uint32());
+                };
+                return SparqlResultsFrame;
+              })();
+              return sparql;
+            })();
             return v1;
           })();
           return proto3;
@@ -4799,82 +5460,13 @@ var Parser = class {
   }
 };
 
-// src/codec/ColumnEncoder.ts
+// src/codec/ColumnTermEncoder.ts
 var proto2 = eu.ostrzyciel.jelly.core.proto.v1;
-var ColumnEncoder = class {
-  constructor(options, sink) {
-    this.options = options;
-    this.sink = sink;
-    this.physicalType = options.physicalType ?? 2 /* QUADS */;
-    if (this.physicalType !== 1 && this.physicalType !== 2) throw new JellyConformanceError("Jelly 1.2 requires TRIPLES or QUADS; use QUADS for named graphs");
-    if (options.logicalType) throw new JellyConformanceError("Jelly 1.2 uses streamType instead of logicalType");
-    this.streamType = options.streamType ?? 0 /* FLAT */;
-    this.rdfVersion = options.rdfVersion ?? 3 /* RDF_1_2 */;
-    if (![0, 1].includes(this.streamType) || ![0, 1, 2, 3].includes(this.rdfVersion)) throw new JellyConformanceError("Invalid streamType or rdfVersion");
-    this.lookup = normalizeLookupPreset(options.lookup);
-    if (this.lookup.maxNames < 128) throw new JellyConformanceError("Jelly 1.2 requires a name lookup size of at least 128");
-    this.size = options.messageSize ?? 250;
-    if (!Number.isInteger(this.size) || this.size < 1 || this.size > 134217727) throw new JellyConformanceError("messageSize must be between 1 and 2^27 - 1");
+var ColumnTermEncoder = class {
+  constructor(rdfVersion) {
+    this.rdfVersion = rdfVersion;
   }
-  frames = [];
-  physicalType;
-  lookup;
-  size;
-  streamType;
-  rdfVersion;
   tables = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
-  quads = [];
-  namespaces = [];
-  first = true;
-  finished = false;
-  inMessage = false;
-  assertOpen() {
-    if (this.finished) throw new JellyConformanceError("Jelly encoder has already ended");
-  }
-  addNamespace(name, iri) {
-    this.assertOpen();
-    this.fit([iri], []);
-    this.tables[0].set(iri, this.tables[0].get(iri) ?? this.tables[0].size + 1);
-    this.namespaces.push([name, iri]);
-  }
-  addQuad(quad) {
-    this.assertOpen();
-    if (this.streamType === 1 && !this.inMessage) throw new JellyConformanceError("Use addMessage() or message counters with streamType MESSAGES");
-    if (this.physicalType === 1 && quad.graph.termType !== "DefaultGraph") throw new JellyConformanceError("TRIPLES streams cannot contain named graph quads");
-    if (!["NamedNode", "BlankNode", "Literal", "Quad"].includes(quad.object.termType)) throw new JellyConformanceError("Invalid RDF object");
-    if (!["NamedNode", "BlankNode"].includes(quad.subject.termType) || quad.predicate.termType !== "NamedNode" || !["DefaultGraph", "NamedNode", "BlankNode"].includes(quad.graph.termType)) throw new JellyConformanceError("Invalid RDF statement");
-    const names = [], datatypes = [];
-    for (const term of [quad.subject, quad.predicate, quad.object, quad.graph]) this.keys(term, names, datatypes);
-    if (this.quads.length >= this.size) this.flush();
-    this.fit(names, datatypes);
-    for (const [values, table] of [[names, this.tables[0]], [datatypes, this.tables[1]]]) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
-    this.quads.push(quad);
-  }
-  addMessage(quads, metadata) {
-    this.assertOpen();
-    if (this.streamType !== 1) throw new JellyConformanceError("Jelly 1.2 addMessage() requires streamType MESSAGES");
-    this.inMessage = true;
-    try {
-      for (const quad of quads) this.addQuad(quad);
-      this.flush(metadata, true);
-    } finally {
-      this.inMessage = false;
-    }
-  }
-  addGraph(_graph, _quads, _metadata) {
-    throw new JellyUnsupportedFeatureError("Jelly 1.2 has no GRAPHS layout; use QUADS and addMessage()");
-  }
-  finish() {
-    this.assertOpen();
-    if (this.first || this.quads.length || this.namespaces.length) this.flush();
-    this.finished = true;
-    return this.frames;
-  }
-  fit(names, datatypes) {
-    const fits = () => [names, datatypes].every((values, i) => (/* @__PURE__ */ new Set([...this.tables[i].keys(), ...values])).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
-    if (!fits()) this.flush();
-    if (!fits()) throw new JellyConformanceError("A single statement does not fit in the configured lookup tables");
-  }
   keys(term, names, datatypes, depth = 0) {
     if (term.termType === "NamedNode") names.push(term.value);
     else if (term.termType === "Literal") {
@@ -4960,6 +5552,81 @@ var ColumnEncoder = class {
     else if (new Set(c.literalKinds).size === 1) c.literalKinds = [c.literalKinds[0]];
     if (c.langtagDirections.every((v) => v === 0)) c.langtagDirections = [];
     return c;
+  }
+};
+
+// src/codec/ColumnEncoder.ts
+var ColumnEncoder = class extends ColumnTermEncoder {
+  constructor(options, sink) {
+    super(options.rdfVersion ?? 3 /* RDF_1_2 */);
+    this.options = options;
+    this.sink = sink;
+    this.physicalType = options.physicalType ?? 2 /* QUADS */;
+    if (this.physicalType !== 1 && this.physicalType !== 2) throw new JellyConformanceError("Jelly 1.2 requires TRIPLES or QUADS; use QUADS for named graphs");
+    if (options.logicalType) throw new JellyConformanceError("Jelly 1.2 uses streamType instead of logicalType");
+    this.streamType = options.streamType ?? 0 /* FLAT */;
+    if (![0, 1].includes(this.streamType) || ![0, 1, 2, 3].includes(this.rdfVersion)) throw new JellyConformanceError("Invalid streamType or rdfVersion");
+    this.lookup = normalizeColumnLookupPreset(options.lookup);
+    if (this.lookup.maxNames < 128) throw new JellyConformanceError("Jelly 1.2 requires a name lookup size of at least 128");
+    this.size = options.messageSize ?? 250;
+    if (!Number.isInteger(this.size) || this.size < 1 || this.size > 134217727) throw new JellyConformanceError("messageSize must be between 1 and 2^27 - 1");
+  }
+  frames = [];
+  physicalType;
+  lookup;
+  size;
+  streamType;
+  quads = [];
+  namespaces = [];
+  first = true;
+  finished = false;
+  inMessage = false;
+  assertOpen() {
+    if (this.finished) throw new JellyConformanceError("Jelly encoder has already ended");
+  }
+  addNamespace(name, iri) {
+    this.assertOpen();
+    this.fit([iri], []);
+    this.tables[0].set(iri, this.tables[0].get(iri) ?? this.tables[0].size + 1);
+    this.namespaces.push([name, iri]);
+  }
+  addQuad(quad) {
+    this.assertOpen();
+    if (this.streamType === 1 && !this.inMessage) throw new JellyConformanceError("Use addMessage() or message counters with streamType MESSAGES");
+    if (this.physicalType === 1 && quad.graph.termType !== "DefaultGraph") throw new JellyConformanceError("TRIPLES streams cannot contain named graph quads");
+    if (!["NamedNode", "BlankNode", "Literal", "Quad"].includes(quad.object.termType)) throw new JellyConformanceError("Invalid RDF object");
+    if (!["NamedNode", "BlankNode"].includes(quad.subject.termType) || quad.predicate.termType !== "NamedNode" || !["DefaultGraph", "NamedNode", "BlankNode"].includes(quad.graph.termType)) throw new JellyConformanceError("Invalid RDF statement");
+    const names = [], datatypes = [];
+    for (const term of [quad.subject, quad.predicate, quad.object, quad.graph]) this.keys(term, names, datatypes);
+    if (this.quads.length >= this.size) this.flush();
+    this.fit(names, datatypes);
+    for (const [values, table] of [[names, this.tables[0]], [datatypes, this.tables[1]]]) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
+    this.quads.push(quad);
+  }
+  addMessage(quads, metadata) {
+    this.assertOpen();
+    if (this.streamType !== 1) throw new JellyConformanceError("Jelly 1.2 addMessage() requires streamType MESSAGES");
+    this.inMessage = true;
+    try {
+      for (const quad of quads) this.addQuad(quad);
+      this.flush(metadata, true);
+    } finally {
+      this.inMessage = false;
+    }
+  }
+  addGraph(_graph, _quads, _metadata) {
+    throw new JellyUnsupportedFeatureError("Jelly 1.2 has no GRAPHS layout; use QUADS and addMessage()");
+  }
+  finish() {
+    this.assertOpen();
+    if (this.first || this.quads.length || this.namespaces.length) this.flush();
+    this.finished = true;
+    return this.frames;
+  }
+  fit(names, datatypes) {
+    const fits = () => [names, datatypes].every((values, i) => (/* @__PURE__ */ new Set([...this.tables[i].keys(), ...values])).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
+    if (!fits()) this.flush();
+    if (!fits()) throw new JellyConformanceError("A single statement does not fit in the configured lookup tables");
   }
   flush(metadata, boundary = false) {
     const columns = {
@@ -5494,6 +6161,364 @@ var Writer = class {
   }
 };
 
+// src/sparql/SparqlDecoder.ts
+function fail3(message) {
+  throw new JellyConformanceError(message);
+}
+var SparqlDecoder = class extends ColumnTermDecoder {
+  constructor(config = {}) {
+    super(config);
+    this.config = config;
+    if (config.maxCellsPerBatch !== void 0 && (!Number.isInteger(config.maxCellsPerBatch) || config.maxCellsPerBatch < 0)) fail3("maxCellsPerBatch must be a nonnegative integer");
+  }
+  streamType;
+  first = true;
+  seenFrame = false;
+  kind;
+  header;
+  trailer = false;
+  resultIndex = 0;
+  resultError;
+  bnodes = /* @__PURE__ */ new Map();
+  usedLabels = /* @__PURE__ */ new Set();
+  ended = false;
+  decode(frame) {
+    if (this.ended) fail3("Jelly-SPARQL decoder has already ended");
+    const events = [];
+    const first = this.first;
+    if (!first && this.kind === "ask") fail3("A frame follows an ASK result without starting a new result set");
+    if (this.streamType === 0 && this.trailer && !frame.options) fail3("A frame without stream options follows a trailer");
+    if (this.streamType === 1 && frame.options && !first) fail3("Stream options occur inside a punctuated result set");
+    if (frame.options) {
+      const o = frame.options;
+      if (o.version !== 1) throw new JellyUnsupportedFeatureError(`Unsupported Jelly-SPARQL protocol version ${o.version}`);
+      if (o.streamType !== 0 && o.streamType !== 1) fail3(`Unknown SPARQL stream type ${o.streamType}`);
+      if (this.streamType !== void 0 && this.streamType !== Number(o.streamType)) fail3("SPARQL stream type cannot change");
+      if (o.rdfVersion < 0 || o.rdfVersion > 3) fail3(`Unknown RDF version ${o.rdfVersion}`);
+      this.resetLookups(o);
+      this.streamType = Number(o.streamType);
+      this.trailer = false;
+    } else if (!this.seenFrame) fail3("The first Jelly-SPARQL frame must have stream options");
+    this.seenFrame = true;
+    this.first = false;
+    this.checkRowCount(frame.rowCount);
+    const entries = frame.names;
+    this.applyLookups([[entries, this.names], [frame.prefixes, this.prefixes], [frame.datatypes, this.datatypes]]);
+    if (frame.askResult) {
+      if (!first) fail3("ASK result must be in the first frame of its result set");
+      if (frame.variables.length || frame.columns.length || frame.rowCount) fail3("ASK frame cannot contain variables, columns, or rows");
+      this.kind = "ask";
+      events.push({ type: "boolean", resultIndex: this.resultIndex, value: frame.askResult.value ?? false });
+    } else {
+      if (first) this.kind = "select";
+      if (first || frame.options) {
+        if (frame.variables.some((v) => !v) || new Set(frame.variables).size !== frame.variables.length) fail3("Variable names must be nonempty and unique");
+        if (this.header && (this.header.length !== frame.variables.length || this.header.some((v, i) => v !== frame.variables[i]))) fail3("Restated header must declare the same variables in the same order");
+        this.header = [...frame.variables];
+        if (first) events.push({ type: "header", resultIndex: this.resultIndex, variables: [...this.header] });
+      } else if (frame.variables.length) fail3("Header is only allowed at the start or with stream options");
+      const variables = this.header;
+      const count = frame.rowCount;
+      if (count * Math.max(1, variables.length) > (this.config.maxCellsPerBatch ?? 1048576)) fail3("Column cell count exceeds configured size limit");
+      if (frame.columns.length && frame.columns.length !== variables.length) fail3("Column count differs from variable count");
+      if (!frame.columns.length && variables.length && count) fail3("Rows with variables require columns");
+      const columns = frame.columns.map((c) => this.column(c, count));
+      for (let r = 0; r < count; r++) {
+        const bindings = /* @__PURE__ */ new Map();
+        for (let v = 0; v < variables.length; v++) {
+          const term = columns[v][r];
+          if (term) bindings.set(variables[v], this.scoped(term));
+        }
+        events.push({ type: "binding", resultIndex: this.resultIndex, bindings });
+      }
+    }
+    const metadata = new Map(Object.entries(frame.metadata).map(([k, v]) => [k, new Uint8Array(v)]));
+    if (metadata.size) {
+      let links;
+      if (metadata.has("link")) {
+        try {
+          const text = new TextDecoder("utf-8", { fatal: true }).decode(metadata.get("link"));
+          links = text ? text.split("\n") : [];
+        } catch {
+          metadata.delete("link");
+        }
+      }
+      events.push({ type: "metadata", resultIndex: this.resultIndex, metadata, ...links ? { links } : {} });
+    }
+    if (frame.trailer) {
+      this.trailer = true;
+      const error = frame.trailer.error ?? "";
+      if (error) {
+        this.resultError ??= error;
+        const failure = new JellySparqlResultError(this.resultIndex, error);
+        if (this.config.onResultError) this.config.onResultError(failure);
+        else throw failure;
+      }
+      if (this.streamType === 1) {
+        events.push(this.endEvent());
+        this.resultIndex++;
+        this.first = true;
+        this.kind = void 0;
+        this.header = void 0;
+        this.resultError = void 0;
+        this.trailer = false;
+        this.bnodes.clear();
+      }
+    }
+    return events;
+  }
+  finish() {
+    if (this.ended) fail3("Jelly-SPARQL decoder has already ended");
+    this.ended = true;
+    if (!this.seenFrame) fail3("Jelly-SPARQL input contains no frames");
+    return this.first ? [] : [this.endEvent()];
+  }
+  endEvent() {
+    return { type: "end", resultIndex: this.resultIndex, complete: this.trailer && !this.resultError, ...this.resultError ? { error: this.resultError } : {} };
+  }
+  scoped(term) {
+    if (this.streamType === 0) return term;
+    if (term.termType === "Quad") return this.factory.quad(this.scoped(term.subject), term.predicate, this.scoped(term.object));
+    if (term.termType !== "BlankNode") return term;
+    let node = this.bnodes.get(term.value);
+    if (!node) {
+      let label = term.value;
+      while (this.usedLabels.has(label)) label = `sparql${this.resultIndex}_${label}`;
+      this.usedLabels.add(label);
+      node = this.factory.blankNode(label);
+      this.bnodes.set(term.value, node);
+    }
+    return node;
+  }
+};
+
+// src/sparql/framing.ts
+var sparqlProto = eu.ostrzyciel.jelly.core.proto.v1.sparql;
+function decode(input, length) {
+  try {
+    return sparqlProto.SparqlResultsFrame.decode(input, length);
+  } catch (cause) {
+    throw new JellyConformanceError("Invalid Jelly-SPARQL protobuf frame", { cause });
+  }
+}
+var SparqlFrameDecoder = class extends FramedMessageDecoder {
+  constructor(options = {}) {
+    super({ ...options, delimited: options.delimited ?? true }, (input) => decode(input), (reader, length) => decode(reader, length));
+  }
+};
+function encodeSparqlFrame(frame, delimited = true) {
+  return delimited ? sparqlProto.SparqlResultsFrame.encodeDelimited(frame).finish() : sparqlProto.SparqlResultsFrame.encode(frame).finish();
+}
+
+// src/sparql/SparqlParser.ts
+var SparqlParser = class {
+  constructor(options = {}) {
+    this.options = options;
+  }
+  /** Returns result sets in stream order (one for a FLAT stream). */
+  parse(input) {
+    const decoder = new SparqlDecoder(this.options);
+    const framing = new SparqlFrameDecoder(this.options);
+    const results = [];
+    const accept = (events) => {
+      for (const event of events) {
+        if (event.type === "header" || event.type === "boolean") {
+          const info = { complete: false, links: [], metadata: /* @__PURE__ */ new Map() };
+          results.push(event.type === "header" ? { ...info, type: "select", variables: event.variables, bindings: [] } : { ...info, type: "ask", boolean: event.value });
+          continue;
+        }
+        const result = results[event.resultIndex];
+        if (event.type === "binding" && result.type === "select") result.bindings.push(event.bindings);
+        else if (event.type === "metadata") {
+          for (const [key, value] of event.metadata) result.metadata.set(key, value);
+          if (event.links) result.links = event.links;
+        } else if (event.type === "end") {
+          result.complete = event.complete;
+          if (event.error) result.error = event.error;
+        }
+      }
+    };
+    framing.decodeEach(input, (frame) => accept(decoder.decode(frame)));
+    accept(decoder.finish());
+    return results;
+  }
+};
+
+// src/sparql-types.ts
+var SparqlStreamType = /* @__PURE__ */ ((SparqlStreamType2) => {
+  SparqlStreamType2[SparqlStreamType2["FLAT"] = 0] = "FLAT";
+  SparqlStreamType2[SparqlStreamType2["PUNCTUATED"] = 1] = "PUNCTUATED";
+  return SparqlStreamType2;
+})(SparqlStreamType || {});
+
+// src/sparql/SparqlWriter.ts
+function fail4(message) {
+  throw new JellyConformanceError(message);
+}
+var SparqlWriter = class extends ColumnTermEncoder {
+  constructor(config = {}, frameSink) {
+    super(config.rdfVersion ?? 3 /* RDF_1_2 */);
+    this.config = config;
+    this.frameSink = frameSink;
+    this.lookup = normalizeColumnLookupPreset(config.lookup);
+    this.streamType = config.streamType ?? 0 /* FLAT */;
+    if (![0, 1].includes(this.streamType)) fail4("Unknown SPARQL streamType");
+    if (![0, 1, 2, 3].includes(this.rdfVersion)) fail4("Unknown RDF version");
+    this.frameSize = config.frameSize ?? 250;
+    if (!Number.isInteger(this.frameSize) || this.frameSize < 1 || this.frameSize > 134217727) fail4("frameSize must be between 1 and 2^27 - 1");
+  }
+  lookup;
+  frameSize;
+  streamType;
+  chunks = [];
+  rows = [];
+  metadata = /* @__PURE__ */ new Map();
+  variables = [];
+  active;
+  askValue = false;
+  firstFrame = true;
+  firstResultFrame = true;
+  resultCount = 0;
+  frameCount = 0;
+  ended = false;
+  startSelect(variables, info = {}) {
+    if (variables.some((v) => !v || v.startsWith("?") || v.startsWith("$")) || new Set(variables).size !== variables.length) fail4("Variables must be unique, nonempty names without ? or $");
+    this.start("select");
+    this.variables = [...variables];
+    this.addMetadata(info);
+  }
+  startAsk(value, info = {}) {
+    if (typeof value !== "boolean") fail4("ASK result must be a boolean");
+    this.start("ask");
+    this.askValue = value;
+    this.addMetadata(info);
+  }
+  addBinding(binding) {
+    this.assertOpen();
+    if (this.active !== "select") fail4("Start a SELECT result before adding bindings");
+    const row = new Map(Symbol.iterator in binding ? binding : Object.entries(binding));
+    const names = [], datatypes = [];
+    for (const [name, term] of row) {
+      if (!this.variables.includes(name)) fail4(`Undeclared variable ${name}`);
+      if (term === void 0) {
+        row.delete(name);
+        continue;
+      }
+      if (!["NamedNode", "BlankNode", "Literal", "Quad"].includes(term.termType)) fail4(`Invalid SPARQL binding term ${term.termType}`);
+      this.keys(term, names, datatypes);
+    }
+    const fits = () => [names, datatypes].every((values, i) => (/* @__PURE__ */ new Set([...this.tables[i].keys(), ...values])).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
+    if (this.rows.length >= this.frameSize || !fits()) this.flush();
+    if (!fits()) fail4("A single solution does not fit in the configured lookup tables");
+    for (const [values, table] of [[names, this.tables[0]], [datatypes, this.tables[1]]]) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
+    this.rows.push(row);
+  }
+  addMetadata(info) {
+    this.assertOpen();
+    if (!this.active) fail4("Start a result before adding metadata");
+    const entries = info.metadata instanceof Map ? info.metadata : Object.entries(info.metadata ?? {});
+    for (const [key, value] of entries) {
+      if (key === "link") {
+        try {
+          new TextDecoder("utf-8", { fatal: true }).decode(value);
+        } catch {
+          fail4("The link metadata must be valid UTF-8");
+        }
+      }
+      this.metadata.set(key, new Uint8Array(value));
+    }
+    if (info.links) {
+      if (info.links.some((link) => typeof link !== "string" || link.includes("\n"))) fail4("Links must be strings without LF characters");
+      this.metadata.set("link", new TextEncoder().encode(info.links.join("\n")));
+    }
+  }
+  endResult(error = "") {
+    this.assertOpen();
+    if (!this.active) fail4("No SPARQL result set is open");
+    this.flush(error);
+    this.active = void 0;
+    this.resultCount++;
+  }
+  addAsk(value, info = {}) {
+    this.startAsk(value, info);
+    this.endResult();
+  }
+  addResult(result) {
+    if (result.type === "ask") this.startAsk(result.boolean, result);
+    else {
+      this.startSelect(result.variables, result);
+      for (const binding of result.bindings) this.addBinding(binding);
+    }
+    this.endResult(result.error || (result.complete === false ? "Result set incomplete" : ""));
+  }
+  /** Accepts the events emitted by SparqlStreamParser. */
+  write(event) {
+    if (event.type === "header") this.startSelect(event.variables);
+    else if (event.type === "boolean") this.startAsk(event.value);
+    else if (event.type === "binding") this.addBinding(event.bindings);
+    else if (event.type === "metadata") this.addMetadata(event);
+    else this.endResult(event.error || (event.complete ? "" : "Result set incomplete"));
+  }
+  /** Finalizes the open result (if any) and returns bytes, or empty bytes with a frame sink. */
+  end() {
+    this.assertOpen();
+    if (this.active) this.endResult();
+    if (!this.resultCount) {
+      this.startSelect([]);
+      this.endResult();
+    }
+    this.ended = true;
+    const bytes = concatBytes(this.chunks);
+    this.chunks.length = 0;
+    return bytes;
+  }
+  start(kind) {
+    this.assertOpen();
+    if (this.active) fail4("End the current result set before starting another");
+    if (this.streamType === 0 && this.resultCount) fail4("Use PUNCTUATED to write more than one result set");
+    this.active = kind;
+    this.firstResultFrame = true;
+    this.variables = [];
+  }
+  assertOpen() {
+    if (this.ended) fail4("Jelly-SPARQL writer has already ended");
+  }
+  flush(error) {
+    if (this.active === "ask" && error === void 0) fail4("An ASK result must fit in one frame with its trailer");
+    if (this.config.delimited === false && this.frameCount) fail4("Non-delimited Jelly-SPARQL output must contain exactly one frame");
+    const frame = {
+      ...this.firstFrame ? { options: {
+        streamName: this.config.streamName ?? "",
+        streamType: Number(this.streamType),
+        rdfVersion: Number(this.rdfVersion),
+        maxNameTableSize: this.lookup.maxNames,
+        maxPrefixTableSize: this.lookup.maxPrefixes,
+        maxDatatypeTableSize: this.lookup.maxDatatypes,
+        version: 1
+      } } : {},
+      ...this.active === "ask" ? { askResult: { value: this.askValue } } : {
+        variables: this.firstResultFrame ? this.variables : [],
+        rowCount: this.rows.length,
+        names: this.tables[0].size ? [{ id: 1, values: [...this.tables[0].keys()] }] : [],
+        datatypes: this.tables[1].size ? [{ id: 1, values: [...this.tables[1].keys()] }] : [],
+        columns: this.rows.length ? this.variables.map((v) => this.column(this.rows.map((row) => row.get(v) ?? UNBOUND))) : []
+      },
+      metadata: Object.fromEntries(this.metadata),
+      ...error !== void 0 ? { trailer: { error } } : {}
+    };
+    const bytes = encodeSparqlFrame(frame, this.config.delimited ?? true);
+    if (this.frameSink) this.frameSink(bytes);
+    else this.chunks.push(bytes);
+    this.frameCount++;
+    this.firstFrame = false;
+    this.firstResultFrame = false;
+    this.rows = [];
+    this.metadata = /* @__PURE__ */ new Map();
+    for (const table of this.tables) table.clear();
+  }
+};
+var UNBOUND = { termType: "DefaultGraph", value: "", equals: (other) => other?.termType === "DefaultGraph" };
+
 // src/api/StreamParser.ts
 import { Transform } from "stream";
 var StreamParser = class extends Transform {
@@ -5618,6 +6643,114 @@ var StreamWriter = class extends Transform2 {
     this.writer.end((error) => callback(error ?? void 0));
   }
 };
+
+// src/sparql/nodeStreams.ts
+import { Transform as Transform3 } from "stream";
+var SparqlStreamParser = class extends Transform3 {
+  reader;
+  decoder;
+  pending = [];
+  index = 0;
+  busy = false;
+  constructor(options = {}) {
+    super({ ...options, readableObjectMode: true, writableObjectMode: false });
+    this.reader = new SparqlFrameDecoder(options);
+    this.decoder = new SparqlDecoder(options);
+  }
+  import(stream) {
+    stream.on("error", (error) => this.destroy(error));
+    stream.pipe(this);
+    return this;
+  }
+  _transform(chunk, _encoding, callback) {
+    this.busy = true;
+    try {
+      if (this.drain() && this.reader.paused) this.reader.resumeEach((frame) => this.accept(frame));
+      this.reader.writeEach(chunk, (frame) => this.accept(frame));
+      this.busy = false;
+      callback();
+    } catch (error) {
+      this.busy = false;
+      callback(error);
+    }
+  }
+  _read(size) {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      if (this.drain() && this.reader.paused) this.reader.resumeEach((frame) => this.accept(frame));
+    } catch (error) {
+      this.busy = false;
+      this.destroy(error);
+      return;
+    }
+    this.busy = false;
+    if (!this.reader.paused && this.index >= this.pending.length) super._read(size);
+  }
+  _flush(callback) {
+    this.busy = true;
+    try {
+      this.drain(true);
+      this.reader.endEach((frame) => {
+        this.pending = this.decoder.decode(frame);
+        this.index = 0;
+        this.drain(true);
+      });
+      this.pending = this.decoder.finish();
+      this.index = 0;
+      this.drain(true);
+      this.busy = false;
+      callback();
+    } catch (error) {
+      this.busy = false;
+      callback(error);
+    }
+  }
+  accept(frame) {
+    this.pending = this.decoder.decode(frame);
+    this.index = 0;
+    return this.drain();
+  }
+  drain(force = false) {
+    while (this.index < this.pending.length) {
+      const accepted = this.push(this.pending[this.index++]);
+      if (!accepted && !force) return false;
+    }
+    this.pending = [];
+    this.index = 0;
+    return true;
+  }
+};
+var SparqlStreamWriter = class extends Transform3 {
+  writer;
+  constructor(options = {}) {
+    super({ writableObjectMode: true, readableObjectMode: false });
+    this.writer = new SparqlWriter(options, (bytes) => {
+      this.push(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+    });
+  }
+  import(stream) {
+    stream.on("error", (error) => this.destroy(error));
+    stream.pipe(this);
+    return this;
+  }
+  _transform(event, _encoding, callback) {
+    try {
+      this.writer.write(event);
+      callback();
+    } catch (error) {
+      callback(error);
+    }
+  }
+  _flush(callback) {
+    try {
+      this.writer.end();
+      callback();
+    } catch (error) {
+      callback(error);
+    }
+  }
+};
 export {
   BlankNode,
   ColumnEncoder,
@@ -5628,6 +6761,7 @@ export {
   Encoder,
   JellyConformanceError,
   JellyError,
+  JellySparqlResultError,
   JellyUnsupportedFeatureError,
   Literal,
   LogicalStreamType,
@@ -5647,6 +6781,11 @@ export {
   RdfStreamType,
   RdfVersion,
   SMALL_LOOKUP_PRESET,
+  SparqlParser,
+  SparqlStreamParser,
+  SparqlStreamType,
+  SparqlStreamWriter,
+  SparqlWriter,
   StreamParser,
   StreamWriter,
   Variable,

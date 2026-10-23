@@ -175,3 +175,4 @@ export class StreamWriter {
     return stream.pipeThrough(this);
   }
 }
+export { SparqlStreamParser, SparqlStreamWriter } from './sparql/browserStreams';

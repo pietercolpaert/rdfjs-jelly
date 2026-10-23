@@ -5241,6 +5241,1093 @@ export const eu = $root.eu = (() => {
                             return RdfStreamRow;
                         })();
 
+                        v1.sparql = (function() {
+
+                            /**
+                             * Namespace sparql.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @namespace
+                             */
+                            const sparql = {};
+
+                            sparql.SparqlResultsOptions = (function() {
+
+                                /**
+                                 * Properties of a SparqlResultsOptions.
+                                 * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties
+                                 * @property {string|null} [streamName] SparqlResultsOptions streamName
+                                 * @property {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType|null} [streamType] SparqlResultsOptions streamType
+                                 * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfVersion|null} [rdfVersion] SparqlResultsOptions rdfVersion
+                                 * @property {number|null} [maxNameTableSize] SparqlResultsOptions maxNameTableSize
+                                 * @property {number|null} [maxPrefixTableSize] SparqlResultsOptions maxPrefixTableSize
+                                 * @property {number|null} [maxDatatypeTableSize] SparqlResultsOptions maxDatatypeTableSize
+                                 * @property {number|null} [version] SparqlResultsOptions version
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+
+                                /**
+                                 * Properties of a SparqlResultsOptions.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @interface ISparqlResultsOptions
+                                 * @augments eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties
+                                 * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties instead.
+                                 */
+
+                                /**
+                                 * Shape of a SparqlResultsOptions.
+                                 * @typedef {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape
+                                 */
+
+                                /**
+                                 * Constructs a new SparqlResultsOptions.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @classdesc Represents a SparqlResultsOptions.
+                                 * @constructor
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties=} [properties] Properties to set
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+                                const SparqlResultsOptions = function (properties) {
+                                    if (properties)
+                                        for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                            if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                                this[keys[i]] = properties[keys[i]];
+                                };
+
+                                /**
+                                 * SparqlResultsOptions streamName.
+                                 * @member {string} streamName
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.streamName = "";
+
+                                /**
+                                 * SparqlResultsOptions streamType.
+                                 * @member {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType} streamType
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.streamType = 0;
+
+                                /**
+                                 * SparqlResultsOptions rdfVersion.
+                                 * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfVersion} rdfVersion
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.rdfVersion = 0;
+
+                                /**
+                                 * SparqlResultsOptions maxNameTableSize.
+                                 * @member {number} maxNameTableSize
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.maxNameTableSize = 0;
+
+                                /**
+                                 * SparqlResultsOptions maxPrefixTableSize.
+                                 * @member {number} maxPrefixTableSize
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.maxPrefixTableSize = 0;
+
+                                /**
+                                 * SparqlResultsOptions maxDatatypeTableSize.
+                                 * @member {number} maxDatatypeTableSize
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.maxDatatypeTableSize = 0;
+
+                                /**
+                                 * SparqlResultsOptions version.
+                                 * @member {number} version
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @instance
+                                 */
+                                SparqlResultsOptions.prototype.version = 0;
+
+                                /**
+                                 * Creates a new SparqlResultsOptions instance using the specified properties.
+                                 * @function create
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties=} [properties] Properties to set
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions} SparqlResultsOptions instance
+                                 * @type {{
+                                 *   (properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+                                 *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions;
+                                 * }}
+                                 */
+                                SparqlResultsOptions.create = function(properties) {
+                                    return new SparqlResultsOptions(properties);
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @function encode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties} message SparqlResultsOptions message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsOptions.encode = function (message, writer, _depth) {
+                                    if (!writer)
+                                        writer = $Writer.create();
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $util.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
+                                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.streamName);
+                                    if (message.streamType != null && $Object.hasOwnProperty.call(message, "streamType") && message.streamType !== 0)
+                                        writer.uint32(/* id 2, wireType 0 =*/16).int32(message.streamType);
+                                    if (message.rdfVersion != null && $Object.hasOwnProperty.call(message, "rdfVersion") && message.rdfVersion !== 0)
+                                        writer.uint32(/* id 5, wireType 0 =*/40).int32(message.rdfVersion);
+                                    if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
+                                        writer.uint32(/* id 9, wireType 0 =*/72).uint32(message.maxNameTableSize);
+                                    if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
+                                        writer.uint32(/* id 10, wireType 0 =*/80).uint32(message.maxPrefixTableSize);
+                                    if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
+                                        writer.uint32(/* id 11, wireType 0 =*/88).uint32(message.maxDatatypeTableSize);
+                                    if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
+                                        writer.uint32(/* id 15, wireType 0 =*/120).uint32(message.version);
+                                    if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                        for (let i = 0; i < message.$unknowns.length; ++i)
+                                            writer.raw(message.$unknowns[i]);
+                                    return writer;
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @function encodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties} message SparqlResultsOptions message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsOptions.encodeDelimited = function(message, writer) {
+                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer.
+                                 * @function decode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @param {number} [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsOptions.decode = function (reader, length, _end, _depth, _target) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = $Reader.create(reader);
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $Reader.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    let end, message, value;
+                                    if (length === $undefined)
+                                        end = reader.len;
+                                    else {
+                                        end = reader.pos + length;
+                                        if (end > reader.len)
+                                            throw $RangeError("index out of range");
+                                        length = reader.len;
+                                        reader.len = end;
+                                    }
+                                    message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions();
+                                    while (reader.pos < end) {
+                                        let start = reader.pos;
+                                        let tag = reader.tag();
+                                        if (tag === _end) {
+                                            _end = $undefined;
+                                            break;
+                                        }
+                                        let wireType = tag & 7;
+                                        switch (tag >>>= 3) {
+                                        case 1: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if ((value = reader.stringVerify()).length)
+                                                    message.streamName = value;
+                                                else
+                                                    delete message.streamName;
+                                                continue;
+                                            }
+                                        case 2: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.int32())
+                                                    message.streamType = value;
+                                                else
+                                                    delete message.streamType;
+                                                continue;
+                                            }
+                                        case 5: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.int32())
+                                                    message.rdfVersion = value;
+                                                else
+                                                    delete message.rdfVersion;
+                                                continue;
+                                            }
+                                        case 9: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.uint32())
+                                                    message.maxNameTableSize = value;
+                                                else
+                                                    delete message.maxNameTableSize;
+                                                continue;
+                                            }
+                                        case 10: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.uint32())
+                                                    message.maxPrefixTableSize = value;
+                                                else
+                                                    delete message.maxPrefixTableSize;
+                                                continue;
+                                            }
+                                        case 11: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.uint32())
+                                                    message.maxDatatypeTableSize = value;
+                                                else
+                                                    delete message.maxDatatypeTableSize;
+                                                continue;
+                                            }
+                                        case 15: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.uint32())
+                                                    message.version = value;
+                                                else
+                                                    delete message.version;
+                                                continue;
+                                            }
+                                        }
+                                        reader.skipType(wireType, _depth, tag);
+                                        if (!reader.discardUnknown) {
+                                            $util.makeProp(message, "$unknowns", false);
+                                            (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                        }
+                                    }
+                                    if (length !== $undefined) {
+                                        if (reader.pos !== end)
+                                            throw $RangeError("index out of range");
+                                        reader.len = length;
+                                    }
+                                    if (_end !== $undefined)
+                                        throw $Error("missing end group");
+                                    return message;
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer, length delimited.
+                                 * @function decodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsOptions.decodeDelimited = function(reader) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = new $Reader(reader);
+                                    return this.decode(reader, reader.uint32());
+                                };
+
+                                return SparqlResultsOptions;
+                            })();
+
+                            /**
+                             * SparqlStreamType enum.
+                             * @name eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType
+                             * @enum {number}
+                             * @property {number} SPARQL_STREAM_TYPE_FLAT=0 SPARQL_STREAM_TYPE_FLAT value
+                             * @property {number} SPARQL_STREAM_TYPE_PUNCTUATED=1 SPARQL_STREAM_TYPE_PUNCTUATED value
+                             */
+                            sparql.SparqlStreamType = (function() {
+                                const valuesById = {}, values = $Object.create(valuesById);
+                                values[valuesById[0] = "SPARQL_STREAM_TYPE_FLAT"] = 0;
+                                values[valuesById[1] = "SPARQL_STREAM_TYPE_PUNCTUATED"] = 1;
+                                return values;
+                            })();
+
+                            sparql.SparqlAskResult = (function() {
+
+                                /**
+                                 * Properties of a SparqlAskResult.
+                                 * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties
+                                 * @property {boolean|null} [value] SparqlAskResult value
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+
+                                /**
+                                 * Properties of a SparqlAskResult.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @interface ISparqlAskResult
+                                 * @augments eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties
+                                 * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties instead.
+                                 */
+
+                                /**
+                                 * Shape of a SparqlAskResult.
+                                 * @typedef {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape
+                                 */
+
+                                /**
+                                 * Constructs a new SparqlAskResult.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @classdesc Represents a SparqlAskResult.
+                                 * @constructor
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties=} [properties] Properties to set
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+                                const SparqlAskResult = function (properties) {
+                                    if (properties)
+                                        for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                            if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                                this[keys[i]] = properties[keys[i]];
+                                };
+
+                                /**
+                                 * SparqlAskResult value.
+                                 * @member {boolean} value
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @instance
+                                 */
+                                SparqlAskResult.prototype.value = false;
+
+                                /**
+                                 * Creates a new SparqlAskResult instance using the specified properties.
+                                 * @function create
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties=} [properties] Properties to set
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult} SparqlAskResult instance
+                                 * @type {{
+                                 *   (properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+                                 *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult;
+                                 * }}
+                                 */
+                                SparqlAskResult.create = function(properties) {
+                                    return new SparqlAskResult(properties);
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @function encode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties} message SparqlAskResult message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlAskResult.encode = function (message, writer, _depth) {
+                                    if (!writer)
+                                        writer = $Writer.create();
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $util.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    if (message.value != null && $Object.hasOwnProperty.call(message, "value") && message.value !== false)
+                                        writer.uint32(/* id 1, wireType 0 =*/8).bool(message.value);
+                                    if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                        for (let i = 0; i < message.$unknowns.length; ++i)
+                                            writer.raw(message.$unknowns[i]);
+                                    return writer;
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @function encodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties} message SparqlAskResult message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlAskResult.encodeDelimited = function(message, writer) {
+                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                };
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer.
+                                 * @function decode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @param {number} [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlAskResult.decode = function (reader, length, _end, _depth, _target) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = $Reader.create(reader);
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $Reader.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    let end, message, value;
+                                    if (length === $undefined)
+                                        end = reader.len;
+                                    else {
+                                        end = reader.pos + length;
+                                        if (end > reader.len)
+                                            throw $RangeError("index out of range");
+                                        length = reader.len;
+                                        reader.len = end;
+                                    }
+                                    message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult();
+                                    while (reader.pos < end) {
+                                        let start = reader.pos;
+                                        let tag = reader.tag();
+                                        if (tag === _end) {
+                                            _end = $undefined;
+                                            break;
+                                        }
+                                        let wireType = tag & 7;
+                                        switch (tag >>>= 3) {
+                                        case 1: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.bool())
+                                                    message.value = value;
+                                                else
+                                                    delete message.value;
+                                                continue;
+                                            }
+                                        }
+                                        reader.skipType(wireType, _depth, tag);
+                                        if (!reader.discardUnknown) {
+                                            $util.makeProp(message, "$unknowns", false);
+                                            (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                        }
+                                    }
+                                    if (length !== $undefined) {
+                                        if (reader.pos !== end)
+                                            throw $RangeError("index out of range");
+                                        reader.len = length;
+                                    }
+                                    if (_end !== $undefined)
+                                        throw $Error("missing end group");
+                                    return message;
+                                };
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer, length delimited.
+                                 * @function decodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlAskResult.decodeDelimited = function(reader) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = new $Reader(reader);
+                                    return this.decode(reader, reader.uint32());
+                                };
+
+                                return SparqlAskResult;
+                            })();
+
+                            sparql.SparqlResultsTrailer = (function() {
+
+                                /**
+                                 * Properties of a SparqlResultsTrailer.
+                                 * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties
+                                 * @property {string|null} [error] SparqlResultsTrailer error
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+
+                                /**
+                                 * Properties of a SparqlResultsTrailer.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @interface ISparqlResultsTrailer
+                                 * @augments eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties
+                                 * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties instead.
+                                 */
+
+                                /**
+                                 * Shape of a SparqlResultsTrailer.
+                                 * @typedef {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape
+                                 */
+
+                                /**
+                                 * Constructs a new SparqlResultsTrailer.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @classdesc Represents a SparqlResultsTrailer.
+                                 * @constructor
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties=} [properties] Properties to set
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+                                const SparqlResultsTrailer = function (properties) {
+                                    if (properties)
+                                        for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                            if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                                this[keys[i]] = properties[keys[i]];
+                                };
+
+                                /**
+                                 * SparqlResultsTrailer error.
+                                 * @member {string} error
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @instance
+                                 */
+                                SparqlResultsTrailer.prototype.error = "";
+
+                                /**
+                                 * Creates a new SparqlResultsTrailer instance using the specified properties.
+                                 * @function create
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties=} [properties] Properties to set
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer} SparqlResultsTrailer instance
+                                 * @type {{
+                                 *   (properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+                                 *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer;
+                                 * }}
+                                 */
+                                SparqlResultsTrailer.create = function(properties) {
+                                    return new SparqlResultsTrailer(properties);
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @function encode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties} message SparqlResultsTrailer message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsTrailer.encode = function (message, writer, _depth) {
+                                    if (!writer)
+                                        writer = $Writer.create();
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $util.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    if (message.error != null && $Object.hasOwnProperty.call(message, "error") && message.error !== "")
+                                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.error);
+                                    if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                        for (let i = 0; i < message.$unknowns.length; ++i)
+                                            writer.raw(message.$unknowns[i]);
+                                    return writer;
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @function encodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties} message SparqlResultsTrailer message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsTrailer.encodeDelimited = function(message, writer) {
+                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer.
+                                 * @function decode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @param {number} [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsTrailer.decode = function (reader, length, _end, _depth, _target) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = $Reader.create(reader);
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $Reader.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    let end, message, value;
+                                    if (length === $undefined)
+                                        end = reader.len;
+                                    else {
+                                        end = reader.pos + length;
+                                        if (end > reader.len)
+                                            throw $RangeError("index out of range");
+                                        length = reader.len;
+                                        reader.len = end;
+                                    }
+                                    message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer();
+                                    while (reader.pos < end) {
+                                        let start = reader.pos;
+                                        let tag = reader.tag();
+                                        if (tag === _end) {
+                                            _end = $undefined;
+                                            break;
+                                        }
+                                        let wireType = tag & 7;
+                                        switch (tag >>>= 3) {
+                                        case 1: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if ((value = reader.stringVerify()).length)
+                                                    message.error = value;
+                                                else
+                                                    delete message.error;
+                                                continue;
+                                            }
+                                        }
+                                        reader.skipType(wireType, _depth, tag);
+                                        if (!reader.discardUnknown) {
+                                            $util.makeProp(message, "$unknowns", false);
+                                            (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                        }
+                                    }
+                                    if (length !== $undefined) {
+                                        if (reader.pos !== end)
+                                            throw $RangeError("index out of range");
+                                        reader.len = length;
+                                    }
+                                    if (_end !== $undefined)
+                                        throw $Error("missing end group");
+                                    return message;
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer, length delimited.
+                                 * @function decodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsTrailer.decodeDelimited = function(reader) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = new $Reader(reader);
+                                    return this.decode(reader, reader.uint32());
+                                };
+
+                                return SparqlResultsTrailer;
+                            })();
+
+                            sparql.SparqlResultsFrame = (function() {
+
+                                /**
+                                 * Properties of a SparqlResultsFrame.
+                                 * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties
+                                 * @property {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null} [options] SparqlResultsFrame options
+                                 * @property {Array.<string>|null} [variables] SparqlResultsFrame variables
+                                 * @property {number|null} [rowCount] SparqlResultsFrame rowCount
+                                 * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [names] SparqlResultsFrame names
+                                 * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [prefixes] SparqlResultsFrame prefixes
+                                 * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [datatypes] SparqlResultsFrame datatypes
+                                 * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties>|null} [columns] SparqlResultsFrame columns
+                                 * @property {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null} [askResult] SparqlResultsFrame askResult
+                                 * @property {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null} [trailer] SparqlResultsFrame trailer
+                                 * @property {Object.<string,Uint8Array>|null} [metadata] SparqlResultsFrame metadata
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+
+                                /**
+                                 * Properties of a SparqlResultsFrame.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @interface ISparqlResultsFrame
+                                 * @augments eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties
+                                 * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties instead.
+                                 */
+
+                                /**
+                                 * Shape of a SparqlResultsFrame.
+                                 * @typedef {{
+                                 *   options?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape|null;
+                                 *   variables?: Array.<string>|null;
+                                 *   rowCount?: number|null;
+                                 *   names?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                                 *   prefixes?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                                 *   datatypes?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                                 *   columns?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape>|null;
+                                 *   askResult?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape|null;
+                                 *   trailer?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape|null;
+                                 *   metadata?: Object.<string,Uint8Array>|null;
+                                 *   $unknowns?: Array.<Uint8Array>;
+                                 * }} eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape
+                                 */
+
+                                /**
+                                 * Constructs a new SparqlResultsFrame.
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql
+                                 * @classdesc Represents a SparqlResultsFrame.
+                                 * @constructor
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties=} [properties] Properties to set
+                                 * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                                 */
+                                const SparqlResultsFrame = function (properties) {
+                                    this.variables = [];
+                                    this.names = [];
+                                    this.prefixes = [];
+                                    this.datatypes = [];
+                                    this.columns = [];
+                                    this.metadata = {};
+                                    if (properties)
+                                        for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                            if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                                this[keys[i]] = properties[keys[i]];
+                                };
+
+                                /**
+                                 * SparqlResultsFrame options.
+                                 * @member {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null|undefined} options
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.options = null;
+
+                                /**
+                                 * SparqlResultsFrame variables.
+                                 * @member {Array.<string>} variables
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.variables = $util.emptyArray;
+
+                                /**
+                                 * SparqlResultsFrame rowCount.
+                                 * @member {number} rowCount
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.rowCount = 0;
+
+                                /**
+                                 * SparqlResultsFrame names.
+                                 * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} names
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.names = $util.emptyArray;
+
+                                /**
+                                 * SparqlResultsFrame prefixes.
+                                 * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} prefixes
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.prefixes = $util.emptyArray;
+
+                                /**
+                                 * SparqlResultsFrame datatypes.
+                                 * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} datatypes
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.datatypes = $util.emptyArray;
+
+                                /**
+                                 * SparqlResultsFrame columns.
+                                 * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties>} columns
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.columns = $util.emptyArray;
+
+                                /**
+                                 * SparqlResultsFrame askResult.
+                                 * @member {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null|undefined} askResult
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.askResult = null;
+
+                                /**
+                                 * SparqlResultsFrame trailer.
+                                 * @member {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null|undefined} trailer
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.trailer = null;
+
+                                /**
+                                 * SparqlResultsFrame metadata.
+                                 * @member {Object.<string,Uint8Array>} metadata
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @instance
+                                 */
+                                SparqlResultsFrame.prototype.metadata = $util.emptyObject;
+
+                                /**
+                                 * Creates a new SparqlResultsFrame instance using the specified properties.
+                                 * @function create
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties=} [properties] Properties to set
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame} SparqlResultsFrame instance
+                                 * @type {{
+                                 *   (properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+                                 *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame;
+                                 * }}
+                                 */
+                                SparqlResultsFrame.create = function(properties) {
+                                    return new SparqlResultsFrame(properties);
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @function encode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties} message SparqlResultsFrame message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsFrame.encode = function (message, writer, _depth) {
+                                    if (!writer)
+                                        writer = $Writer.create();
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $util.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    if (message.options != null && $Object.hasOwnProperty.call(message, "options"))
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.encode(message.options, writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
+                                    if (message.variables != null && message.variables.length)
+                                        for (let i = 0; i < message.variables.length; ++i)
+                                            writer.uint32(/* id 2, wireType 2 =*/18).string(message.variables[i]);
+                                    if (message.rowCount != null && $Object.hasOwnProperty.call(message, "rowCount") && message.rowCount !== 0)
+                                        writer.uint32(/* id 3, wireType 0 =*/24).uint32(message.rowCount);
+                                    if (message.names != null && message.names.length)
+                                        for (let i = 0; i < message.names.length; ++i)
+                                            $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.names[i], writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
+                                    if (message.prefixes != null && message.prefixes.length)
+                                        for (let i = 0; i < message.prefixes.length; ++i)
+                                            $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.prefixes[i], writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
+                                    if (message.datatypes != null && message.datatypes.length)
+                                        for (let i = 0; i < message.datatypes.length; ++i)
+                                            $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.datatypes[i], writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
+                                    if (message.columns != null && message.columns.length)
+                                        for (let i = 0; i < message.columns.length; ++i)
+                                            $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.columns[i], writer.uint32(/* id 7, wireType 2 =*/58).fork(), _depth + 1).ldelim();
+                                    if (message.askResult != null && $Object.hasOwnProperty.call(message, "askResult"))
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.encode(message.askResult, writer.uint32(/* id 8, wireType 2 =*/66).fork(), _depth + 1).ldelim();
+                                    if (message.trailer != null && $Object.hasOwnProperty.call(message, "trailer"))
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.encode(message.trailer, writer.uint32(/* id 9, wireType 2 =*/74).fork(), _depth + 1).ldelim();
+                                    if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
+                                        for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
+                                            writer.uint32(/* id 15, wireType 2 =*/122).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).bytes(message.metadata[keys[i]]).ldelim();
+                                    if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                        for (let i = 0; i < message.$unknowns.length; ++i)
+                                            writer.raw(message.$unknowns[i]);
+                                    return writer;
+                                };
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @function encodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @static
+                                 * @param {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties} message SparqlResultsFrame message or plain object to encode
+                                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                                 * @returns {$protobuf.Writer} Writer
+                                 */
+                                SparqlResultsFrame.encodeDelimited = function(message, writer) {
+                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer.
+                                 * @function decode
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @param {number} [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsFrame.decode = function (reader, length, _end, _depth, _target) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = $Reader.create(reader);
+                                    if (_depth === $undefined)
+                                        _depth = 0;
+                                    if (_depth > $Reader.recursionLimit)
+                                        throw $Error("max depth exceeded");
+                                    let end, message, key, value;
+                                    if (length === $undefined)
+                                        end = reader.len;
+                                    else {
+                                        end = reader.pos + length;
+                                        if (end > reader.len)
+                                            throw $RangeError("index out of range");
+                                        length = reader.len;
+                                        reader.len = end;
+                                    }
+                                    message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame();
+                                    while (reader.pos < end) {
+                                        let start = reader.pos;
+                                        let tag = reader.tag();
+                                        if (tag === _end) {
+                                            _end = $undefined;
+                                            break;
+                                        }
+                                        let wireType = tag & 7;
+                                        switch (tag >>>= 3) {
+                                        case 1: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                                                continue;
+                                            }
+                                        case 2: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (!(message.variables && message.variables.length))
+                                                    message.variables = [];
+                                                message.variables.push(reader.stringVerify());
+                                                continue;
+                                            }
+                                        case 3: {
+                                                if (wireType !== 0)
+                                                    break;
+                                                if (value = reader.uint32())
+                                                    message.rowCount = value;
+                                                else
+                                                    delete message.rowCount;
+                                                continue;
+                                            }
+                                        case 4: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (!(message.names && message.names.length))
+                                                    message.names = [];
+                                                message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                continue;
+                                            }
+                                        case 5: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (!(message.prefixes && message.prefixes.length))
+                                                    message.prefixes = [];
+                                                message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                continue;
+                                            }
+                                        case 6: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (!(message.datatypes && message.datatypes.length))
+                                                    message.datatypes = [];
+                                                message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                continue;
+                                            }
+                                        case 7: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (!(message.columns && message.columns.length))
+                                                    message.columns = [];
+                                                message.columns.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                continue;
+                                            }
+                                        case 8: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                message.askResult = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.decode(reader, reader.uint32(), $undefined, _depth + 1, message.askResult);
+                                                continue;
+                                            }
+                                        case 9: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                message.trailer = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.decode(reader, reader.uint32(), $undefined, _depth + 1, message.trailer);
+                                                continue;
+                                            }
+                                        case 15: {
+                                                if (wireType !== 2)
+                                                    break;
+                                                if (message.metadata === $util.emptyObject)
+                                                    message.metadata = {};
+                                                let end2 = reader.uint32() + reader.pos;
+                                                if (end2 > reader.len)
+                                                    throw $RangeError("index out of range");
+                                                reader.len = end2;
+                                                key = "";
+                                                value = [];
+                                                while (reader.pos < end2) {
+                                                    let tag2 = reader.tag();
+                                                    wireType = tag2 & 7;
+                                                    switch (tag2 >>>= 3) {
+                                                    case 1:
+                                                        if (wireType !== 2)
+                                                            break;
+                                                        key = reader.stringVerify();
+                                                        continue;
+                                                    case 2:
+                                                        if (wireType !== 2)
+                                                            break;
+                                                        value = reader.bytes();
+                                                        continue;
+                                                    }
+                                                    reader.skipType(wireType, _depth, tag2);
+                                                }
+                                                if (reader.pos !== end2)
+                                                    throw $RangeError("index out of range");
+                                                reader.len = end;
+                                                if (key === "__proto__")
+                                                    $util.makeProp(message.metadata, key);
+                                                message.metadata[key] = value;
+                                                continue;
+                                            }
+                                        }
+                                        reader.skipType(wireType, _depth, tag);
+                                        if (!reader.discardUnknown) {
+                                            $util.makeProp(message, "$unknowns", false);
+                                            (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                        }
+                                    }
+                                    if (length !== $undefined) {
+                                        if (reader.pos !== end)
+                                            throw $RangeError("index out of range");
+                                        reader.len = length;
+                                    }
+                                    if (_end !== $undefined)
+                                        throw $Error("missing end group");
+                                    return message;
+                                };
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer, length delimited.
+                                 * @function decodeDelimited
+                                 * @memberof eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame
+                                 * @static
+                                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                SparqlResultsFrame.decodeDelimited = function(reader) {
+                                    if (!(reader instanceof $Reader))
+                                        reader = new $Reader(reader);
+                                    return this.decode(reader, reader.uint32());
+                                };
+
+                                return SparqlResultsFrame;
+                            })();
+
+                            return sparql;
+                        })();
+
                         return v1;
                     })();
 

@@ -67,3 +67,14 @@ export function normalizeLookupPreset(value: Partial<LookupPreset> = {}): Lookup
   return preset;
 }
 
+
+/** Column layouts have a minimum of 128 names and allow any prefix capacity. */
+export function normalizeColumnLookupPreset(value: Partial<LookupPreset> = {}): LookupPreset {
+  const preset = normalizeLookupPreset({ ...value, maxPrefixes: 0 });
+  const maxPrefixes = value.maxPrefixes ?? DEFAULT_LOOKUP_PRESET.maxPrefixes;
+  if (!Number.isInteger(maxPrefixes) || maxPrefixes < 0 || maxPrefixes > MAX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(`Prefix lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+  }
+  if (preset.maxNames < 128) throw new JellyConformanceError('Column streams require a name lookup size of at least 128');
+  return { ...preset, maxPrefixes };
+}

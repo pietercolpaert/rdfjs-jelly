@@ -2,15 +2,16 @@
 
 [![npm](https://img.shields.io/npm/v/rdfjs-jelly.svg)](https://www.npmjs.com/package/rdfjs-jelly)
 
-Jelly-RDF binary parser and writer for RDF/JS, for Node.js and browsers.
+Jelly-RDF and Jelly-SPARQL binary parsers and writers using RDF/JS terms, for Node.js and browsers.
 
 ## Support
 
 - Reads Jelly-RDF 1.0, 1.1, and 1.2 (protocol tags 1, 2, and 3).
 - Writes Jelly-RDF 1.1 by default; opt into 1.2 with `version: 3`.
 - Supports physical triple, quad, and graph streams; delimited and non-delimited encoding; lookup/repeated-term compression; namespaces; and message metadata.
-- Uses RDF/JS quads and accepts a custom RDF/JS data factory.
-- Supports RDF 1.2 directional language literals and object triple terms in 1.2 streams. Legacy RDF-star, generalized RDF, Jelly-SPARQL, Jelly-Patch, and gRPC are unsupported.
+- Reads and writes Jelly-SPARQL 1.0 SELECT and ASK result sets, including punctuated streams.
+- Uses RDF/JS terms and accepts a custom RDF/JS data factory.
+- Supports RDF 1.2 directional language literals and object triple terms in 1.2 streams. Legacy RDF-star, generalized RDF, Jelly-Patch, and gRPC are unsupported.
 
 Node.js 24 or newer is required by the Node build. The browser bundle targets ES2020.
 
@@ -140,6 +141,86 @@ writer.end((error, bytes) => {
 ```
 
 For compatibility with `rdf-parser-ts`, use `new Parser({ messages: true })` to receive `{ quad, messageCounter }` entries. The returned array has a `messageCount` property. `isMessageQuad()` and `toMessages()` convert between flat and grouped forms while preserving empty messages.
+
+## SPARQL result sets
+
+[Jelly-SPARQL 1.0.0](https://jelly-rdf.github.io/1.2.x/specification/sparql/)
+is a separate format from Jelly-RDF, using its own protocol tag **1**, media type
+`application/x-jelly-sparql`, and `.jellys` extension. Use `SparqlParser` and
+`SparqlWriter` for result sets. The command-line tools currently handle Jelly-RDF.
+
+```ts
+import { DataFactory, SparqlParser, SparqlWriter } from 'rdfjs-jelly';
+
+const writer = new SparqlWriter();
+writer.startSelect(['item', 'label'], { links: ['https://example.org/query'] });
+writer.addBinding({
+  item: DataFactory.namedNode('https://example.org/item/1'),
+  label: DataFactory.literal('hello', 'en'),
+});
+writer.addBinding({ item: DataFactory.namedNode('https://example.org/item/2') });
+// Missing keys are unbound. Map<string, SparqlTerm> inputs are accepted too.
+const bytes = writer.end(); // Synchronous; finalizes the result with a trailer.
+const [result] = new SparqlParser().parse(bytes);
+if (result.type === 'select') {
+  console.log(result.variables, result.bindings[0].get('item'), result.complete);
+}
+```
+
+`parse()` returns result sets in stream order. SELECT results have `variables`
+in projection order and `bindings` as `Map<string, SparqlTerm>[]`, preserving row
+order and duplicates. ASK results have `type: 'ask'` and `boolean`. Both carry
+`complete`, `links`, and merged binary `metadata`. RDF 1.2 directional literals
+and nested object triple terms use the same RDF/JS terms as Jelly-RDF 1.2.
+
+For ASK, use `writer.addAsk(false)`. To write several independent SELECT/ASK
+results, create a writer with `streamType: SparqlStreamType.PUNCTUATED`, then call
+`startSelect()` / `addBinding()` / `endResult()` or `addAsk()` for each result.
+`addResult()` accepts a complete result object, including those returned by the
+parser. Blank nodes share scope within one result set, across frames and repeated
+options, and get distinct identities across punctuated result sets.
+
+A missing trailer returns the rows already read with `complete: false`. A producer
+error trailer throws `JellySparqlResultError`, with its message and `resultIndex`.
+Supply `onResultError` to receive those errors through a callback and continue
+reading; affected results retain `complete: false` and an `error` string.
+`writer.endResult('backend timeout')` writes an error trailer. An error remains
+in effect after concatenating another FLAT stream with a successful trailer.
+
+`frameSize` limits writer rows per frame (default 250). The lookup working set
+can also end a frame early. As with the RDF 1.2 writer, columns use packed full-IRI
+name entries and repeat runs; prefix compression and lookup reuse across frames
+are future optimizations. Parser limits include `maxMessageSize`,
+`maxLookupTableSize`, `maxRowsPerBatch` (default 1,048,576), and
+`maxCellsPerBatch` (default 1,048,576 across all variables). Files use delimited
+frames by default; use `delimited: false` only for a single bare transport frame.
+
+For row delivery without buffering an entire result set, `SparqlStreamParser`
+emits event objects:
+
+| `type` | Data |
+| --- | --- |
+| `header` | `variables` in projection order |
+| `binding` | `bindings`, a Map for one solution |
+| `boolean` | `value`, an ASK result |
+| `metadata` | Binary `metadata` and optional updated `links` |
+| `end` | `complete` and optional `error` |
+
+Every event has a `resultIndex`. FLAT completion is emitted at end of input,
+because concatenated options can invalidate an earlier success trailer.
+`SparqlStreamWriter` consumes these same events. Both Node Transform streams
+and browser Web Streams are available through the corresponding package entry:
+
+```ts
+import { SparqlStreamParser, SparqlStreamWriter } from 'rdfjs-jelly';
+// For browser ReadableStream.pipeThrough(), import from 'rdfjs-jelly/browser'.
+input.pipe(new SparqlStreamParser()).pipe(new SparqlStreamWriter()).pipe(output);
+```
+
+Set `streamType: SparqlStreamType.PUNCTUATED` on the stream writer when forwarding
+multiple result sets. Stream parsers apply backpressure between frames and retain
+at most one decoded frame of events. Binary metadata is copied, and invalid UTF-8
+in the well-known `link` key is ignored. Unknown metadata keys remain binary.
 
 ## Node streams
 
@@ -401,7 +482,8 @@ npm run check
 npm run proto:generate
 ```
 
-The checked-in schema is Jelly-RDF `rdf.proto` 1.2.0. Static JavaScript codecs
+The checked-in schemas are Jelly-RDF `rdf.proto` 1.2.0 and Jelly-SPARQL
+`sparql.proto` 1.0.0 from the same upstream release. Static JavaScript codecs
 and TypeScript declarations are generated with protobuf.js. The generation
 step replaces generic oneof setter calls with cheap discriminator markers;
 `src/generated/rdf_pb.ts` consumes those markers while preserving protobuf's
@@ -409,9 +491,12 @@ last-one-wins semantics.
 
 Tests include all 226 parser and 31 writer fixtures from the official v1.2.0
 release, plus legacy 1.1 fixtures, Node/browser streaming, and version-2 writer
-compatibility. This is test coverage, not a published conformance report.
+compatibility. Jelly-SPARQL adds all 201 parser and 29 writer fixtures from that
+release, plus completion/error handling, blank-node scope, and streaming tests.
+This is test coverage, not a published conformance report.
 Regenerate the 1.2 fixture bundles from a v1.2.0 checkout with
-`node scripts/import-rdf12-fixtures.mjs /path/to/jelly-protobuf`.
+`node scripts/import-rdf12-fixtures.mjs /path/to/jelly-protobuf`. For SPARQL, use
+`node scripts/import-sparql-fixtures.mjs /path/to/jelly-protobuf`.
 The low-level `Encoder` remains the row encoder; `ColumnEncoder` writes the new
 layout. Low-level decoders should use `decodePayloadMessages()` and
 `finishMessages()` to preserve logical messages across frames.

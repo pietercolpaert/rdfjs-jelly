@@ -44,3 +44,12 @@ export type {
   WriterOptions,
 } from './types';
 
+export { SparqlParser } from './sparql/SparqlParser';
+export { SparqlWriter } from './sparql/SparqlWriter';
+export type { SparqlWritableResult } from './sparql/SparqlWriter';
+export { JellySparqlResultError } from './errors';
+export { SparqlStreamType } from './sparql-types';
+export type {
+  SparqlTerm, SparqlBinding, SparqlResultInfo, SparqlSelectResult, SparqlAskResult,
+  SparqlResult, SparqlEvent, SparqlParserOptions, SparqlWriterOptions, SparqlResultMetadata,
+} from './sparql-types';

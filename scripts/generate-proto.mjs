@@ -23,6 +23,7 @@ const result = spawnSync(executable, [
   '--dts',
   '-o', output,
   join(root, 'proto', 'rdf.proto'),
+  join(root, 'proto', 'sparql.proto'),
 ], {
   cwd: root,
   stdio: 'inherit',

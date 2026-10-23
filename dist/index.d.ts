@@ -2406,6 +2406,450 @@ declare namespace eu {
                               ({ row?: undefined; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "options"; options: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "triple"; options?: null; triple: eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.$Shape; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "quad"; options?: null; triple?: null; quad: eu.ostrzyciel.jelly.core.proto.v1.RdfQuad.$Shape; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "graphStart"; options?: null; triple?: null; quad?: null; graphStart: eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart.$Shape; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "graphEnd"; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd: eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd.$Shape; namespace?: null; name?: null; prefix?: null; datatype?: null }|{ row?: "namespace"; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape; name?: null; prefix?: null; datatype?: null }|{ row?: "name"; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name: eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry.$Shape; prefix?: null; datatype?: null }|{ row?: "prefix"; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix: eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry.$Shape; datatype?: null }|{ row?: "datatype"; options?: null; triple?: null; quad?: null; graphStart?: null; graphEnd?: null; namespace?: null; name?: null; prefix?: null; datatype: eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry.$Shape })
                             );
                         }
+
+                        /** Namespace sparql. */
+                        namespace sparql {
+
+                            /**
+                             * Properties of a SparqlResultsOptions.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties instead.
+                             */
+                            interface ISparqlResultsOptions extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties {
+                            }
+
+                            /** Represents a SparqlResultsOptions. */
+                            class SparqlResultsOptions {
+
+                                /**
+                                 * Constructs a new SparqlResultsOptions.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsOptions streamName. */
+                                streamName: string;
+
+                                /** SparqlResultsOptions streamType. */
+                                streamType: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType;
+
+                                /** SparqlResultsOptions rdfVersion. */
+                                rdfVersion: eu.ostrzyciel.jelly.core.proto.v1.RdfVersion;
+
+                                /** SparqlResultsOptions maxNameTableSize. */
+                                maxNameTableSize: number;
+
+                                /** SparqlResultsOptions maxPrefixTableSize. */
+                                maxPrefixTableSize: number;
+
+                                /** SparqlResultsOptions maxDatatypeTableSize. */
+                                maxDatatypeTableSize: number;
+
+                                /** SparqlResultsOptions version. */
+                                version: number;
+
+                                /**
+                                 * Creates a new SparqlResultsOptions instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsOptions instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions;
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @param message SparqlResultsOptions message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @param message SparqlResultsOptions message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+                            }
+
+                            namespace SparqlResultsOptions {
+
+                                /** Properties of a SparqlResultsOptions. */
+                                interface $Properties {
+
+                                    /** SparqlResultsOptions streamName */
+                                    streamName?: (string|null);
+
+                                    /** SparqlResultsOptions streamType */
+                                    streamType?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType|null);
+
+                                    /** SparqlResultsOptions rdfVersion */
+                                    rdfVersion?: (eu.ostrzyciel.jelly.core.proto.v1.RdfVersion|null);
+
+                                    /** SparqlResultsOptions maxNameTableSize */
+                                    maxNameTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions maxPrefixTableSize */
+                                    maxPrefixTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions maxDatatypeTableSize */
+                                    maxDatatypeTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions version */
+                                    version?: (number|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsOptions. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties;
+                            }
+
+                            /** SparqlStreamType enum. */
+                            enum SparqlStreamType {
+
+                                /** SPARQL_STREAM_TYPE_FLAT value */
+                                SPARQL_STREAM_TYPE_FLAT = 0,
+
+                                /** SPARQL_STREAM_TYPE_PUNCTUATED value */
+                                SPARQL_STREAM_TYPE_PUNCTUATED = 1
+                            }
+
+                            /**
+                             * Properties of a SparqlAskResult.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties instead.
+                             */
+                            interface ISparqlAskResult extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties {
+                            }
+
+                            /** Represents a SparqlAskResult. */
+                            class SparqlAskResult {
+
+                                /**
+                                 * Constructs a new SparqlAskResult.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlAskResult value. */
+                                value: boolean;
+
+                                /**
+                                 * Creates a new SparqlAskResult instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlAskResult instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult;
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @param message SparqlAskResult message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @param message SparqlAskResult message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+                            }
+
+                            namespace SparqlAskResult {
+
+                                /** Properties of a SparqlAskResult. */
+                                interface $Properties {
+
+                                    /** SparqlAskResult value */
+                                    value?: (boolean|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlAskResult. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties;
+                            }
+
+                            /**
+                             * Properties of a SparqlResultsTrailer.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties instead.
+                             */
+                            interface ISparqlResultsTrailer extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties {
+                            }
+
+                            /** Represents a SparqlResultsTrailer. */
+                            class SparqlResultsTrailer {
+
+                                /**
+                                 * Constructs a new SparqlResultsTrailer.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsTrailer error. */
+                                error: string;
+
+                                /**
+                                 * Creates a new SparqlResultsTrailer instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsTrailer instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @param message SparqlResultsTrailer message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @param message SparqlResultsTrailer message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+                            }
+
+                            namespace SparqlResultsTrailer {
+
+                                /** Properties of a SparqlResultsTrailer. */
+                                interface $Properties {
+
+                                    /** SparqlResultsTrailer error */
+                                    error?: (string|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsTrailer. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties;
+                            }
+
+                            /**
+                             * Properties of a SparqlResultsFrame.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties instead.
+                             */
+                            interface ISparqlResultsFrame extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties {
+                            }
+
+                            /** Represents a SparqlResultsFrame. */
+                            class SparqlResultsFrame {
+
+                                /**
+                                 * Constructs a new SparqlResultsFrame.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsFrame options. */
+                                options?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null);
+
+                                /** SparqlResultsFrame variables. */
+                                variables: string[];
+
+                                /** SparqlResultsFrame rowCount. */
+                                rowCount: number;
+
+                                /** SparqlResultsFrame names. */
+                                names: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame prefixes. */
+                                prefixes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame datatypes. */
+                                datatypes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame columns. */
+                                columns: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties[];
+
+                                /** SparqlResultsFrame askResult. */
+                                askResult?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null);
+
+                                /** SparqlResultsFrame trailer. */
+                                trailer?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null);
+
+                                /** SparqlResultsFrame metadata. */
+                                metadata: { [k: string]: Uint8Array };
+
+                                /**
+                                 * Creates a new SparqlResultsFrame instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsFrame instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame;
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @param message SparqlResultsFrame message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @param message SparqlResultsFrame message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+                            }
+
+                            namespace SparqlResultsFrame {
+
+                                /** Properties of a SparqlResultsFrame. */
+                                interface $Properties {
+
+                                    /** SparqlResultsFrame options */
+                                    options?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null);
+
+                                    /** SparqlResultsFrame variables */
+                                    variables?: (string[]|null);
+
+                                    /** SparqlResultsFrame rowCount */
+                                    rowCount?: (number|null);
+
+                                    /** SparqlResultsFrame names */
+                                    names?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame prefixes */
+                                    prefixes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame datatypes */
+                                    datatypes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame columns */
+                                    columns?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties[]|null);
+
+                                    /** SparqlResultsFrame askResult */
+                                    askResult?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null);
+
+                                    /** SparqlResultsFrame trailer */
+                                    trailer?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null);
+
+                                    /** SparqlResultsFrame metadata */
+                                    metadata?: ({ [k: string]: Uint8Array }|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsFrame. */
+                                type $Shape = {
+                                  options?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape|null;
+                                  variables?: string[]|null;
+                                  rowCount?: number|null;
+                                  names?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  prefixes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  datatypes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  columns?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape[]|null;
+                                  askResult?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape|null;
+                                  trailer?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape|null;
+                                  metadata?: { [k: string]: Uint8Array }|null;
+                                  $unknowns?: Uint8Array[];
+                                };
+                            }
+                        }
                     }
                 }
             }
@@ -2590,8 +3034,22 @@ declare class Decoder {
     private endGraph;
 }
 
+type Column = eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties;
+type Triple = eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties;
+type Literal$1 = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties;
+/** Shared term collection and column encoding for both Jelly formats. */
+declare class ColumnTermEncoder {
+    protected readonly rdfVersion: RdfVersion;
+    protected readonly tables: Map<string, number>[];
+    constructor(rdfVersion: RdfVersion);
+    protected keys(term: RDF.Term, names: string[], datatypes: string[], depth?: number): void;
+    protected literal(term: RDF.Literal): Literal$1;
+    protected triple(term: RDF.Quad): Triple;
+    protected column(terms: RDF.Term[]): Column;
+}
+
 /** Batches own their lookup working set; entries can never be evicted mid-batch. */
-declare class ColumnEncoder {
+declare class ColumnEncoder extends ColumnTermEncoder {
     private readonly options;
     private readonly sink?;
     readonly frames: RdfStreamFrame[];
@@ -2599,8 +3057,6 @@ declare class ColumnEncoder {
     readonly lookup: LookupPreset;
     private readonly size;
     private readonly streamType;
-    private readonly rdfVersion;
-    private readonly tables;
     private quads;
     private namespaces;
     private first;
@@ -2614,10 +3070,6 @@ declare class ColumnEncoder {
     addGraph(_graph: RDF.Quad_Graph, _quads: Iterable<RDF.Quad>, _metadata?: MessageMetadata): void;
     finish(): readonly RdfStreamFrame[];
     private fit;
-    private keys;
-    private literal;
-    private triple;
-    private column;
     private flush;
 }
 
@@ -2771,6 +3223,11 @@ declare class JellyConformanceError extends JellyError {
 }
 declare class JellyUnsupportedFeatureError extends JellyError {
 }
+/** A producer reported an incomplete SPARQL result set in its trailer. */
+declare class JellySparqlResultError extends JellyError {
+    readonly resultIndex: number;
+    constructor(resultIndex: number, message: string);
+}
 
 declare class NamedNode<Iri extends string = string> implements RDF.NamedNode<Iri> {
     readonly value: Iri;
@@ -2816,6 +3273,131 @@ declare class Quad implements RDF.Quad {
 }
 declare const DataFactory: RDF.DataFactory;
 
+declare enum SparqlStreamType {
+    FLAT = 0,
+    PUNCTUATED = 1
+}
+type SparqlTerm = RDF.NamedNode | RDF.BlankNode | RDF.Literal | RDF.Quad;
+/** Keys are variable names without ? or $. Missing keys represent unbound cells. */
+type SparqlBinding = ReadonlyMap<string, SparqlTerm> | Readonly<Record<string, SparqlTerm | undefined>>;
+interface SparqlResultInfo {
+    links: string[];
+    metadata: ReadonlyMap<string, Uint8Array>;
+    complete: boolean;
+    error?: string;
+}
+interface SparqlSelectResult extends SparqlResultInfo {
+    type: 'select';
+    variables: string[];
+    bindings: Map<string, SparqlTerm>[];
+}
+interface SparqlAskResult extends SparqlResultInfo {
+    type: 'ask';
+    boolean: boolean;
+}
+type SparqlResult = SparqlSelectResult | SparqlAskResult;
+type SparqlEvent = {
+    type: 'header';
+    resultIndex: number;
+    variables: string[];
+} | {
+    type: 'binding';
+    resultIndex: number;
+    bindings: Map<string, SparqlTerm>;
+} | {
+    type: 'boolean';
+    resultIndex: number;
+    value: boolean;
+} | {
+    type: 'metadata';
+    resultIndex: number;
+    metadata: ReadonlyMap<string, Uint8Array>;
+    links?: string[];
+} | {
+    type: 'end';
+    resultIndex: number;
+    complete: boolean;
+    error?: string;
+};
+interface SparqlParserOptions extends Pick<ParserOptions, 'factory' | 'maxMessageSize' | 'maxLookupTableSize' | 'maxRowsPerBatch'> {
+    /** Files use length-delimited frames (default true). False reads a single bare frame. */
+    delimited?: boolean;
+    /** Limits expanded cells per frame, including all variables (default 1,048,576). */
+    maxCellsPerBatch?: number;
+    /** Error trailers throw by default. A callback signals the failure and allows parsing to continue. */
+    onResultError?: (error: JellySparqlResultError) => void;
+}
+interface SparqlWriterOptions {
+    delimited?: boolean;
+    streamType?: SparqlStreamType;
+    rdfVersion?: RdfVersion;
+    streamName?: string;
+    lookup?: Partial<LookupPreset>;
+    /** Maximum rows per frame. Lookup capacity may end a frame earlier. Default 250. */
+    frameSize?: number;
+}
+interface SparqlResultMetadata {
+    links?: readonly string[];
+    metadata?: MessageMetadata;
+}
+
+/** Reads complete result streams. For row delivery use a SparqlStreamParser. */
+declare class SparqlParser {
+    readonly options: SparqlParserOptions;
+    constructor(options?: SparqlParserOptions);
+    /** Returns result sets in stream order (one for a FLAT stream). */
+    parse(input: BinaryInput): SparqlResult[];
+}
+
+type SparqlWritableResult = ({
+    type: 'select';
+    variables: readonly string[];
+    bindings: Iterable<SparqlBinding>;
+} & SparqlResultMetadata & {
+    error?: string;
+    complete?: boolean;
+}) | ({
+    type: 'ask';
+    boolean: boolean;
+} & SparqlResultMetadata & {
+    error?: string;
+    complete?: boolean;
+});
+/** Incremental writer: buffers at most one batch, and optionally sends encoded frames to a sink. */
+declare class SparqlWriter extends ColumnTermEncoder {
+    private readonly config;
+    private readonly frameSink?;
+    readonly lookup: LookupPreset;
+    private readonly frameSize;
+    private readonly streamType;
+    private readonly chunks;
+    private rows;
+    private metadata;
+    private variables;
+    private active?;
+    private askValue;
+    private firstFrame;
+    private firstResultFrame;
+    private resultCount;
+    private frameCount;
+    private ended;
+    constructor(config?: SparqlWriterOptions, frameSink?: ((bytes: Uint8Array) => void) | undefined);
+    startSelect(variables: readonly string[], info?: SparqlResultMetadata): void;
+    startAsk(value: boolean, info?: SparqlResultMetadata): void;
+    addBinding(binding: SparqlBinding): void;
+    addMetadata(info: SparqlResultMetadata): void;
+    endResult(error?: string): void;
+    addAsk(value: boolean, info?: SparqlResultMetadata): void;
+    addResult(result: SparqlWritableResult | SparqlResult): void;
+    /** Accepts the events emitted by SparqlStreamParser. */
+    write(event: SparqlEvent): void;
+    /** Finalizes the open result (if any) and returns bytes, or empty bytes with a frame sink. */
+    end(): Uint8Array;
+    private start;
+    private assertOpen;
+    private flush;
+}
+
 /**
  * Node's Transform already stops accepting chunks once the readable side is
  * full. What it cannot do is stop one chunk from being expanded into every quad
@@ -2854,4 +3436,29 @@ declare class StreamWriter extends Transform {
     _flush(callback: TransformCallback): void;
 }
 
-export { type BinaryInput, type BinaryOutput, BlankNode, ColumnEncoder, DEFAULT_LOOKUP_PRESET, DataFactory, Decoder, DefaultGraph, Encoder, JellyConformanceError, JellyError, JellyUnsupportedFeatureError, Literal, LogicalStreamType, LookupDecoder, LookupEncoder, type LookupPreset, MAX_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, Message, MessageDecoder, MessageEncoder, type MessageMetadata, type MessageQuad, type MessageQuadArray, NamedNode, type ParseCallback, Parser, type ParserOptions, type ParserOutput, type ParserOutputItem, PhysicalStreamType, Quad, RDF_DIR_LANG_STRING, RDF_LANG_STRING, RdfStreamType, RdfVersion, SMALL_LOOKUP_PRESET, type StreamOptions, StreamParser, type StreamParserOptions, StreamWriter, Variable, Writer, type WriterEndCallback, type WriterOptions, XSD_STRING, delimitedJellyHint, isMessageQuad, normalizeLookupPreset, toMessages };
+type SparqlStreamParserOptions = SparqlParserOptions & TransformOptions;
+/** Emits header/binding/boolean/metadata/end events without buffering a result set. */
+declare class SparqlStreamParser extends Transform {
+    private readonly reader;
+    private readonly decoder;
+    private pending;
+    private index;
+    private busy;
+    constructor(options?: SparqlStreamParserOptions);
+    import(stream: Readable): this;
+    _transform(chunk: Buffer | Uint8Array, _encoding: BufferEncoding, callback: TransformCallback): void;
+    _read(size: number): void;
+    _flush(callback: TransformCallback): void;
+    private accept;
+    private drain;
+}
+/** Consumes the event stream produced by SparqlStreamParser. */
+declare class SparqlStreamWriter extends Transform {
+    private readonly writer;
+    constructor(options?: SparqlWriterOptions);
+    import(stream: Readable): this;
+    _transform(event: SparqlEvent, _encoding: BufferEncoding, callback: TransformCallback): void;
+    _flush(callback: TransformCallback): void;
+}
+
+export { type BinaryInput, type BinaryOutput, BlankNode, ColumnEncoder, DEFAULT_LOOKUP_PRESET, DataFactory, Decoder, DefaultGraph, Encoder, JellyConformanceError, JellyError, JellySparqlResultError, JellyUnsupportedFeatureError, Literal, LogicalStreamType, LookupDecoder, LookupEncoder, type LookupPreset, MAX_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, Message, MessageDecoder, MessageEncoder, type MessageMetadata, type MessageQuad, type MessageQuadArray, NamedNode, type ParseCallback, Parser, type ParserOptions, type ParserOutput, type ParserOutputItem, PhysicalStreamType, Quad, RDF_DIR_LANG_STRING, RDF_LANG_STRING, RdfStreamType, RdfVersion, SMALL_LOOKUP_PRESET, SparqlAskResult, type SparqlBinding, type SparqlEvent, SparqlParser, type SparqlParserOptions, type SparqlResult, type SparqlResultInfo, type SparqlResultMetadata, type SparqlSelectResult, SparqlStreamParser, type SparqlStreamParserOptions, SparqlStreamType, SparqlStreamWriter, type SparqlTerm, type SparqlWritableResult, SparqlWriter, type SparqlWriterOptions, type StreamOptions, StreamParser, type StreamParserOptions, StreamWriter, Variable, Writer, type WriterEndCallback, type WriterOptions, XSD_STRING, delimitedJellyHint, isMessageQuad, normalizeLookupPreset, toMessages };

@@ -20,3 +20,13 @@ Reimport with `node scripts/import-rdf12-fixtures.mjs /path/to/v1.2.0-checkout`.
 The tests compare decoded RDF and logical message boundaries, allowing different
 valid batching and compression choices. The text fixture parser uses an adapter
 for the RDF 1.2 `@lang--direction` notation.
+
+`sparql-from_jelly.json` and `sparql-to_jelly.json` contain all 201 parser and
+29 writer fixtures from `test/sparql` in the same v1.2.0 release (Jelly-SPARQL
+1.0.0). Binary streams/options are Base64; the SPARQL Results JSON structures
+are preserved. The upstream Apache-2.0 license applies. Reimport with
+`node scripts/import-sparql-fixtures.mjs /path/to/v1.2.0-checkout`.
+Tests compare variable order, row order, unbound cells, terms, links, and result-set
+boundaries while allowing different valid compression and frame sizes. Blank-node
+labels are compared up to renaming within each result set. Additional tests check
+completion flags, error trailers, and blank-node identity across result sets.

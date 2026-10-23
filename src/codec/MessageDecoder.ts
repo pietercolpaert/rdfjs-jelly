@@ -40,7 +40,7 @@ type FrameConsumer<Frame> = (frame: Frame) => boolean | void;
  * and the live region is only moved when the buffer has to grow or make room, so
  * total copying is linear in the input rather than quadratic in the frame size.
  */
-class FramedMessageDecoder<Frame> {
+export class FramedMessageDecoder<Frame> {
   private buffer: Uint8Array<ArrayBufferLike> = EMPTY_BYTES;
   private start = 0;
   private filled = 0;
