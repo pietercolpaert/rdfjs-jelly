@@ -3,7 +3,7 @@ import $protobuf from "protobufjs/minimal.js";
 
 // Common aliases
 const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
-const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error;
+const $Object = $util.global.Object, $undefined = $util.global.undefined, $Error = $util.global.Error, $RangeError = $util.global.RangeError;
 
 // Exported root namespace
 const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
@@ -189,7 +189,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri(), value;
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -224,6 +234,11 @@ export const eu = $root.eu = (() => {
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
                                 }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
                                 return message;
@@ -248,6 +263,40 @@ export const eu = $root.eu = (() => {
                             return RdfIri;
                         })();
 
+                        /**
+                         * RdfVersion enum.
+                         * @name eu.ostrzyciel.jelly.core.proto.v1.RdfVersion
+                         * @enum {number}
+                         * @property {number} RDF_VERSION_UNSPECIFIED=0 RDF_VERSION_UNSPECIFIED value
+                         * @property {number} RDF_VERSION_1_1=1 RDF_VERSION_1_1 value
+                         * @property {number} RDF_VERSION_1_2_BASIC=2 RDF_VERSION_1_2_BASIC value
+                         * @property {number} RDF_VERSION_1_2=3 RDF_VERSION_1_2 value
+                         */
+                        v1.RdfVersion = (function() {
+                            const valuesById = {}, values = $Object.create(valuesById);
+                            values[valuesById[0] = "RDF_VERSION_UNSPECIFIED"] = 0;
+                            values[valuesById[1] = "RDF_VERSION_1_1"] = 1;
+                            values[valuesById[2] = "RDF_VERSION_1_2_BASIC"] = 2;
+                            values[valuesById[3] = "RDF_VERSION_1_2"] = 3;
+                            return values;
+                        })();
+
+                        /**
+                         * RdfBaseDirection enum.
+                         * @name eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection
+                         * @enum {number}
+                         * @property {number} RDF_BASE_DIRECTION_UNSPECIFIED=0 RDF_BASE_DIRECTION_UNSPECIFIED value
+                         * @property {number} RDF_BASE_DIRECTION_LTR=1 RDF_BASE_DIRECTION_LTR value
+                         * @property {number} RDF_BASE_DIRECTION_RTL=2 RDF_BASE_DIRECTION_RTL value
+                         */
+                        v1.RdfBaseDirection = (function() {
+                            const valuesById = {}, values = $Object.create(valuesById);
+                            values[valuesById[0] = "RDF_BASE_DIRECTION_UNSPECIFIED"] = 0;
+                            values[valuesById[1] = "RDF_BASE_DIRECTION_LTR"] = 1;
+                            values[valuesById[2] = "RDF_BASE_DIRECTION_RTL"] = 2;
+                            return values;
+                        })();
+
                         v1.RdfLiteral = (function() {
 
                             /**
@@ -256,6 +305,7 @@ export const eu = $root.eu = (() => {
                              * @property {string|null} [lex] RdfLiteral lex
                              * @property {string|null} [langtag] RdfLiteral langtag
                              * @property {number|null} [datatype] RdfLiteral datatype
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection|null} [direction] RdfLiteral direction
                              * @property {"langtag"|"datatype"} [literalKind] RdfLiteral literalKind
                              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
                              */
@@ -274,6 +324,7 @@ export const eu = $root.eu = (() => {
                              *   lex?: string|null;
                              *   langtag?: string|null;
                              *   datatype?: number|null;
+                             *   direction?: eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection|null;
                              *   $unknowns?: Array.<Uint8Array>;
                              * } & (
                              *   ({ literalKind?: undefined; langtag?: null; datatype?: null }|{ literalKind?: "langtag"; langtag: string; datatype?: null }|{ literalKind?: "datatype"; langtag?: null; datatype: number })
@@ -318,6 +369,14 @@ export const eu = $root.eu = (() => {
                              * @instance
                              */
                             RdfLiteral.prototype.datatype = null;
+
+                            /**
+                             * RdfLiteral direction.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection} direction
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral
+                             * @instance
+                             */
+                            RdfLiteral.prototype.direction = 0;
 
                             // OneOf field names bound to virtual getters and setters
                             let $oneOfFields;
@@ -371,6 +430,8 @@ export const eu = $root.eu = (() => {
                                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.langtag);
                                 if (message.datatype != null && $Object.hasOwnProperty.call(message, "datatype"))
                                     writer.uint32(/* id 3, wireType 0 =*/24).uint32(message.datatype);
+                                if (message.direction != null && $Object.hasOwnProperty.call(message, "direction") && message.direction !== 0)
+                                    writer.uint32(/* id 4, wireType 0 =*/32).int32(message.direction);
                                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                                     for (let i = 0; i < message.$unknowns.length; ++i)
                                         writer.raw(message.$unknowns[i]);
@@ -408,7 +469,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral(), value;
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -441,12 +512,26 @@ export const eu = $root.eu = (() => {
                                             message.$literalKind = "datatype";
                                             continue;
                                         }
+                                    case 4: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.int32())
+                                                message.direction = value;
+                                            else
+                                                delete message.direction;
+                                            continue;
+                                        }
                                     }
                                     reader.skipType(wireType, _depth, tag);
                                     if (!reader.discardUnknown) {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -470,6 +555,2176 @@ export const eu = $root.eu = (() => {
                             };
 
                             return RdfLiteral;
+                        })();
+
+                        v1.RdfTripleTerm = (function() {
+
+                            /**
+                             * Properties of a RdfTripleTerm.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null} [sIri] RdfTripleTerm sIri
+                             * @property {string|null} [sBnode] RdfTripleTerm sBnode
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null} [pIri] RdfTripleTerm pIri
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null} [oIri] RdfTripleTerm oIri
+                             * @property {string|null} [oBnode] RdfTripleTerm oBnode
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties|null} [oLiteral] RdfTripleTerm oLiteral
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties|null} [oTripleTerm] RdfTripleTerm oTripleTerm
+                             * @property {"sIri"|"sBnode"} [subject] RdfTripleTerm subject
+                             * @property {"oIri"|"oBnode"|"oLiteral"|"oTripleTerm"} [object] RdfTripleTerm object
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfTripleTerm.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfTripleTerm
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties instead.
+                             */
+
+                            /**
+                             * Narrowed shape of a RdfTripleTerm.
+                             * @typedef {{
+                             *   sIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                             *   sBnode?: string|null;
+                             *   pIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                             *   oIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                             *   oBnode?: string|null;
+                             *   oLiteral?: eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Shape|null;
+                             *   oTripleTerm?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape|null;
+                             *   $unknowns?: Array.<Uint8Array>;
+                             * } & (
+                             *   ({ subject?: undefined; sIri?: null; sBnode?: null }|{ subject?: "sIri"; sIri: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape; sBnode?: null }|{ subject?: "sBnode"; sIri?: null; sBnode: string })
+                             * ) & (
+                             *   ({ object?: undefined; oIri?: null; oBnode?: null; oLiteral?: null; oTripleTerm?: null }|{ object?: "oIri"; oIri: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape; oBnode?: null; oLiteral?: null; oTripleTerm?: null }|{ object?: "oBnode"; oIri?: null; oBnode: string; oLiteral?: null; oTripleTerm?: null }|{ object?: "oLiteral"; oIri?: null; oBnode?: null; oLiteral: eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Shape; oTripleTerm?: null }|{ object?: "oTripleTerm"; oIri?: null; oBnode?: null; oLiteral?: null; oTripleTerm: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape })
+                             * )} eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfTripleTerm.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfTripleTerm.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfTripleTerm = function (properties) {
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfTripleTerm sIri.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null|undefined} sIri
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.sIri = null;
+
+                            /**
+                             * RdfTripleTerm sBnode.
+                             * @member {string|null|undefined} sBnode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.sBnode = null;
+
+                            /**
+                             * RdfTripleTerm pIri.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null|undefined} pIri
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.pIri = null;
+
+                            /**
+                             * RdfTripleTerm oIri.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null|undefined} oIri
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.oIri = null;
+
+                            /**
+                             * RdfTripleTerm oBnode.
+                             * @member {string|null|undefined} oBnode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.oBnode = null;
+
+                            /**
+                             * RdfTripleTerm oLiteral.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties|null|undefined} oLiteral
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.oLiteral = null;
+
+                            /**
+                             * RdfTripleTerm oTripleTerm.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties|null|undefined} oTripleTerm
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            RdfTripleTerm.prototype.oTripleTerm = null;
+
+                            // OneOf field names bound to virtual getters and setters
+                            let $oneOfFields;
+
+                            /**
+                             * RdfTripleTerm subject.
+                             * @member {"sIri"|"sBnode"|undefined} subject
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            $Object.defineProperty(RdfTripleTerm.prototype, "subject", {
+                                get: $util.oneOfGetter($oneOfFields = ["sIri", "sBnode"]),
+                                set: $util.oneOfSetter($oneOfFields)
+                            });
+
+                            /**
+                             * RdfTripleTerm object.
+                             * @member {"oIri"|"oBnode"|"oLiteral"|"oTripleTerm"|undefined} object
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @instance
+                             */
+                            $Object.defineProperty(RdfTripleTerm.prototype, "object", {
+                                get: $util.oneOfGetter($oneOfFields = ["oIri", "oBnode", "oLiteral", "oTripleTerm"]),
+                                set: $util.oneOfSetter($oneOfFields)
+                            });
+
+                            /**
+                             * Creates a new RdfTripleTerm instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm} RdfTripleTerm instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm;
+                             * }}
+                             */
+                            RdfTripleTerm.create = function(properties) {
+                                return new RdfTripleTerm(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfTripleTerm message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties} message RdfTripleTerm message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfTripleTerm.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.sIri != null && $Object.hasOwnProperty.call(message, "sIri"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.sIri, writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
+                                if (message.sBnode != null && $Object.hasOwnProperty.call(message, "sBnode"))
+                                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.sBnode);
+                                if (message.pIri != null && $Object.hasOwnProperty.call(message, "pIri"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.pIri, writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
+                                if (message.oIri != null && $Object.hasOwnProperty.call(message, "oIri"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.oIri, writer.uint32(/* id 9, wireType 2 =*/74).fork(), _depth + 1).ldelim();
+                                if (message.oBnode != null && $Object.hasOwnProperty.call(message, "oBnode"))
+                                    writer.uint32(/* id 10, wireType 2 =*/82).string(message.oBnode);
+                                if (message.oLiteral != null && $Object.hasOwnProperty.call(message, "oLiteral"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.encode(message.oLiteral, writer.uint32(/* id 11, wireType 2 =*/90).fork(), _depth + 1).ldelim();
+                                if (message.oTripleTerm != null && $Object.hasOwnProperty.call(message, "oTripleTerm"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.encode(message.oTripleTerm, writer.uint32(/* id 12, wireType 2 =*/98).fork(), _depth + 1).ldelim();
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfTripleTerm message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties} message RdfTripleTerm message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfTripleTerm.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfTripleTerm message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape} RdfTripleTerm
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfTripleTerm.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sIri);
+                                            message.$subject = "sIri";
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.sBnode = reader.stringVerify();
+                                            message.$subject = "sBnode";
+                                            continue;
+                                        }
+                                    case 5: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pIri);
+                                            continue;
+                                        }
+                                    case 9: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oIri);
+                                            message.$object = "oIri";
+                                            continue;
+                                        }
+                                    case 10: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.oBnode = reader.stringVerify();
+                                            message.$object = "oBnode";
+                                            continue;
+                                        }
+                                    case 11: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oLiteral);
+                                            message.$object = "oLiteral";
+                                            continue;
+                                        }
+                                    case 12: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oTripleTerm);
+                                            message.$object = "oTripleTerm";
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfTripleTerm message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape} RdfTripleTerm
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfTripleTerm.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfTripleTerm;
+                        })();
+
+                        v1.RdfLookupEntryPacked = (function() {
+
+                            /**
+                             * Properties of a RdfLookupEntryPacked.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties
+                             * @property {number|null} [id] RdfLookupEntryPacked id
+                             * @property {Array.<string>|null} [values] RdfLookupEntryPacked values
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfLookupEntryPacked.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfLookupEntryPacked
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfLookupEntryPacked.
+                             * @typedef {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties} eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfLookupEntryPacked.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfLookupEntryPacked.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfLookupEntryPacked = function (properties) {
+                                this.values = [];
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfLookupEntryPacked id.
+                             * @member {number} id
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @instance
+                             */
+                            RdfLookupEntryPacked.prototype.id = 0;
+
+                            /**
+                             * RdfLookupEntryPacked values.
+                             * @member {Array.<string>} values
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @instance
+                             */
+                            RdfLookupEntryPacked.prototype.values = $util.emptyArray;
+
+                            /**
+                             * Creates a new RdfLookupEntryPacked instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked} RdfLookupEntryPacked instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked;
+                             * }}
+                             */
+                            RdfLookupEntryPacked.create = function(properties) {
+                                return new RdfLookupEntryPacked(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfLookupEntryPacked message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties} message RdfLookupEntryPacked message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfLookupEntryPacked.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.id != null && $Object.hasOwnProperty.call(message, "id") && message.id !== 0)
+                                    writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.id);
+                                if (message.values != null && message.values.length)
+                                    for (let i = 0; i < message.values.length; ++i)
+                                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.values[i]);
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfLookupEntryPacked message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties} message RdfLookupEntryPacked message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfLookupEntryPacked.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfLookupEntryPacked message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape} RdfLookupEntryPacked
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfLookupEntryPacked.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.id = value;
+                                            else
+                                                delete message.id;
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.values && message.values.length))
+                                                message.values = [];
+                                            message.values.push(reader.stringVerify());
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfLookupEntryPacked message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape} RdfLookupEntryPacked
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfLookupEntryPacked.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfLookupEntryPacked;
+                        })();
+
+                        v1.RdfStreamOptions = (function() {
+
+                            /**
+                             * Properties of a RdfStreamOptions.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties
+                             * @property {string|null} [streamName] RdfStreamOptions streamName
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType|null} [physicalType] RdfStreamOptions physicalType
+                             * @property {boolean|null} [generalizedStatements] RdfStreamOptions generalizedStatements
+                             * @property {boolean|null} [rdfStar] RdfStreamOptions rdfStar
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamType|null} [streamType] RdfStreamOptions streamType
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfVersion|null} [rdfVersion] RdfStreamOptions rdfVersion
+                             * @property {number|null} [maxNameTableSize] RdfStreamOptions maxNameTableSize
+                             * @property {number|null} [maxPrefixTableSize] RdfStreamOptions maxPrefixTableSize
+                             * @property {number|null} [maxDatatypeTableSize] RdfStreamOptions maxDatatypeTableSize
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType|null} [logicalType] RdfStreamOptions logicalType
+                             * @property {number|null} [version] RdfStreamOptions version
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfStreamOptions.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfStreamOptions
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfStreamOptions.
+                             * @typedef {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfStreamOptions.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfStreamOptions.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfStreamOptions = function (properties) {
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfStreamOptions streamName.
+                             * @member {string} streamName
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.streamName = "";
+
+                            /**
+                             * RdfStreamOptions physicalType.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType} physicalType
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.physicalType = 0;
+
+                            /**
+                             * RdfStreamOptions generalizedStatements.
+                             * @member {boolean} generalizedStatements
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.generalizedStatements = false;
+
+                            /**
+                             * RdfStreamOptions rdfStar.
+                             * @member {boolean} rdfStar
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.rdfStar = false;
+
+                            /**
+                             * RdfStreamOptions streamType.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamType} streamType
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.streamType = 0;
+
+                            /**
+                             * RdfStreamOptions rdfVersion.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfVersion} rdfVersion
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.rdfVersion = 0;
+
+                            /**
+                             * RdfStreamOptions maxNameTableSize.
+                             * @member {number} maxNameTableSize
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.maxNameTableSize = 0;
+
+                            /**
+                             * RdfStreamOptions maxPrefixTableSize.
+                             * @member {number} maxPrefixTableSize
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.maxPrefixTableSize = 0;
+
+                            /**
+                             * RdfStreamOptions maxDatatypeTableSize.
+                             * @member {number} maxDatatypeTableSize
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.maxDatatypeTableSize = 0;
+
+                            /**
+                             * RdfStreamOptions logicalType.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType} logicalType
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.logicalType = 0;
+
+                            /**
+                             * RdfStreamOptions version.
+                             * @member {number} version
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @instance
+                             */
+                            RdfStreamOptions.prototype.version = 0;
+
+                            /**
+                             * Creates a new RdfStreamOptions instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions} RdfStreamOptions instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions;
+                             * }}
+                             */
+                            RdfStreamOptions.create = function(properties) {
+                                return new RdfStreamOptions(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfStreamOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} message RdfStreamOptions message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfStreamOptions.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
+                                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.streamName);
+                                if (message.physicalType != null && $Object.hasOwnProperty.call(message, "physicalType") && message.physicalType !== 0)
+                                    writer.uint32(/* id 2, wireType 0 =*/16).int32(message.physicalType);
+                                if (message.generalizedStatements != null && $Object.hasOwnProperty.call(message, "generalizedStatements") && message.generalizedStatements !== false)
+                                    writer.uint32(/* id 3, wireType 0 =*/24).bool(message.generalizedStatements);
+                                if (message.rdfStar != null && $Object.hasOwnProperty.call(message, "rdfStar") && message.rdfStar !== false)
+                                    writer.uint32(/* id 4, wireType 0 =*/32).bool(message.rdfStar);
+                                if (message.streamType != null && $Object.hasOwnProperty.call(message, "streamType") && message.streamType !== 0)
+                                    writer.uint32(/* id 5, wireType 0 =*/40).int32(message.streamType);
+                                if (message.rdfVersion != null && $Object.hasOwnProperty.call(message, "rdfVersion") && message.rdfVersion !== 0)
+                                    writer.uint32(/* id 6, wireType 0 =*/48).int32(message.rdfVersion);
+                                if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
+                                    writer.uint32(/* id 9, wireType 0 =*/72).uint32(message.maxNameTableSize);
+                                if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
+                                    writer.uint32(/* id 10, wireType 0 =*/80).uint32(message.maxPrefixTableSize);
+                                if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
+                                    writer.uint32(/* id 11, wireType 0 =*/88).uint32(message.maxDatatypeTableSize);
+                                if (message.logicalType != null && $Object.hasOwnProperty.call(message, "logicalType") && message.logicalType !== 0)
+                                    writer.uint32(/* id 14, wireType 0 =*/112).int32(message.logicalType);
+                                if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
+                                    writer.uint32(/* id 15, wireType 0 =*/120).uint32(message.version);
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfStreamOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} message RdfStreamOptions message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfStreamOptions.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfStreamOptions message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfStreamOptions.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if ((value = reader.stringVerify()).length)
+                                                message.streamName = value;
+                                            else
+                                                delete message.streamName;
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.int32())
+                                                message.physicalType = value;
+                                            else
+                                                delete message.physicalType;
+                                            continue;
+                                        }
+                                    case 3: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.bool())
+                                                message.generalizedStatements = value;
+                                            else
+                                                delete message.generalizedStatements;
+                                            continue;
+                                        }
+                                    case 4: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.bool())
+                                                message.rdfStar = value;
+                                            else
+                                                delete message.rdfStar;
+                                            continue;
+                                        }
+                                    case 5: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.int32())
+                                                message.streamType = value;
+                                            else
+                                                delete message.streamType;
+                                            continue;
+                                        }
+                                    case 6: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.int32())
+                                                message.rdfVersion = value;
+                                            else
+                                                delete message.rdfVersion;
+                                            continue;
+                                        }
+                                    case 9: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.maxNameTableSize = value;
+                                            else
+                                                delete message.maxNameTableSize;
+                                            continue;
+                                        }
+                                    case 10: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.maxPrefixTableSize = value;
+                                            else
+                                                delete message.maxPrefixTableSize;
+                                            continue;
+                                        }
+                                    case 11: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.maxDatatypeTableSize = value;
+                                            else
+                                                delete message.maxDatatypeTableSize;
+                                            continue;
+                                        }
+                                    case 14: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.int32())
+                                                message.logicalType = value;
+                                            else
+                                                delete message.logicalType;
+                                            continue;
+                                        }
+                                    case 15: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.version = value;
+                                            else
+                                                delete message.version;
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfStreamOptions message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfStreamOptions.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfStreamOptions;
+                        })();
+
+                        /**
+                         * PhysicalStreamType enum.
+                         * @name eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType
+                         * @enum {number}
+                         * @property {number} PHYSICAL_STREAM_TYPE_UNSPECIFIED=0 PHYSICAL_STREAM_TYPE_UNSPECIFIED value
+                         * @property {number} PHYSICAL_STREAM_TYPE_TRIPLES=1 PHYSICAL_STREAM_TYPE_TRIPLES value
+                         * @property {number} PHYSICAL_STREAM_TYPE_QUADS=2 PHYSICAL_STREAM_TYPE_QUADS value
+                         * @property {number} PHYSICAL_STREAM_TYPE_GRAPHS=3 PHYSICAL_STREAM_TYPE_GRAPHS value
+                         */
+                        v1.PhysicalStreamType = (function() {
+                            const valuesById = {}, values = $Object.create(valuesById);
+                            values[valuesById[0] = "PHYSICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
+                            values[valuesById[1] = "PHYSICAL_STREAM_TYPE_TRIPLES"] = 1;
+                            values[valuesById[2] = "PHYSICAL_STREAM_TYPE_QUADS"] = 2;
+                            values[valuesById[3] = "PHYSICAL_STREAM_TYPE_GRAPHS"] = 3;
+                            return values;
+                        })();
+
+                        /**
+                         * RdfStreamType enum.
+                         * @name eu.ostrzyciel.jelly.core.proto.v1.RdfStreamType
+                         * @enum {number}
+                         * @property {number} RDF_STREAM_TYPE_FLAT=0 RDF_STREAM_TYPE_FLAT value
+                         * @property {number} RDF_STREAM_TYPE_MESSAGES=1 RDF_STREAM_TYPE_MESSAGES value
+                         */
+                        v1.RdfStreamType = (function() {
+                            const valuesById = {}, values = $Object.create(valuesById);
+                            values[valuesById[0] = "RDF_STREAM_TYPE_FLAT"] = 0;
+                            values[valuesById[1] = "RDF_STREAM_TYPE_MESSAGES"] = 1;
+                            return values;
+                        })();
+
+                        v1.RdfStreamFrame = (function() {
+
+                            /**
+                             * Properties of a RdfStreamFrame.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties>|null} [rows] RdfStreamFrame rows
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties|null} [columns] RdfStreamFrame columns
+                             * @property {Object.<string,Uint8Array>|null} [metadata] RdfStreamFrame metadata
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfStreamFrame.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfStreamFrame
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfStreamFrame.
+                             * @typedef {{
+                             *   rows?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Shape>|null;
+                             *   columns?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape|null;
+                             *   metadata?: Object.<string,Uint8Array>|null;
+                             *   $unknowns?: Array.<Uint8Array>;
+                             * }} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfStreamFrame.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfStreamFrame.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfStreamFrame = function (properties) {
+                                this.rows = [];
+                                this.metadata = {};
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfStreamFrame rows.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties>} rows
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @instance
+                             */
+                            RdfStreamFrame.prototype.rows = $util.emptyArray;
+
+                            /**
+                             * RdfStreamFrame columns.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties|null|undefined} columns
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @instance
+                             */
+                            RdfStreamFrame.prototype.columns = null;
+
+                            /**
+                             * RdfStreamFrame metadata.
+                             * @member {Object.<string,Uint8Array>} metadata
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @instance
+                             */
+                            RdfStreamFrame.prototype.metadata = $util.emptyObject;
+
+                            /**
+                             * Creates a new RdfStreamFrame instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame} RdfStreamFrame instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
+                             * }}
+                             */
+                            RdfStreamFrame.create = function(properties) {
+                                return new RdfStreamFrame(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfStreamFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties} message RdfStreamFrame message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfStreamFrame.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.rows != null && message.rows.length)
+                                    for (let i = 0; i < message.rows.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.encode(message.rows[i], writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
+                                if (message.columns != null && $Object.hasOwnProperty.call(message, "columns"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.encode(message.columns, writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
+                                if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
+                                    for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
+                                        writer.uint32(/* id 15, wireType 2 =*/122).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).bytes(message.metadata[keys[i]]).ldelim();
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfStreamFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties} message RdfStreamFrame message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfStreamFrame.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfStreamFrame message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfStreamFrame.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, key, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.rows && message.rows.length))
+                                                message.rows = [];
+                                            message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.columns = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.decode(reader, reader.uint32(), $undefined, _depth + 1, message.columns);
+                                            continue;
+                                        }
+                                    case 15: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (message.metadata === $util.emptyObject)
+                                                message.metadata = {};
+                                            let end2 = reader.uint32() + reader.pos;
+                                            if (end2 > reader.len)
+                                                throw $RangeError("index out of range");
+                                            reader.len = end2;
+                                            key = "";
+                                            value = [];
+                                            while (reader.pos < end2) {
+                                                let tag2 = reader.tag();
+                                                wireType = tag2 & 7;
+                                                switch (tag2 >>>= 3) {
+                                                case 1:
+                                                    if (wireType !== 2)
+                                                        break;
+                                                    key = reader.stringVerify();
+                                                    continue;
+                                                case 2:
+                                                    if (wireType !== 2)
+                                                        break;
+                                                    value = reader.bytes();
+                                                    continue;
+                                                }
+                                                reader.skipType(wireType, _depth, tag2);
+                                            }
+                                            if (reader.pos !== end2)
+                                                throw $RangeError("index out of range");
+                                            reader.len = end;
+                                            if (key === "__proto__")
+                                                $util.makeProp(message.metadata, key);
+                                            message.metadata[key] = value;
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfStreamFrame message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfStreamFrame.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfStreamFrame;
+                        })();
+
+                        v1.RdfColumnBatch = (function() {
+
+                            /**
+                             * Properties of a RdfColumnBatch.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties
+                             * @property {number|null} [rowCount] RdfColumnBatch rowCount
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [names] RdfColumnBatch names
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [prefixes] RdfColumnBatch prefixes
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>|null} [datatypes] RdfColumnBatch datatypes
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties>|null} [namespaces] RdfColumnBatch namespaces
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null} [subjects] RdfColumnBatch subjects
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null} [predicates] RdfColumnBatch predicates
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null} [objects] RdfColumnBatch objects
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null} [graphs] RdfColumnBatch graphs
+                             * @property {Array.<number>|null} [messageLengths] RdfColumnBatch messageLengths
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfColumnBatch.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfColumnBatch
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfColumnBatch.
+                             * @typedef {{
+                             *   rowCount?: number|null;
+                             *   names?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                             *   prefixes?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                             *   datatypes?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape>|null;
+                             *   namespaces?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape>|null;
+                             *   subjects?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                             *   predicates?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                             *   objects?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                             *   graphs?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                             *   messageLengths?: Array.<number>|null;
+                             *   $unknowns?: Array.<Uint8Array>;
+                             * }} eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfColumnBatch.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfColumnBatch.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfColumnBatch = function (properties) {
+                                this.names = [];
+                                this.prefixes = [];
+                                this.datatypes = [];
+                                this.namespaces = [];
+                                this.messageLengths = [];
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfColumnBatch rowCount.
+                             * @member {number} rowCount
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.rowCount = 0;
+
+                            /**
+                             * RdfColumnBatch names.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} names
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.names = $util.emptyArray;
+
+                            /**
+                             * RdfColumnBatch prefixes.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} prefixes
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.prefixes = $util.emptyArray;
+
+                            /**
+                             * RdfColumnBatch datatypes.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties>} datatypes
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.datatypes = $util.emptyArray;
+
+                            /**
+                             * RdfColumnBatch namespaces.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties>} namespaces
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.namespaces = $util.emptyArray;
+
+                            /**
+                             * RdfColumnBatch subjects.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null|undefined} subjects
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.subjects = null;
+
+                            /**
+                             * RdfColumnBatch predicates.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null|undefined} predicates
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.predicates = null;
+
+                            /**
+                             * RdfColumnBatch objects.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null|undefined} objects
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.objects = null;
+
+                            /**
+                             * RdfColumnBatch graphs.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null|undefined} graphs
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.graphs = null;
+
+                            /**
+                             * RdfColumnBatch messageLengths.
+                             * @member {Array.<number>} messageLengths
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @instance
+                             */
+                            RdfColumnBatch.prototype.messageLengths = $util.emptyArray;
+
+                            /**
+                             * Creates a new RdfColumnBatch instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch} RdfColumnBatch instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch;
+                             * }}
+                             */
+                            RdfColumnBatch.create = function(properties) {
+                                return new RdfColumnBatch(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfColumnBatch message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties} message RdfColumnBatch message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfColumnBatch.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.rowCount != null && $Object.hasOwnProperty.call(message, "rowCount") && message.rowCount !== 0)
+                                    writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.rowCount);
+                                if (message.names != null && message.names.length)
+                                    for (let i = 0; i < message.names.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.names[i], writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
+                                if (message.prefixes != null && message.prefixes.length)
+                                    for (let i = 0; i < message.prefixes.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.prefixes[i], writer.uint32(/* id 3, wireType 2 =*/26).fork(), _depth + 1).ldelim();
+                                if (message.datatypes != null && message.datatypes.length)
+                                    for (let i = 0; i < message.datatypes.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.datatypes[i], writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
+                                if (message.namespaces != null && message.namespaces.length)
+                                    for (let i = 0; i < message.namespaces.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.encode(message.namespaces[i], writer.uint32(/* id 5, wireType 2 =*/42).fork(), _depth + 1).ldelim();
+                                if (message.subjects != null && $Object.hasOwnProperty.call(message, "subjects"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.subjects, writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
+                                if (message.predicates != null && $Object.hasOwnProperty.call(message, "predicates"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.predicates, writer.uint32(/* id 7, wireType 2 =*/58).fork(), _depth + 1).ldelim();
+                                if (message.objects != null && $Object.hasOwnProperty.call(message, "objects"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.objects, writer.uint32(/* id 8, wireType 2 =*/66).fork(), _depth + 1).ldelim();
+                                if (message.graphs != null && $Object.hasOwnProperty.call(message, "graphs"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.graphs, writer.uint32(/* id 9, wireType 2 =*/74).fork(), _depth + 1).ldelim();
+                                if (message.messageLengths != null && message.messageLengths.length)
+                                    writer.uint32(/* id 15, wireType 2 =*/122).uint32s(message.messageLengths);
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfColumnBatch message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties} message RdfColumnBatch message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfColumnBatch.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfColumnBatch message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape} RdfColumnBatch
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfColumnBatch.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 0)
+                                                break;
+                                            if (value = reader.uint32())
+                                                message.rowCount = value;
+                                            else
+                                                delete message.rowCount;
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.names && message.names.length))
+                                                message.names = [];
+                                            message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    case 3: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.prefixes && message.prefixes.length))
+                                                message.prefixes = [];
+                                            message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    case 4: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.datatypes && message.datatypes.length))
+                                                message.datatypes = [];
+                                            message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    case 5: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.namespaces && message.namespaces.length))
+                                                message.namespaces = [];
+                                            message.namespaces.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    case 6: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.subjects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.subjects);
+                                            continue;
+                                        }
+                                    case 7: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.predicates = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.predicates);
+                                            continue;
+                                        }
+                                    case 8: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.objects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.objects);
+                                            continue;
+                                        }
+                                    case 9: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.graphs = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.graphs);
+                                            continue;
+                                        }
+                                    case 15: {
+                                            if (wireType === 2) {
+                                                if (!(message.messageLengths && message.messageLengths.length))
+                                                    message.messageLengths = [];
+                                                reader.uint32s(message.messageLengths);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.messageLengths && message.messageLengths.length))
+                                                message.messageLengths = [];
+                                            message.messageLengths.push(reader.uint32());
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfColumnBatch message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape} RdfColumnBatch
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfColumnBatch.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfColumnBatch;
+                        })();
+
+                        v1.RdfNamespaceDeclaration = (function() {
+
+                            /**
+                             * Properties of a RdfNamespaceDeclaration.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties
+                             * @property {string|null} [name] RdfNamespaceDeclaration name
+                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null} [value] RdfNamespaceDeclaration value
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfNamespaceDeclaration.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfNamespaceDeclaration
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfNamespaceDeclaration.
+                             * @typedef {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfNamespaceDeclaration.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfNamespaceDeclaration.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfNamespaceDeclaration = function (properties) {
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfNamespaceDeclaration name.
+                             * @member {string} name
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @instance
+                             */
+                            RdfNamespaceDeclaration.prototype.name = "";
+
+                            /**
+                             * RdfNamespaceDeclaration value.
+                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null|undefined} value
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @instance
+                             */
+                            RdfNamespaceDeclaration.prototype.value = null;
+
+                            /**
+                             * Creates a new RdfNamespaceDeclaration instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration} RdfNamespaceDeclaration instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration;
+                             * }}
+                             */
+                            RdfNamespaceDeclaration.create = function(properties) {
+                                return new RdfNamespaceDeclaration(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfNamespaceDeclaration message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} message RdfNamespaceDeclaration message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfNamespaceDeclaration.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
+                                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+                                if (message.value != null && $Object.hasOwnProperty.call(message, "value"))
+                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.value, writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfNamespaceDeclaration message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} message RdfNamespaceDeclaration message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfNamespaceDeclaration.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfNamespaceDeclaration.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if ((value = reader.stringVerify()).length)
+                                                message.name = value;
+                                            else
+                                                delete message.name;
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType !== 2)
+                                                break;
+                                            message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.value);
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfNamespaceDeclaration.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfNamespaceDeclaration;
+                        })();
+
+                        v1.RdfColumn = (function() {
+
+                            /**
+                             * Properties of a RdfColumn.
+                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties
+                             * @property {Uint8Array|null} [kinds] RdfColumn kinds
+                             * @property {Array.<number>|null} [layouts] RdfColumn layouts
+                             * @property {Array.<number>|null} [nameIds] RdfColumn nameIds
+                             * @property {Array.<number>|null} [prefixIds] RdfColumn prefixIds
+                             * @property {Array.<string>|null} [lexValues] RdfColumn lexValues
+                             * @property {Array.<number>|null} [literalKinds] RdfColumn literalKinds
+                             * @property {Array.<string>|null} [langtags] RdfColumn langtags
+                             * @property {Array.<number>|null} [langtagDirections] RdfColumn langtagDirections
+                             * @property {Array.<string>|null} [bnodes] RdfColumn bnodes
+                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties>|null} [tripleTerms] RdfColumn tripleTerms
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+
+                            /**
+                             * Properties of a RdfColumn.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @interface IRdfColumn
+                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties instead.
+                             */
+
+                            /**
+                             * Shape of a RdfColumn.
+                             * @typedef {{
+                             *   kinds?: Uint8Array|null;
+                             *   layouts?: Array.<number>|null;
+                             *   nameIds?: Array.<number>|null;
+                             *   prefixIds?: Array.<number>|null;
+                             *   lexValues?: Array.<string>|null;
+                             *   literalKinds?: Array.<number>|null;
+                             *   langtags?: Array.<string>|null;
+                             *   langtagDirections?: Array.<number>|null;
+                             *   bnodes?: Array.<string>|null;
+                             *   tripleTerms?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape>|null;
+                             *   $unknowns?: Array.<Uint8Array>;
+                             * }} eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape
+                             */
+
+                            /**
+                             * Constructs a new RdfColumn.
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
+                             * @classdesc Represents a RdfColumn.
+                             * @constructor
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties=} [properties] Properties to set
+                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+                             */
+                            const RdfColumn = function (properties) {
+                                this.layouts = [];
+                                this.nameIds = [];
+                                this.prefixIds = [];
+                                this.lexValues = [];
+                                this.literalKinds = [];
+                                this.langtags = [];
+                                this.langtagDirections = [];
+                                this.bnodes = [];
+                                this.tripleTerms = [];
+                                if (properties)
+                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                                            this[keys[i]] = properties[keys[i]];
+                            };
+
+                            /**
+                             * RdfColumn kinds.
+                             * @member {Uint8Array} kinds
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.kinds = $util.newBuffer([]);
+
+                            /**
+                             * RdfColumn layouts.
+                             * @member {Array.<number>} layouts
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.layouts = $util.emptyArray;
+
+                            /**
+                             * RdfColumn nameIds.
+                             * @member {Array.<number>} nameIds
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.nameIds = $util.emptyArray;
+
+                            /**
+                             * RdfColumn prefixIds.
+                             * @member {Array.<number>} prefixIds
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.prefixIds = $util.emptyArray;
+
+                            /**
+                             * RdfColumn lexValues.
+                             * @member {Array.<string>} lexValues
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.lexValues = $util.emptyArray;
+
+                            /**
+                             * RdfColumn literalKinds.
+                             * @member {Array.<number>} literalKinds
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.literalKinds = $util.emptyArray;
+
+                            /**
+                             * RdfColumn langtags.
+                             * @member {Array.<string>} langtags
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.langtags = $util.emptyArray;
+
+                            /**
+                             * RdfColumn langtagDirections.
+                             * @member {Array.<number>} langtagDirections
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.langtagDirections = $util.emptyArray;
+
+                            /**
+                             * RdfColumn bnodes.
+                             * @member {Array.<string>} bnodes
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.bnodes = $util.emptyArray;
+
+                            /**
+                             * RdfColumn tripleTerms.
+                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties>} tripleTerms
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @instance
+                             */
+                            RdfColumn.prototype.tripleTerms = $util.emptyArray;
+
+                            /**
+                             * Creates a new RdfColumn instance using the specified properties.
+                             * @function create
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties=} [properties] Properties to set
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn} RdfColumn instance
+                             * @type {{
+                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape;
+                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn;
+                             * }}
+                             */
+                            RdfColumn.create = function(properties) {
+                                return new RdfColumn(properties);
+                            };
+
+                            /**
+                             * Encodes the specified RdfColumn message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.verify|verify} messages.
+                             * @function encode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties} message RdfColumn message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfColumn.encode = function (message, writer, _depth) {
+                                if (!writer)
+                                    writer = $Writer.create();
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $util.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                if (message.kinds != null && $Object.hasOwnProperty.call(message, "kinds") && message.kinds.length)
+                                    writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.kinds);
+                                if (message.layouts != null && message.layouts.length)
+                                    writer.uint32(/* id 2, wireType 2 =*/18).uint32s(message.layouts);
+                                if (message.nameIds != null && message.nameIds.length)
+                                    writer.uint32(/* id 3, wireType 2 =*/26).uint32s(message.nameIds);
+                                if (message.prefixIds != null && message.prefixIds.length)
+                                    writer.uint32(/* id 4, wireType 2 =*/34).uint32s(message.prefixIds);
+                                if (message.lexValues != null && message.lexValues.length)
+                                    for (let i = 0; i < message.lexValues.length; ++i)
+                                        writer.uint32(/* id 5, wireType 2 =*/42).string(message.lexValues[i]);
+                                if (message.literalKinds != null && message.literalKinds.length)
+                                    writer.uint32(/* id 6, wireType 2 =*/50).uint32s(message.literalKinds);
+                                if (message.langtags != null && message.langtags.length)
+                                    for (let i = 0; i < message.langtags.length; ++i)
+                                        writer.uint32(/* id 7, wireType 2 =*/58).string(message.langtags[i]);
+                                if (message.langtagDirections != null && message.langtagDirections.length)
+                                    writer.uint32(/* id 8, wireType 2 =*/66).uint32s(message.langtagDirections);
+                                if (message.bnodes != null && message.bnodes.length)
+                                    for (let i = 0; i < message.bnodes.length; ++i)
+                                        writer.uint32(/* id 9, wireType 2 =*/74).string(message.bnodes[i]);
+                                if (message.tripleTerms != null && message.tripleTerms.length)
+                                    for (let i = 0; i < message.tripleTerms.length; ++i)
+                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.encode(message.tripleTerms[i], writer.uint32(/* id 10, wireType 2 =*/82).fork(), _depth + 1).ldelim();
+                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                                    for (let i = 0; i < message.$unknowns.length; ++i)
+                                        writer.raw(message.$unknowns[i]);
+                                return writer;
+                            };
+
+                            /**
+                             * Encodes the specified RdfColumn message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.verify|verify} messages.
+                             * @function encodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @static
+                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties} message RdfColumn message or plain object to encode
+                             * @param {$protobuf.Writer} [writer] Writer to encode to
+                             * @returns {$protobuf.Writer} Writer
+                             */
+                            RdfColumn.encodeDelimited = function(message, writer) {
+                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            };
+
+                            /**
+                             * Decodes a RdfColumn message from the specified reader or buffer.
+                             * @function decode
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @param {number} [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape} RdfColumn
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfColumn.decode = function (reader, length, _end, _depth, _target) {
+                                if (!(reader instanceof $Reader))
+                                    reader = $Reader.create(reader);
+                                if (_depth === $undefined)
+                                    _depth = 0;
+                                if (_depth > $Reader.recursionLimit)
+                                    throw $Error("max depth exceeded");
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn();
+                                while (reader.pos < end) {
+                                    let start = reader.pos;
+                                    let tag = reader.tag();
+                                    if (tag === _end) {
+                                        _end = $undefined;
+                                        break;
+                                    }
+                                    let wireType = tag & 7;
+                                    switch (tag >>>= 3) {
+                                    case 1: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if ((value = reader.bytes()).length)
+                                                message.kinds = value;
+                                            else
+                                                delete message.kinds;
+                                            continue;
+                                        }
+                                    case 2: {
+                                            if (wireType === 2) {
+                                                if (!(message.layouts && message.layouts.length))
+                                                    message.layouts = [];
+                                                reader.uint32s(message.layouts);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.layouts && message.layouts.length))
+                                                message.layouts = [];
+                                            message.layouts.push(reader.uint32());
+                                            continue;
+                                        }
+                                    case 3: {
+                                            if (wireType === 2) {
+                                                if (!(message.nameIds && message.nameIds.length))
+                                                    message.nameIds = [];
+                                                reader.uint32s(message.nameIds);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.nameIds && message.nameIds.length))
+                                                message.nameIds = [];
+                                            message.nameIds.push(reader.uint32());
+                                            continue;
+                                        }
+                                    case 4: {
+                                            if (wireType === 2) {
+                                                if (!(message.prefixIds && message.prefixIds.length))
+                                                    message.prefixIds = [];
+                                                reader.uint32s(message.prefixIds);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.prefixIds && message.prefixIds.length))
+                                                message.prefixIds = [];
+                                            message.prefixIds.push(reader.uint32());
+                                            continue;
+                                        }
+                                    case 5: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.lexValues && message.lexValues.length))
+                                                message.lexValues = [];
+                                            message.lexValues.push(reader.stringVerify());
+                                            continue;
+                                        }
+                                    case 6: {
+                                            if (wireType === 2) {
+                                                if (!(message.literalKinds && message.literalKinds.length))
+                                                    message.literalKinds = [];
+                                                reader.uint32s(message.literalKinds);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.literalKinds && message.literalKinds.length))
+                                                message.literalKinds = [];
+                                            message.literalKinds.push(reader.uint32());
+                                            continue;
+                                        }
+                                    case 7: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.langtags && message.langtags.length))
+                                                message.langtags = [];
+                                            message.langtags.push(reader.stringVerify());
+                                            continue;
+                                        }
+                                    case 8: {
+                                            if (wireType === 2) {
+                                                if (!(message.langtagDirections && message.langtagDirections.length))
+                                                    message.langtagDirections = [];
+                                                reader.uint32s(message.langtagDirections);
+                                                continue;
+                                            }
+                                            if (wireType !== 0)
+                                                break;
+                                            if (!(message.langtagDirections && message.langtagDirections.length))
+                                                message.langtagDirections = [];
+                                            message.langtagDirections.push(reader.uint32());
+                                            continue;
+                                        }
+                                    case 9: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.bnodes && message.bnodes.length))
+                                                message.bnodes = [];
+                                            message.bnodes.push(reader.stringVerify());
+                                            continue;
+                                        }
+                                    case 10: {
+                                            if (wireType !== 2)
+                                                break;
+                                            if (!(message.tripleTerms && message.tripleTerms.length))
+                                                message.tripleTerms = [];
+                                            message.tripleTerms.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            continue;
+                                        }
+                                    }
+                                    reader.skipType(wireType, _depth, tag);
+                                    if (!reader.discardUnknown) {
+                                        $util.makeProp(message, "$unknowns", false);
+                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                                    }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
+                                if (_end !== $undefined)
+                                    throw $Error("missing end group");
+                                return message;
+                            };
+
+                            /**
+                             * Decodes a RdfColumn message from the specified reader or buffer, length delimited.
+                             * @function decodeDelimited
+                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfColumn
+                             * @static
+                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape} RdfColumn
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            RdfColumn.decodeDelimited = function(reader) {
+                                if (!(reader instanceof $Reader))
+                                    reader = new $Reader(reader);
+                                return this.decode(reader, reader.uint32());
+                            };
+
+                            return RdfColumn;
                         })();
 
                         v1.RdfDefaultGraph = (function() {
@@ -577,7 +2832,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -590,6 +2855,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -911,7 +3181,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -1011,6 +3291,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -1394,7 +3679,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -1522,6 +3817,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -1719,7 +4019,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -1763,6 +4073,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -1893,7 +4208,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -1906,6 +4231,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -1929,189 +4259,6 @@ export const eu = $root.eu = (() => {
                             };
 
                             return RdfGraphEnd;
-                        })();
-
-                        v1.RdfNamespaceDeclaration = (function() {
-
-                            /**
-                             * Properties of a RdfNamespaceDeclaration.
-                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties
-                             * @property {string|null} [name] RdfNamespaceDeclaration name
-                             * @property {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null} [value] RdfNamespaceDeclaration value
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-
-                            /**
-                             * Properties of a RdfNamespaceDeclaration.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @interface IRdfNamespaceDeclaration
-                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties
-                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties instead.
-                             */
-
-                            /**
-                             * Shape of a RdfNamespaceDeclaration.
-                             * @typedef {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape
-                             */
-
-                            /**
-                             * Constructs a new RdfNamespaceDeclaration.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @classdesc Represents a RdfNamespaceDeclaration.
-                             * @constructor
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties=} [properties] Properties to set
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-                            const RdfNamespaceDeclaration = function (properties) {
-                                if (properties)
-                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                                            this[keys[i]] = properties[keys[i]];
-                            };
-
-                            /**
-                             * RdfNamespaceDeclaration name.
-                             * @member {string} name
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @instance
-                             */
-                            RdfNamespaceDeclaration.prototype.name = "";
-
-                            /**
-                             * RdfNamespaceDeclaration value.
-                             * @member {eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null|undefined} value
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @instance
-                             */
-                            RdfNamespaceDeclaration.prototype.value = null;
-
-                            /**
-                             * Creates a new RdfNamespaceDeclaration instance using the specified properties.
-                             * @function create
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties=} [properties] Properties to set
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration} RdfNamespaceDeclaration instance
-                             * @type {{
-                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
-                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration;
-                             * }}
-                             */
-                            RdfNamespaceDeclaration.create = function(properties) {
-                                return new RdfNamespaceDeclaration(properties);
-                            };
-
-                            /**
-                             * Encodes the specified RdfNamespaceDeclaration message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
-                             * @function encode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} message RdfNamespaceDeclaration message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfNamespaceDeclaration.encode = function (message, writer, _depth) {
-                                if (!writer)
-                                    writer = $Writer.create();
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $util.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
-                                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-                                if (message.value != null && $Object.hasOwnProperty.call(message, "value"))
-                                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.value, writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
-                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                                    for (let i = 0; i < message.$unknowns.length; ++i)
-                                        writer.raw(message.$unknowns[i]);
-                                return writer;
-                            };
-
-                            /**
-                             * Encodes the specified RdfNamespaceDeclaration message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
-                             * @function encodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties} message RdfNamespaceDeclaration message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfNamespaceDeclaration.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-                            };
-
-                            /**
-                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer.
-                             * @function decode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @param {number} [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfNamespaceDeclaration.decode = function (reader, length, _end, _depth, _target) {
-                                if (!(reader instanceof $Reader))
-                                    reader = $Reader.create(reader);
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $Reader.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration(), value;
-                                while (reader.pos < end) {
-                                    let start = reader.pos;
-                                    let tag = reader.tag();
-                                    if (tag === _end) {
-                                        _end = $undefined;
-                                        break;
-                                    }
-                                    let wireType = tag & 7;
-                                    switch (tag >>>= 3) {
-                                    case 1: {
-                                            if (wireType !== 2)
-                                                break;
-                                            if ((value = reader.stringVerify()).length)
-                                                message.name = value;
-                                            else
-                                                delete message.name;
-                                            continue;
-                                        }
-                                    case 2: {
-                                            if (wireType !== 2)
-                                                break;
-                                            message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.value);
-                                            continue;
-                                        }
-                                    }
-                                    reader.skipType(wireType, _depth, tag);
-                                    if (!reader.discardUnknown) {
-                                        $util.makeProp(message, "$unknowns", false);
-                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                                    }
-                                }
-                                if (_end !== $undefined)
-                                    throw $Error("missing end group");
-                                return message;
-                            };
-
-                            /**
-                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer, length delimited.
-                             * @function decodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfNamespaceDeclaration.decodeDelimited = function(reader) {
-                                if (!(reader instanceof $Reader))
-                                    reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
-                            };
-
-                            return RdfNamespaceDeclaration;
                         })();
 
                         v1.RdfNameEntry = (function() {
@@ -2241,7 +4388,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry(), value;
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -2275,6 +4432,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -2427,7 +4589,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry(), value;
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -2461,6 +4633,11 @@ export const eu = $root.eu = (() => {
                                         $util.makeProp(message, "$unknowns", false);
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
+                                }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
                                 }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
@@ -2613,7 +4790,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry(), value;
+                                let end, message, value;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -2648,6 +4835,11 @@ export const eu = $root.eu = (() => {
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
                                 }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
                                 return message;
@@ -2670,350 +4862,6 @@ export const eu = $root.eu = (() => {
                             };
 
                             return RdfDatatypeEntry;
-                        })();
-
-                        v1.RdfStreamOptions = (function() {
-
-                            /**
-                             * Properties of a RdfStreamOptions.
-                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties
-                             * @property {string|null} [streamName] RdfStreamOptions streamName
-                             * @property {eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType|null} [physicalType] RdfStreamOptions physicalType
-                             * @property {boolean|null} [generalizedStatements] RdfStreamOptions generalizedStatements
-                             * @property {boolean|null} [rdfStar] RdfStreamOptions rdfStar
-                             * @property {number|null} [maxNameTableSize] RdfStreamOptions maxNameTableSize
-                             * @property {number|null} [maxPrefixTableSize] RdfStreamOptions maxPrefixTableSize
-                             * @property {number|null} [maxDatatypeTableSize] RdfStreamOptions maxDatatypeTableSize
-                             * @property {eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType|null} [logicalType] RdfStreamOptions logicalType
-                             * @property {number|null} [version] RdfStreamOptions version
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-
-                            /**
-                             * Properties of a RdfStreamOptions.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @interface IRdfStreamOptions
-                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties
-                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties instead.
-                             */
-
-                            /**
-                             * Shape of a RdfStreamOptions.
-                             * @typedef {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape
-                             */
-
-                            /**
-                             * Constructs a new RdfStreamOptions.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @classdesc Represents a RdfStreamOptions.
-                             * @constructor
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties=} [properties] Properties to set
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-                            const RdfStreamOptions = function (properties) {
-                                if (properties)
-                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                                            this[keys[i]] = properties[keys[i]];
-                            };
-
-                            /**
-                             * RdfStreamOptions streamName.
-                             * @member {string} streamName
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.streamName = "";
-
-                            /**
-                             * RdfStreamOptions physicalType.
-                             * @member {eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType} physicalType
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.physicalType = 0;
-
-                            /**
-                             * RdfStreamOptions generalizedStatements.
-                             * @member {boolean} generalizedStatements
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.generalizedStatements = false;
-
-                            /**
-                             * RdfStreamOptions rdfStar.
-                             * @member {boolean} rdfStar
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.rdfStar = false;
-
-                            /**
-                             * RdfStreamOptions maxNameTableSize.
-                             * @member {number} maxNameTableSize
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.maxNameTableSize = 0;
-
-                            /**
-                             * RdfStreamOptions maxPrefixTableSize.
-                             * @member {number} maxPrefixTableSize
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.maxPrefixTableSize = 0;
-
-                            /**
-                             * RdfStreamOptions maxDatatypeTableSize.
-                             * @member {number} maxDatatypeTableSize
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.maxDatatypeTableSize = 0;
-
-                            /**
-                             * RdfStreamOptions logicalType.
-                             * @member {eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType} logicalType
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.logicalType = 0;
-
-                            /**
-                             * RdfStreamOptions version.
-                             * @member {number} version
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @instance
-                             */
-                            RdfStreamOptions.prototype.version = 0;
-
-                            /**
-                             * Creates a new RdfStreamOptions instance using the specified properties.
-                             * @function create
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties=} [properties] Properties to set
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions} RdfStreamOptions instance
-                             * @type {{
-                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
-                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions;
-                             * }}
-                             */
-                            RdfStreamOptions.create = function(properties) {
-                                return new RdfStreamOptions(properties);
-                            };
-
-                            /**
-                             * Encodes the specified RdfStreamOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
-                             * @function encode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} message RdfStreamOptions message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfStreamOptions.encode = function (message, writer, _depth) {
-                                if (!writer)
-                                    writer = $Writer.create();
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $util.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
-                                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.streamName);
-                                if (message.physicalType != null && $Object.hasOwnProperty.call(message, "physicalType") && message.physicalType !== 0)
-                                    writer.uint32(/* id 2, wireType 0 =*/16).int32(message.physicalType);
-                                if (message.generalizedStatements != null && $Object.hasOwnProperty.call(message, "generalizedStatements") && message.generalizedStatements !== false)
-                                    writer.uint32(/* id 3, wireType 0 =*/24).bool(message.generalizedStatements);
-                                if (message.rdfStar != null && $Object.hasOwnProperty.call(message, "rdfStar") && message.rdfStar !== false)
-                                    writer.uint32(/* id 4, wireType 0 =*/32).bool(message.rdfStar);
-                                if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
-                                    writer.uint32(/* id 9, wireType 0 =*/72).uint32(message.maxNameTableSize);
-                                if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
-                                    writer.uint32(/* id 10, wireType 0 =*/80).uint32(message.maxPrefixTableSize);
-                                if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
-                                    writer.uint32(/* id 11, wireType 0 =*/88).uint32(message.maxDatatypeTableSize);
-                                if (message.logicalType != null && $Object.hasOwnProperty.call(message, "logicalType") && message.logicalType !== 0)
-                                    writer.uint32(/* id 14, wireType 0 =*/112).int32(message.logicalType);
-                                if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
-                                    writer.uint32(/* id 15, wireType 0 =*/120).uint32(message.version);
-                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                                    for (let i = 0; i < message.$unknowns.length; ++i)
-                                        writer.raw(message.$unknowns[i]);
-                                return writer;
-                            };
-
-                            /**
-                             * Encodes the specified RdfStreamOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
-                             * @function encodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties} message RdfStreamOptions message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfStreamOptions.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-                            };
-
-                            /**
-                             * Decodes a RdfStreamOptions message from the specified reader or buffer.
-                             * @function decode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @param {number} [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfStreamOptions.decode = function (reader, length, _end, _depth, _target) {
-                                if (!(reader instanceof $Reader))
-                                    reader = $Reader.create(reader);
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $Reader.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions(), value;
-                                while (reader.pos < end) {
-                                    let start = reader.pos;
-                                    let tag = reader.tag();
-                                    if (tag === _end) {
-                                        _end = $undefined;
-                                        break;
-                                    }
-                                    let wireType = tag & 7;
-                                    switch (tag >>>= 3) {
-                                    case 1: {
-                                            if (wireType !== 2)
-                                                break;
-                                            if ((value = reader.stringVerify()).length)
-                                                message.streamName = value;
-                                            else
-                                                delete message.streamName;
-                                            continue;
-                                        }
-                                    case 2: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.int32())
-                                                message.physicalType = value;
-                                            else
-                                                delete message.physicalType;
-                                            continue;
-                                        }
-                                    case 3: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.bool())
-                                                message.generalizedStatements = value;
-                                            else
-                                                delete message.generalizedStatements;
-                                            continue;
-                                        }
-                                    case 4: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.bool())
-                                                message.rdfStar = value;
-                                            else
-                                                delete message.rdfStar;
-                                            continue;
-                                        }
-                                    case 9: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.uint32())
-                                                message.maxNameTableSize = value;
-                                            else
-                                                delete message.maxNameTableSize;
-                                            continue;
-                                        }
-                                    case 10: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.uint32())
-                                                message.maxPrefixTableSize = value;
-                                            else
-                                                delete message.maxPrefixTableSize;
-                                            continue;
-                                        }
-                                    case 11: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.uint32())
-                                                message.maxDatatypeTableSize = value;
-                                            else
-                                                delete message.maxDatatypeTableSize;
-                                            continue;
-                                        }
-                                    case 14: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.int32())
-                                                message.logicalType = value;
-                                            else
-                                                delete message.logicalType;
-                                            continue;
-                                        }
-                                    case 15: {
-                                            if (wireType !== 0)
-                                                break;
-                                            if (value = reader.uint32())
-                                                message.version = value;
-                                            else
-                                                delete message.version;
-                                            continue;
-                                        }
-                                    }
-                                    reader.skipType(wireType, _depth, tag);
-                                    if (!reader.discardUnknown) {
-                                        $util.makeProp(message, "$unknowns", false);
-                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                                    }
-                                }
-                                if (_end !== $undefined)
-                                    throw $Error("missing end group");
-                                return message;
-                            };
-
-                            /**
-                             * Decodes a RdfStreamOptions message from the specified reader or buffer, length delimited.
-                             * @function decodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfStreamOptions.decodeDelimited = function(reader) {
-                                if (!(reader instanceof $Reader))
-                                    reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
-                            };
-
-                            return RdfStreamOptions;
-                        })();
-
-                        /**
-                         * PhysicalStreamType enum.
-                         * @name eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType
-                         * @enum {number}
-                         * @property {number} PHYSICAL_STREAM_TYPE_UNSPECIFIED=0 PHYSICAL_STREAM_TYPE_UNSPECIFIED value
-                         * @property {number} PHYSICAL_STREAM_TYPE_TRIPLES=1 PHYSICAL_STREAM_TYPE_TRIPLES value
-                         * @property {number} PHYSICAL_STREAM_TYPE_QUADS=2 PHYSICAL_STREAM_TYPE_QUADS value
-                         * @property {number} PHYSICAL_STREAM_TYPE_GRAPHS=3 PHYSICAL_STREAM_TYPE_GRAPHS value
-                         */
-                        v1.PhysicalStreamType = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
-                            values[valuesById[0] = "PHYSICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
-                            values[valuesById[1] = "PHYSICAL_STREAM_TYPE_TRIPLES"] = 1;
-                            values[valuesById[2] = "PHYSICAL_STREAM_TYPE_QUADS"] = 2;
-                            values[valuesById[3] = "PHYSICAL_STREAM_TYPE_GRAPHS"] = 3;
-                            return values;
                         })();
 
                         /**
@@ -3274,7 +5122,17 @@ export const eu = $root.eu = (() => {
                                     _depth = 0;
                                 if (_depth > $Reader.recursionLimit)
                                     throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow();
+                                let end, message;
+                                if (length === $undefined)
+                                    end = reader.len;
+                                else {
+                                    end = reader.pos + length;
+                                    if (end > reader.len)
+                                        throw $RangeError("index out of range");
+                                    length = reader.len;
+                                    reader.len = end;
+                                }
+                                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow();
                                 while (reader.pos < end) {
                                     let start = reader.pos;
                                     let tag = reader.tag();
@@ -3354,6 +5212,11 @@ export const eu = $root.eu = (() => {
                                         (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                                     }
                                 }
+                                if (length !== $undefined) {
+                                    if (reader.pos !== end)
+                                        throw $RangeError("index out of range");
+                                    reader.len = length;
+                                }
                                 if (_end !== $undefined)
                                     throw $Error("missing end group");
                                 return message;
@@ -3376,220 +5239,6 @@ export const eu = $root.eu = (() => {
                             };
 
                             return RdfStreamRow;
-                        })();
-
-                        v1.RdfStreamFrame = (function() {
-
-                            /**
-                             * Properties of a RdfStreamFrame.
-                             * @typedef {Object} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties
-                             * @property {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties>|null} [rows] RdfStreamFrame rows
-                             * @property {Object.<string,Uint8Array>|null} [metadata] RdfStreamFrame metadata
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-
-                            /**
-                             * Properties of a RdfStreamFrame.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @interface IRdfStreamFrame
-                             * @augments eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties
-                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties instead.
-                             */
-
-                            /**
-                             * Shape of a RdfStreamFrame.
-                             * @typedef {{
-                             *   rows?: Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Shape>|null;
-                             *   metadata?: Object.<string,Uint8Array>|null;
-                             *   $unknowns?: Array.<Uint8Array>;
-                             * }} eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape
-                             */
-
-                            /**
-                             * Constructs a new RdfStreamFrame.
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1
-                             * @classdesc Represents a RdfStreamFrame.
-                             * @constructor
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties=} [properties] Properties to set
-                             * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-                             */
-                            const RdfStreamFrame = function (properties) {
-                                this.rows = [];
-                                this.metadata = {};
-                                if (properties)
-                                    for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                                        if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                                            this[keys[i]] = properties[keys[i]];
-                            };
-
-                            /**
-                             * RdfStreamFrame rows.
-                             * @member {Array.<eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties>} rows
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @instance
-                             */
-                            RdfStreamFrame.prototype.rows = $util.emptyArray;
-
-                            /**
-                             * RdfStreamFrame metadata.
-                             * @member {Object.<string,Uint8Array>} metadata
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @instance
-                             */
-                            RdfStreamFrame.prototype.metadata = $util.emptyObject;
-
-                            /**
-                             * Creates a new RdfStreamFrame instance using the specified properties.
-                             * @function create
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties=} [properties] Properties to set
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame} RdfStreamFrame instance
-                             * @type {{
-                             *   (properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
-                             *   (properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
-                             * }}
-                             */
-                            RdfStreamFrame.create = function(properties) {
-                                return new RdfStreamFrame(properties);
-                            };
-
-                            /**
-                             * Encodes the specified RdfStreamFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
-                             * @function encode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties} message RdfStreamFrame message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfStreamFrame.encode = function (message, writer, _depth) {
-                                if (!writer)
-                                    writer = $Writer.create();
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $util.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                if (message.rows != null && message.rows.length)
-                                    for (let i = 0; i < message.rows.length; ++i)
-                                        $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.encode(message.rows[i], writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
-                                if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
-                                    for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
-                                        writer.uint32(/* id 15, wireType 2 =*/122).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).bytes(message.metadata[keys[i]]).ldelim();
-                                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                                    for (let i = 0; i < message.$unknowns.length; ++i)
-                                        writer.raw(message.$unknowns[i]);
-                                return writer;
-                            };
-
-                            /**
-                             * Encodes the specified RdfStreamFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
-                             * @function encodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @static
-                             * @param {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties} message RdfStreamFrame message or plain object to encode
-                             * @param {$protobuf.Writer} [writer] Writer to encode to
-                             * @returns {$protobuf.Writer} Writer
-                             */
-                            RdfStreamFrame.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-                            };
-
-                            /**
-                             * Decodes a RdfStreamFrame message from the specified reader or buffer.
-                             * @function decode
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @param {number} [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfStreamFrame.decode = function (reader, length, _end, _depth, _target) {
-                                if (!(reader instanceof $Reader))
-                                    reader = $Reader.create(reader);
-                                if (_depth === $undefined)
-                                    _depth = 0;
-                                if (_depth > $Reader.recursionLimit)
-                                    throw $Error("max depth exceeded");
-                                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame(), key, value;
-                                while (reader.pos < end) {
-                                    let start = reader.pos;
-                                    let tag = reader.tag();
-                                    if (tag === _end) {
-                                        _end = $undefined;
-                                        break;
-                                    }
-                                    let wireType = tag & 7;
-                                    switch (tag >>>= 3) {
-                                    case 1: {
-                                            if (wireType !== 2)
-                                                break;
-                                            if (!(message.rows && message.rows.length))
-                                                message.rows = [];
-                                            message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.uint32(), $undefined, _depth + 1));
-                                            continue;
-                                        }
-                                    case 15: {
-                                            if (wireType !== 2)
-                                                break;
-                                            if (message.metadata === $util.emptyObject)
-                                                message.metadata = {};
-                                            let end2 = reader.uint32() + reader.pos;
-                                            key = "";
-                                            value = [];
-                                            while (reader.pos < end2) {
-                                                let tag2 = reader.tag();
-                                                wireType = tag2 & 7;
-                                                switch (tag2 >>>= 3) {
-                                                case 1:
-                                                    if (wireType !== 2)
-                                                        break;
-                                                    key = reader.stringVerify();
-                                                    continue;
-                                                case 2:
-                                                    if (wireType !== 2)
-                                                        break;
-                                                    value = reader.bytes();
-                                                    continue;
-                                                }
-                                                reader.skipType(wireType, _depth, tag2);
-                                            }
-                                            if (key === "__proto__")
-                                                $util.makeProp(message.metadata, key);
-                                            message.metadata[key] = value;
-                                            continue;
-                                        }
-                                    }
-                                    reader.skipType(wireType, _depth, tag);
-                                    if (!reader.discardUnknown) {
-                                        $util.makeProp(message, "$unknowns", false);
-                                        (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                                    }
-                                }
-                                if (_end !== $undefined)
-                                    throw $Error("missing end group");
-                                return message;
-                            };
-
-                            /**
-                             * Decodes a RdfStreamFrame message from the specified reader or buffer, length delimited.
-                             * @function decodeDelimited
-                             * @memberof eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame
-                             * @static
-                             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            RdfStreamFrame.decodeDelimited = function(reader) {
-                                if (!(reader instanceof $Reader))
-                                    reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
-                            };
-
-                            return RdfStreamFrame;
                         })();
 
                         return v1;

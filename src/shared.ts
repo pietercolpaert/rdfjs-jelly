@@ -1,6 +1,7 @@
 export { Parser } from './api/Parser';
 export { Writer } from './api/Writer';
 export { Decoder } from './codec/Decoder';
+export { ColumnEncoder } from './codec/ColumnEncoder';
 export { Encoder } from './codec/Encoder';
 export { LookupDecoder } from './codec/LookupDecoder';
 export { LookupEncoder } from './codec/LookupEncoder';
@@ -12,6 +13,7 @@ export {
   MAX_LOOKUP_SIZE,
   MIN_NAME_LOOKUP_SIZE,
   RDF_LANG_STRING,
+  RDF_DIR_LANG_STRING,
   SMALL_LOOKUP_PRESET,
   XSD_STRING,
   normalizeLookupPreset,
@@ -20,6 +22,8 @@ export type { LookupPreset } from './options';
 export { BlankNode, DataFactory, DefaultGraph, Literal, NamedNode, Quad, Variable } from './rdfjs/adapter';
 export {
   LogicalStreamType,
+  RdfStreamType,
+  RdfVersion,
   Message,
   PhysicalStreamType,
   isMessageQuad,

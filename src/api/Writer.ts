@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { concatBytes } from '../codec/bytes';
+import { ColumnEncoder } from '../codec/ColumnEncoder';
 import { Encoder } from '../codec/Encoder';
 import { MessageEncoder } from '../codec/MessageEncoder';
 import { JellyConformanceError } from '../errors';
@@ -19,7 +20,7 @@ function isOutput(value: unknown): value is BinaryOutput {
 }
 
 export class Writer {
-  private readonly encoder: Encoder;
+  private readonly encoder: Encoder | ColumnEncoder;
   private readonly messageEncoder: MessageEncoder;
   private readonly output?: BinaryOutput;
   private pendingCounter: number | undefined;
@@ -44,7 +45,8 @@ export class Writer {
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
     const buffered = !this.output && this.messageEncoder.delimited;
     if (buffered) this.chunks = [];
-    this.encoder = new Encoder(options, this.streaming
+    const EncoderClass = options.version === 3 ? ColumnEncoder : Encoder;
+    this.encoder = new EncoderClass(options, this.streaming
       ? frame => this.writeFrame(frame)
       : buffered ? frame => this.chunks!.push(this.messageEncoder.encode(frame)) : undefined);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {

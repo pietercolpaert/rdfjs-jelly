@@ -73,11 +73,14 @@ export class Parser {
     const reader = new DirectMessageDecoder(this.options, decoder);
     const messages: Message[] = [];
     let messageCount = 0;
-    reader.decodeEach(optimizedBinaryInput(input), message => {
-      messageCount++;
-      if (consume) consume(message); else messages.push(message);
-    });
-    decoder.finish();
+    const accept = (batch: Message[]): void => {
+      for (const message of batch) {
+        messageCount++;
+        if (consume) consume(message); else messages.push(message);
+      }
+    };
+    reader.decodeEach(optimizedBinaryInput(input), accept);
+    accept(decoder.finishMessages());
     return { messages, decoder, messageCount };
   }
 
@@ -86,7 +89,7 @@ export class Parser {
     const decoder = new Decoder(this.options);
     const reader = new DirectQuadDecoder(this.options, decoder, output);
     reader.decodeEach(optimizedBinaryInput(input), () => undefined);
-    decoder.finish();
+    for (const message of decoder.finishMessages()) for (const quad of message) output.push(quad);
     return output;
   }
 

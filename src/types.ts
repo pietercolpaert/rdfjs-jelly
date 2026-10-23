@@ -20,6 +20,9 @@ export enum LogicalStreamType {
   TIMESTAMPED_NAMED_GRAPHS = 114,
 }
 
+export enum RdfStreamType { FLAT = 0, MESSAGES = 1 }
+export enum RdfVersion { UNSPECIFIED = 0, RDF_1_1 = 1, RDF_1_2_BASIC = 2, RDF_1_2 = 3 }
+
 export type BinaryInput = Uint8Array | ArrayBuffer;
 export type MessageMetadata = ReadonlyMap<string, Uint8Array> | Record<string, Uint8Array>;
 
@@ -58,13 +61,17 @@ export interface StreamOptions {
   maxPrefixTableSize: number;
   maxDatatypeTableSize: number;
   version: number;
+  streamType?: RdfStreamType;
+  rdfVersion?: RdfVersion;
 }
 
 export interface ParserOptions {
   factory?: RDF.DataFactory;
   delimited?: boolean | 'auto';
   strict?: boolean;
-  maxSupportedVersion?: 1 | 2;
+  maxSupportedVersion?: 1 | 2 | 3;
+  /** Maximum statements per column batch (default 1,048,576). */
+  maxRowsPerBatch?: number;
   messages?: boolean;
   rdfMessages?: boolean;
   maxMessageSize?: number;
@@ -82,11 +89,15 @@ export interface WriterOptions {
   physicalType?: PhysicalStreamType;
   logicalType?: LogicalStreamType;
   delimited?: boolean;
+  /** Row budget for 1.1, statement budget per column batch for 1.2. */
   messageSize?: number;
   streamName?: string;
   namespaces?: Record<string, string | RDF.NamedNode>;
   lookup?: Partial<LookupPreset>;
-  version?: 2;
+  /** Protocol tag: 2 = Jelly 1.1 (default), 3 = Jelly 1.2. */
+  version?: 2 | 3;
+  streamType?: RdfStreamType;
+  rdfVersion?: RdfVersion;
 }
 
 export interface BinaryOutput {

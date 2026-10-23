@@ -27,6 +27,7 @@ export const MAX_LOOKUP_SIZE = 4096;
 export const MAX_DECODED_LOOKUP_SIZE = 1_048_576;
 
 export const XSD_STRING = 'http://www.w3.org/2001/XMLSchema#string';
+export const RDF_DIR_LANG_STRING = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString';
 export const RDF_LANG_STRING = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString';
 
 export interface LookupPreset {

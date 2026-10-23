@@ -21,7 +21,7 @@ function delimitedHint(first: number, second: number, third: number): boolean {
 }
 
 export function delimitedJellyHint(input: Uint8Array): boolean {
-  return input.byteLength >= 3 && delimitedHint(input[0]!, input[1]!, input[2]!);
+  return input.byteLength > 0 && (input[0] === 0 || (input.byteLength >= 3 && delimitedHint(input[0]!, input[1]!, input[2]!)));
 }
 
 type FrameDecoder<Frame> = (input: Uint8Array) => Frame;
@@ -160,7 +160,7 @@ class FramedMessageDecoder<Frame> {
       return true;
     }
     if (!final || this.delivered) return true;
-    if (this.retained === 0) throw new JellyConformanceError('Jelly input is empty');
+    if (this.retained === 0) return true;
     const frame = this.decodeFrame(this.buffer.subarray(this.start, this.filled));
     this.delivered = true;
     this.buffer = EMPTY_BYTES;
@@ -253,15 +253,15 @@ export class ProtoMessageDecoder extends FramedMessageDecoder<ProtoFrame> {
   }
 }
 
-export class DirectMessageDecoder extends FramedMessageDecoder<Message> {
+export class DirectMessageDecoder extends FramedMessageDecoder<Message[]> {
   public constructor(
     options: Pick<ParserOptions, 'delimited' | 'maxMessageSize'>,
     decoder: Decoder,
   ) {
     super(
       options,
-      input => decoder.decodeProtoPayload(Reader.create(input), input.byteLength),
-      (reader, length) => decoder.decodeProtoPayload(reader, length),
+      input => decoder.decodePayloadMessages(Reader.create(input), input.byteLength),
+      (reader, length) => decoder.decodePayloadMessages(reader, length),
     );
   }
 }

@@ -6,11 +6,11 @@ Jelly-RDF binary parser and writer for RDF/JS, for Node.js and browsers.
 
 ## Support
 
-- Reads Jelly protocol versions 1 and 2.
-- Writes Jelly protocol version 2 only.
+- Reads Jelly-RDF 1.0, 1.1, and 1.2 (protocol tags 1, 2, and 3).
+- Writes Jelly-RDF 1.1 by default; opt into 1.2 with `version: 3`.
 - Supports physical triple, quad, and graph streams; delimited and non-delimited encoding; lookup/repeated-term compression; namespaces; and message metadata.
 - Uses RDF/JS quads and accepts a custom RDF/JS data factory.
-- Does not support RDF-star, generalized RDF, Jelly-Patch, or gRPC.
+- Supports RDF 1.2 directional language literals and object triple terms in 1.2 streams. Legacy RDF-star, generalized RDF, Jelly-SPARQL, Jelly-Patch, and gRPC are unsupported.
 
 Node.js 24 or newer is required by the Node build. The browser bundle targets ES2020.
 
@@ -59,9 +59,48 @@ writer.end((error, bytes) => {
 
 `Writer` emits a delimited version-2 stream by default. Set `delimited: false` for a single-message protobuf payload. A non-delimited output cannot contain multiple messages.
 
+## Jelly-RDF 1.2
+
+[Jelly-RDF 1.2.0](https://w3id.org/jelly/1.2.0/specification/serialization/)
+introduces a column layout (protocol tag **3**), packed lookup entries, repeat
+runs, RDF 1.2 terms, explicit RDF Message boundaries, and concatenable streams.
+The parser selects the layout from the stream options. Existing 1.0/1.1 streams
+remain readable, and the default writer stays on 1.1 for older consumers.
+
+```ts
+import { Writer, RdfStreamType, RdfVersion } from 'rdfjs-jelly';
+
+const flatWriter = new Writer({ version: 3 });
+const messageWriter = new Writer({
+  version: 3,
+  streamType: RdfStreamType.MESSAGES,
+  rdfVersion: RdfVersion.RDF_1_2,
+});
+messageWriter.addMessage([quad1, quad2]);
+messageWriter.addMessage([]);
+```
+
+For version 3, `messageSize` limits statements per batch; a message may span
+batches. Lookup capacity can also end a batch early. The writer uses packed
+full-IRI name entries and repeat runs; prefix compression and lookup reuse
+between batches are future optimizations. A statement that cannot fit an empty
+batch raises an error. The name table must hold at least 128 entries.
+
+The 1.2 layout supports `TRIPLES` and `QUADS`. Use `QUADS` for named graphs;
+`GRAPHS`, `addGraph()`, and `logicalType` belong to the older layout. Use
+`streamType` (`FLAT` or `MESSAGES`) instead. `rdfVersion` defaults to RDF 1.2;
+writers reject terms that the declared version cannot represent. Custom factories
+must preserve direction and `rdf:dirLangString` for directional literals.
+
+Parsers support `maxSupportedVersion: 2` to require an older stream and
+`maxRowsPerBatch` (default 1,048,576) to limit expanded column batches. Existing
+lookup and frame-size limits still apply. Empty files and empty frames are valid.
+For transport protocols that provide their own framing, `delimited: false` reads
+or writes a single bare frame; `.jelly` files should use the default delimited mode.
+
 ## Messages
 
-The API exposes one Jelly `RdfStreamFrame` as one `Message` container.
+For Jelly 1.0/1.1 and flat 1.2 streams, the API exposes each data frame as a `Message` container.
 `Message` extends `Array<RDF.Quad>` and carries `messageCounter` and binary
 `metadata`. This API mapping does not make every frame an independent RDF Message.
 
@@ -71,10 +110,15 @@ are local to that message. Equal labels in different RDF Messages do not identif
 the same blank node. See the [Jelly blank-node rules](https://jelly-rdf.github.io/1.1.x/specification/serialization/#blank-nodes)
 and [RDF Messages specification](https://w3c-cg.github.io/rsp/spec/messages).
 
-Currently, `parseMessages()` and `messages: true` expose frame boundaries and
-preserve the decoded blank-node labels; they do not assign fresh identities per
-frame. Consumers must distinguish transport frames from independent RDF Messages
-and retain the appropriate scope when interpreting those labels.
+For Jelly 1.0/1.1, `parseMessages()` and `messages: true` expose frame boundaries
+and preserve blank-node labels; consumers must retain the appropriate scope.
+For 1.2 streams with `streamType: MESSAGES`, these APIs expose the explicit
+logical messages, including empty messages. Messages may span frames or share a
+frame. Blank nodes are assigned distinct identities across messages. A final
+unfinished message with statements is emitted at end of input. Restated options
+reset lookup tables and close an unfinished message, while preserving namespaces.
+Frame metadata is attached to messages that end in that frame; a message closed
+only at end of input has no metadata. Metadata has no effect on RDF semantics.
 
 When representing independent RDF Messages, supply their actual boundaries to
 `addMessage()`. Do not divide a connected blank-node structure into independent
@@ -357,14 +401,20 @@ npm run check
 npm run proto:generate
 ```
 
-The checked-in schema is Jelly-RDF `rdf.proto` 1.1.1. Static JavaScript codecs
+The checked-in schema is Jelly-RDF `rdf.proto` 1.2.0. Static JavaScript codecs
 and TypeScript declarations are generated with protobuf.js. The generation
 step replaces generic oneof setter calls with cheap discriminator markers;
 `src/generated/rdf_pb.ts` consumes those markers while preserving protobuf's
 last-one-wins semantics.
 
-Tests include pinned official Jelly conformance fixtures and pyjelly-compatible
-version-2 writer behavior.
+Tests include all 226 parser and 31 writer fixtures from the official v1.2.0
+release, plus legacy 1.1 fixtures, Node/browser streaming, and version-2 writer
+compatibility. This is test coverage, not a published conformance report.
+Regenerate the 1.2 fixture bundles from a v1.2.0 checkout with
+`node scripts/import-rdf12-fixtures.mjs /path/to/jelly-protobuf`.
+The low-level `Encoder` remains the row encoder; `ColumnEncoder` writes the new
+layout. Low-level decoders should use `decodePayloadMessages()` and
+`finishMessages()` to preserve logical messages across frames.
 
 ## License
 

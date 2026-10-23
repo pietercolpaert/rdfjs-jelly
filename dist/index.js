@@ -31,6 +31,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   BlankNode: () => BlankNode,
+  ColumnEncoder: () => ColumnEncoder,
   DEFAULT_LOOKUP_PRESET: () => DEFAULT_LOOKUP_PRESET,
   DataFactory: () => DataFactory,
   Decoder: () => Decoder,
@@ -52,7 +53,10 @@ __export(index_exports, {
   Parser: () => Parser,
   PhysicalStreamType: () => PhysicalStreamType,
   Quad: () => Quad,
+  RDF_DIR_LANG_STRING: () => RDF_DIR_LANG_STRING,
   RDF_LANG_STRING: () => RDF_LANG_STRING,
+  RdfStreamType: () => RdfStreamType,
+  RdfVersion: () => RdfVersion,
   SMALL_LOOKUP_PRESET: () => SMALL_LOOKUP_PRESET,
   StreamParser: () => StreamParser,
   StreamWriter: () => StreamWriter,
@@ -78,6 +82,514 @@ var JellyConformanceError = class extends JellyError {
 var JellyUnsupportedFeatureError = class extends JellyError {
 };
 
+// src/options.ts
+var MIN_NAME_LOOKUP_SIZE = 8;
+var MIN_PREFIX_LOOKUP_SIZE = 4;
+var MAX_LOOKUP_SIZE = 4096;
+var MAX_DECODED_LOOKUP_SIZE = 1048576;
+var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
+var RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString";
+var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+var DEFAULT_LOOKUP_PRESET = Object.freeze({
+  maxNames: 4e3,
+  maxPrefixes: 150,
+  maxDatatypes: 32
+});
+var SMALL_LOOKUP_PRESET = Object.freeze({
+  maxNames: 128,
+  maxPrefixes: 32,
+  maxDatatypes: 32
+});
+function normalizeLookupPreset(value = {}) {
+  const preset = { ...DEFAULT_LOOKUP_PRESET, ...value };
+  if (!Number.isInteger(preset.maxNames) || preset.maxNames < MIN_NAME_LOOKUP_SIZE || preset.maxNames > MAX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(`Name lookup size must be between ${MIN_NAME_LOOKUP_SIZE} and ${MAX_LOOKUP_SIZE}`);
+  }
+  for (const [name, size] of [["Prefix", preset.maxPrefixes], ["Datatype", preset.maxDatatypes]]) {
+    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
+      throw new JellyConformanceError(`${name} lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+    }
+  }
+  if (preset.maxPrefixes > 0 && preset.maxPrefixes < MIN_PREFIX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(
+      `Prefix lookup size ${preset.maxPrefixes} cannot encode a statement whose terms use more prefixes than the table holds; use 0 to disable the prefix lookup or at least ${MIN_PREFIX_LOOKUP_SIZE}`
+    );
+  }
+  return preset;
+}
+
+// src/types.ts
+var PhysicalStreamType = /* @__PURE__ */ ((PhysicalStreamType2) => {
+  PhysicalStreamType2[PhysicalStreamType2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
+  PhysicalStreamType2[PhysicalStreamType2["TRIPLES"] = 1] = "TRIPLES";
+  PhysicalStreamType2[PhysicalStreamType2["QUADS"] = 2] = "QUADS";
+  PhysicalStreamType2[PhysicalStreamType2["GRAPHS"] = 3] = "GRAPHS";
+  return PhysicalStreamType2;
+})(PhysicalStreamType || {});
+var LogicalStreamType = /* @__PURE__ */ ((LogicalStreamType2) => {
+  LogicalStreamType2[LogicalStreamType2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
+  LogicalStreamType2[LogicalStreamType2["FLAT_TRIPLES"] = 1] = "FLAT_TRIPLES";
+  LogicalStreamType2[LogicalStreamType2["FLAT_QUADS"] = 2] = "FLAT_QUADS";
+  LogicalStreamType2[LogicalStreamType2["GRAPHS"] = 3] = "GRAPHS";
+  LogicalStreamType2[LogicalStreamType2["DATASETS"] = 4] = "DATASETS";
+  LogicalStreamType2[LogicalStreamType2["SUBJECT_GRAPHS"] = 13] = "SUBJECT_GRAPHS";
+  LogicalStreamType2[LogicalStreamType2["NAMED_GRAPHS"] = 14] = "NAMED_GRAPHS";
+  LogicalStreamType2[LogicalStreamType2["TIMESTAMPED_NAMED_GRAPHS"] = 114] = "TIMESTAMPED_NAMED_GRAPHS";
+  return LogicalStreamType2;
+})(LogicalStreamType || {});
+var RdfStreamType = /* @__PURE__ */ ((RdfStreamType2) => {
+  RdfStreamType2[RdfStreamType2["FLAT"] = 0] = "FLAT";
+  RdfStreamType2[RdfStreamType2["MESSAGES"] = 1] = "MESSAGES";
+  return RdfStreamType2;
+})(RdfStreamType || {});
+var RdfVersion = /* @__PURE__ */ ((RdfVersion2) => {
+  RdfVersion2[RdfVersion2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
+  RdfVersion2[RdfVersion2["RDF_1_1"] = 1] = "RDF_1_1";
+  RdfVersion2[RdfVersion2["RDF_1_2_BASIC"] = 2] = "RDF_1_2_BASIC";
+  RdfVersion2[RdfVersion2["RDF_1_2"] = 3] = "RDF_1_2";
+  return RdfVersion2;
+})(RdfVersion || {});
+var Message = class _Message extends Array {
+  constructor(messageCounter, quads = [], metadata = /* @__PURE__ */ new Map()) {
+    super();
+    this.messageCounter = messageCounter;
+    Object.setPrototypeOf(this, _Message.prototype);
+    for (const quad of quads) this.push(quad);
+    this.metadata = metadata instanceof Map ? metadata : new Map(Object.entries(metadata));
+  }
+  static get [Symbol.species]() {
+    return Array;
+  }
+  metadata;
+};
+function isMessageQuad(value) {
+  return Boolean(value && typeof value === "object" && "quad" in value && "messageCounter" in value);
+}
+function toMessages(output, messageCount) {
+  const messages = [];
+  const inferredCount = messageCount ?? (Array.isArray(output) && "messageCount" in output ? output.messageCount : void 0);
+  let wrapped = false;
+  for (const item of output) {
+    const entry = isMessageQuad(item) ? item : { quad: item, messageCounter: 0 };
+    wrapped ||= isMessageQuad(item);
+    while (messages.length <= entry.messageCounter) messages.push(new Message(messages.length));
+    messages[entry.messageCounter].push(entry.quad);
+  }
+  if (inferredCount !== void 0) {
+    while (messages.length < inferredCount) messages.push(new Message(messages.length));
+  } else if (!wrapped && messages.length === 0) {
+    return [];
+  }
+  return messages;
+}
+
+// src/rdfjs/adapter.ts
+function sameTerm(term, other) {
+  if (!other || term.termType !== other.termType || term.value !== other.value) return false;
+  if (term.termType === "Literal" && other.termType === "Literal") {
+    return term.language === other.language && term.direction === other.direction && term.datatype.equals(other.datatype);
+  }
+  if (term.termType === "Quad" && other.termType === "Quad") {
+    return term.subject.equals(other.subject) && term.predicate.equals(other.predicate) && term.object.equals(other.object) && term.graph.equals(other.graph);
+  }
+  return true;
+}
+var NamedNode = class {
+  constructor(value) {
+    this.value = value;
+  }
+  termType = "NamedNode";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var BlankNode = class {
+  constructor(value) {
+    this.value = value;
+  }
+  termType = "BlankNode";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var Variable = class {
+  constructor(value) {
+    this.value = value;
+  }
+  termType = "Variable";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var DefaultGraph = class {
+  termType = "DefaultGraph";
+  value = "";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var Literal = class {
+  constructor(value, language = "", datatype = new NamedNode(language ? RDF_LANG_STRING : XSD_STRING), direction) {
+    this.value = value;
+    this.language = language;
+    this.datatype = datatype;
+    this.direction = direction;
+  }
+  termType = "Literal";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var Quad = class {
+  constructor(subject, predicate, object, graph = defaultGraphSingleton) {
+    this.subject = subject;
+    this.predicate = predicate;
+    this.object = object;
+    this.graph = graph;
+  }
+  termType = "Quad";
+  value = "";
+  equals(other) {
+    return sameTerm(this, other);
+  }
+};
+var defaultGraphSingleton = new DefaultGraph();
+var blankNodeCounter = 0;
+var dataFactory = {
+  namedNode: (value) => new NamedNode(value),
+  blankNode: (value) => new BlankNode(value ?? `b${blankNodeCounter++}`),
+  literal: (value, languageOrDatatype) => {
+    if (typeof languageOrDatatype === "string") {
+      const language = languageOrDatatype.toLowerCase();
+      return new Literal(value, language, new NamedNode(language ? RDF_LANG_STRING : XSD_STRING));
+    }
+    if (languageOrDatatype && !("termType" in languageOrDatatype)) {
+      return new Literal(
+        value,
+        languageOrDatatype.language.toLowerCase(),
+        new NamedNode(languageOrDatatype.direction ? RDF_DIR_LANG_STRING : RDF_LANG_STRING),
+        languageOrDatatype.direction
+      );
+    }
+    return new Literal(value, "", languageOrDatatype ?? new NamedNode(XSD_STRING));
+  },
+  variable: (value) => new Variable(value),
+  defaultGraph: () => defaultGraphSingleton,
+  quad: (subject, predicate, object, graph = defaultGraphSingleton) => new Quad(subject, predicate, object, graph),
+  fromTerm: (original) => {
+    if (original.termType === "NamedNode") return new NamedNode(original.value);
+    if (original.termType === "BlankNode") return new BlankNode(original.value);
+    if (original.termType === "Variable") return new Variable(original.value);
+    if (original.termType === "DefaultGraph") return defaultGraphSingleton;
+    if (original.termType === "Literal") return new Literal(
+      original.value,
+      original.language,
+      new NamedNode(original.datatype.value),
+      original.direction
+    );
+    return new Quad(
+      dataFactory.fromTerm(original.subject),
+      dataFactory.fromTerm(original.predicate),
+      dataFactory.fromTerm(original.object),
+      dataFactory.fromTerm(original.graph)
+    );
+  },
+  fromQuad: (original) => new Quad(
+    dataFactory.fromTerm(original.subject),
+    dataFactory.fromTerm(original.predicate),
+    dataFactory.fromTerm(original.object),
+    dataFactory.fromTerm(original.graph)
+  )
+};
+var DataFactory = dataFactory;
+
+// src/codec/LookupDecoder.ts
+var LookupDecoder = class {
+  constructor(size, limit = MAX_DECODED_LOOKUP_SIZE) {
+    this.size = size;
+    if (!Number.isInteger(size) || size < 0 || size > limit) {
+      throw new JellyConformanceError(`Lookup size must be between 0 and ${limit}`);
+    }
+  }
+  /**
+   * Grown on demand rather than allocated at the declared size, so a stream may
+   * declare a large table without the parser paying for entries it never fills.
+   */
+  data = [];
+  lastAssignedIndex = 0;
+  lastReusedIndex = 0;
+  assign(index, value) {
+    const resolved = index === 0 ? this.lastAssignedIndex + 1 : index;
+    if (resolved < 1 || resolved > this.size) {
+      throw new JellyConformanceError(`Lookup entry index ${resolved} is outside table size ${this.size}`);
+    }
+    if (resolved > this.data.length) this.reserve(resolved);
+    this.data[resolved - 1] = value;
+    this.lastAssignedIndex = resolved;
+  }
+  /** Extend the backing array by doubling, staying packed and capped at the table size. */
+  reserve(required) {
+    let capacity = this.data.length || 16;
+    while (capacity < required) capacity *= 2;
+    if (capacity > this.size) capacity = this.size;
+    for (let index = this.data.length; index < capacity; index++) this.data.push(void 0);
+  }
+  at(index) {
+    if (index < 1 || index > this.size) throw new JellyConformanceError(`Invalid lookup index ${index}`);
+    const value = index <= this.data.length ? this.data[index - 1] : void 0;
+    if (value === void 0) throw new JellyConformanceError(`Lookup index ${index} has not been assigned`);
+    this.lastReusedIndex = index;
+    return value;
+  }
+  prefix(index) {
+    const resolved = index || this.lastReusedIndex;
+    return resolved === 0 ? "" : this.at(resolved);
+  }
+  name(index) {
+    const resolved = index || this.lastReusedIndex + 1;
+    if (resolved === 0) throw new JellyConformanceError("Zero is not a valid resolved name index");
+    return this.at(resolved);
+  }
+  datatype(index) {
+    if (index === 0) throw new JellyConformanceError("Zero is not a valid datatype index");
+    return this.at(index);
+  }
+};
+
+// src/codec/ColumnDecoder.ts
+function fail(message) {
+  throw new JellyConformanceError(message);
+}
+var ColumnDecoder = class {
+  constructor(options, events) {
+    this.options = options;
+    this.events = events;
+    this.factory = options.factory ?? DataFactory;
+    if (options.maxRowsPerBatch !== void 0 && (!Number.isInteger(options.maxRowsPerBatch) || options.maxRowsPerBatch < 0)) fail("maxRowsPerBatch must be a nonnegative integer");
+  }
+  streamOptions;
+  namespaces = /* @__PURE__ */ Object.create(null);
+  factory;
+  names;
+  prefixes;
+  datatypes;
+  current = [];
+  counter = 0;
+  blankNodes = /* @__PURE__ */ new Map();
+  usedBlankLabels = /* @__PURE__ */ new Set();
+  decode(frame) {
+    const out = [];
+    const metadata = new Map(Object.entries(frame.metadata).map(([k, v]) => [k, new Uint8Array(v)]));
+    const endMessage = () => {
+      out.push(new Message(this.counter++, this.current, metadata));
+      this.current = [];
+    };
+    if (frame.rows.length > 1) fail("Column layout permits only one options row per frame");
+    for (const row of frame.rows) {
+      const kind = row.$row ?? row.row;
+      if (kind !== "options") fail("Row layout data is invalid in a column stream");
+      const raw = row.options;
+      const old = this.streamOptions;
+      if (raw.version !== 3) fail("Cannot change Jelly layout within a stream");
+      if (raw.generalizedStatements || raw.rdfStar || raw.logicalType) fail("Row layout options are invalid in a column stream");
+      if (raw.physicalType !== 1 && raw.physicalType !== 2) fail("Column streams require physical type TRIPLES or QUADS");
+      if (raw.streamType !== 0 && raw.streamType !== 1) fail(`Unknown RDF stream type ${raw.streamType}`);
+      if (raw.rdfVersion < 0 || raw.rdfVersion > 3) fail(`Unknown RDF version ${raw.rdfVersion}`);
+      if (old && (raw.physicalType !== old.physicalType || raw.streamType !== old.streamType)) fail("Restated options must preserve physical type, stream type, and version");
+      if (old?.streamType === 1) {
+        if (this.current.length) endMessage();
+        this.blankNodes.clear();
+      }
+      const limit2 = this.options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
+      if (raw.maxNameTableSize < 128) fail("Column streams require a name lookup size of at least 128");
+      this.names = new LookupDecoder(raw.maxNameTableSize, limit2);
+      this.prefixes = new LookupDecoder(raw.maxPrefixTableSize, limit2);
+      this.datatypes = new LookupDecoder(raw.maxDatatypeTableSize, limit2);
+      this.streamOptions = {
+        streamName: raw.streamName,
+        physicalType: raw.physicalType,
+        logicalType: 0,
+        generalizedStatements: false,
+        rdfStar: false,
+        maxNameTableSize: raw.maxNameTableSize,
+        maxPrefixTableSize: raw.maxPrefixTableSize,
+        maxDatatypeTableSize: raw.maxDatatypeTableSize,
+        version: 3,
+        streamType: raw.streamType,
+        rdfVersion: raw.rdfVersion
+      };
+      this.events.options?.(this.streamOptions);
+    }
+    const b = frame.columns;
+    if (!b) return out;
+    if (!this.streamOptions) fail("Column batch before stream options");
+    const n = b.rowCount;
+    const limit = this.options.maxRowsPerBatch ?? 1048576;
+    if (n > 134217727 || n > limit) fail("Column row_count exceeds configured size limit");
+    for (const [entries, table] of [[b.names, this.names], [b.prefixes, this.prefixes], [b.datatypes, this.datatypes]]) {
+      for (const rawEntry of entries) {
+        const entry = rawEntry;
+        for (let j = 0; j < entry.values.length; j++) table.assign(j === 0 ? entry.id : 0, entry.values[j]);
+      }
+    }
+    const nsState = [0, 0];
+    for (const rawNs of b.namespaces) {
+      const ns = rawNs;
+      const term = this.iri(ns.value ?? {}, nsState);
+      this.namespaces[ns.name] = term;
+      this.events.namespace?.(ns.name, term);
+    }
+    if (this.streamOptions.physicalType === 1 && b.graphs) fail("Graphs column in a TRIPLES stream");
+    const columns = [b.subjects, b.predicates, b.objects, b.graphs].map((c) => this.column(c, n));
+    const lengths = b.messageLengths;
+    if (this.streamOptions.streamType === 0 && lengths.length) fail("Message boundaries in a FLAT stream");
+    if (lengths.reduce((sum, v) => sum + v, 0) > n) fail("Message lengths exceed row_count");
+    let pos = 0;
+    const append = (count) => {
+      for (const end = pos + count; pos < end; pos++) {
+        const [s, p, o, g] = columns.map((c) => c[pos]);
+        if (!s || s.termType !== "NamedNode" && s.termType !== "BlankNode") fail("Invalid or unbound subject in column");
+        if (!p || p.termType !== "NamedNode") fail("Invalid or unbound predicate in column");
+        if (!o) fail("Unbound object in column");
+        if (g && g.termType !== "NamedNode" && g.termType !== "BlankNode") fail("Invalid graph in column");
+        this.current.push(this.factory.quad(this.scoped(s), p, this.scoped(o), g ? this.scoped(g) : this.factory.defaultGraph()));
+      }
+    };
+    for (const length of lengths) {
+      append(length);
+      endMessage();
+      this.blankNodes.clear();
+    }
+    append(n - pos);
+    if (this.streamOptions.streamType === 0) endMessage();
+    return out;
+  }
+  finish() {
+    if (!this.streamOptions) fail("No Jelly stream options row was found");
+    if (!this.current.length) return [];
+    const out = new Message(this.counter++, this.current);
+    this.current = [];
+    return [out];
+  }
+  scoped(term) {
+    if (this.streamOptions.streamType !== 1) return term;
+    if (term.termType === "Quad") return this.factory.quad(this.scoped(term.subject), term.predicate, this.scoped(term.object));
+    if (term.termType !== "BlankNode") return term;
+    let node = this.blankNodes.get(term.value);
+    if (!node) {
+      let label = term.value;
+      while (this.usedBlankLabels.has(label)) label = `jelly${this.counter}_${label}`;
+      this.usedBlankLabels.add(label);
+      node = this.factory.blankNode(label);
+      this.blankNodes.set(term.value, node);
+    }
+    return node;
+  }
+  iri(value, state) {
+    state[0] = value.prefixId || state[0];
+    state[1] = value.nameId || state[1] + 1;
+    return this.resolve(state[0], state[1]);
+  }
+  resolve(prefix, name) {
+    return this.factory.namedNode((prefix ? this.prefixes.datatype(prefix) : "") + this.names.datatype(name));
+  }
+  datatype(id) {
+    const value = this.datatypes.datatype(id);
+    if (value === RDF_LANG_STRING || value === RDF_DIR_LANG_STRING) fail("Language datatypes require a language tag");
+    return this.factory.namedNode(value);
+  }
+  literal(lex, language, direction = 0, datatype) {
+    if (direction < 0 || direction > 2) fail(`Unknown base direction ${direction}`);
+    if (direction && language === void 0) fail("Base direction requires a language tag");
+    const term = datatype !== void 0 ? this.factory.literal(lex, this.datatype(datatype)) : direction ? this.factory.literal(lex, { language, direction: direction === 1 ? "ltr" : "rtl" }) : this.factory.literal(lex, language);
+    if (direction && (term.direction !== (direction === 1 ? "ltr" : "rtl") || term.datatype.value !== RDF_DIR_LANG_STRING)) {
+      throw new JellyUnsupportedFeatureError("The RDF data factory does not support directional language literals");
+    }
+    return term;
+  }
+  triple(t, state, depth = 1) {
+    if (depth > 64) fail("Triple terms nested too deeply");
+    const marked = t;
+    const sk = marked.$subject ?? t.subject;
+    const ok = marked.$object ?? t.object;
+    const s = sk === "sIri" ? this.iri(t.sIri, state) : sk === "sBnode" ? this.factory.blankNode(t.sBnode) : fail("Missing triple term subject");
+    if (!t.pIri) fail("Missing triple term predicate");
+    const p = this.iri(t.pIri, state);
+    let o;
+    if (ok === "oIri") o = this.iri(t.oIri, state);
+    else if (ok === "oBnode") o = this.factory.blankNode(t.oBnode);
+    else if (ok === "oTripleTerm") o = this.triple(t.oTripleTerm, state, depth + 1);
+    else if (ok === "oLiteral") {
+      const l = t.oLiteral;
+      const k = l.$literalKind ?? l.literalKind;
+      o = this.literal(l.lex, k === "langtag" ? l.langtag : void 0, l.direction, k === "datatype" ? l.datatype : void 0);
+    } else return fail("Missing triple term object");
+    return this.factory.quad(s, p, o);
+  }
+  column(c, n) {
+    if (!c) return new Array(n);
+    const { nameIds, prefixIds, lexValues, literalKinds, langtags, langtagDirections } = c;
+    if (![0, 1, nameIds.length].includes(prefixIds.length)) fail("Invalid prefix_ids length");
+    if (![0, 1, lexValues.length].includes(literalKinds.length)) fail("Invalid literal_kinds length");
+    if (langtagDirections.length && langtagDirections.length !== langtags.length) fail("Invalid langtag_directions length");
+    const state = [0, 0];
+    const iris = nameIds.map((name, j) => {
+      state[1] = name || state[1] + 1;
+      state[0] = prefixIds.length === 1 ? prefixIds[0] : prefixIds[j] || state[0];
+      return this.resolve(state[0], state[1]);
+    });
+    const literals = lexValues.map((lex, j) => {
+      const kind = literalKinds.length === 1 ? literalKinds[0] : literalKinds[j] ?? 0;
+      if (kind === 0) return this.literal(lex);
+      if (kind % 2) return this.literal(lex, void 0, 0, (kind + 1) / 2);
+      const index = kind / 2 - 1;
+      if (index >= langtags.length) fail("Invalid language tag index");
+      return this.literal(lex, langtags[index], langtagDirections[index] ?? 0);
+    });
+    const tripleState = [0, 0];
+    const lists = [iris, literals, c.bnodes.map((v) => this.factory.blankNode(v)), c.tripleTerms.map((t) => this.triple(t, tripleState))];
+    const total = lists.reduce((sum, list) => sum + list.length, 0);
+    const used = lists.filter((list) => list.length);
+    const values = [];
+    if (!c.kinds.length && used.length <= 1) {
+      for (const value of used[0] ?? []) values.push(value);
+    } else {
+      if (c.kinds.length !== Math.ceil(total / 4)) fail("Invalid kinds length");
+      if (total % 4 && c.kinds[c.kinds.length - 1] >>> 2 * (total % 4)) fail("Nonzero unused kinds bits");
+      const indices = [0, 0, 0, 0];
+      for (let j = 0; j < total; j++) {
+        const kind = c.kinds[j >> 2] >> 2 * (j & 3) & 3;
+        const value = lists[kind][indices[kind]];
+        indices[kind]++;
+        if (!value) fail("Kinds references missing run value");
+        values.push(value);
+      }
+    }
+    const cells = [];
+    let i = 0;
+    for (let k = 0; k < c.layouts.length; k++) {
+      const token = c.layouts[k];
+      const skip = token >>> 5;
+      const kind = token >>> 4 & 1;
+      let length = token & 15;
+      if (length === 15) {
+        if (++k >= c.layouts.length) fail("Layout escape without extension");
+        length += c.layouts[k];
+      }
+      const count = length + (kind ? 1 : 2);
+      if (i + skip > values.length || cells.length + skip + count > n) fail("Column layout exceeds bounds");
+      for (let j = 0; j < skip; j++) cells.push(values[i++]);
+      const value = kind ? void 0 : values[i++];
+      if (!kind && !value) fail("Repeat run without a value");
+      for (let j = 0; j < count; j++) cells.push(value);
+    }
+    if (cells.length + values.length - i > n) fail("Too many column values");
+    while (i < values.length) cells.push(values[i++]);
+    cells.length = n;
+    return cells;
+  }
+};
+
 // src/generated/rdf_pb.ts
 var import_minimal2 = require("protobufjs/minimal.js");
 
@@ -89,6 +601,7 @@ var $util = import_minimal.default.util;
 var $Object = $util.global.Object;
 var $undefined = $util.global.undefined;
 var $Error = $util.global.Error;
+var $RangeError = $util.global.RangeError;
 var $root = import_minimal.default.roots["default"] || (import_minimal.default.roots["default"] = {});
 var eu = $root.eu = (() => {
   const eu2 = {};
@@ -99,8 +612,8 @@ var eu = $root.eu = (() => {
       jelly.core = (function() {
         const core = {};
         core.proto = (function() {
-          const proto2 = {};
-          proto2.v1 = (function() {
+          const proto3 = {};
+          proto3.v1 = (function() {
             const v1 = {};
             v1.RdfIri = (function() {
               const RdfIri = function(properties) {
@@ -147,7 +660,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri(), value;
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -182,6 +705,11 @@ var eu = $root.eu = (() => {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
                 }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
                 return message;
@@ -192,6 +720,21 @@ var eu = $root.eu = (() => {
                 return this.decode(reader, reader.uint32());
               };
               return RdfIri;
+            })();
+            v1.RdfVersion = (function() {
+              const valuesById = {}, values = $Object.create(valuesById);
+              values[valuesById[0] = "RDF_VERSION_UNSPECIFIED"] = 0;
+              values[valuesById[1] = "RDF_VERSION_1_1"] = 1;
+              values[valuesById[2] = "RDF_VERSION_1_2_BASIC"] = 2;
+              values[valuesById[3] = "RDF_VERSION_1_2"] = 3;
+              return values;
+            })();
+            v1.RdfBaseDirection = (function() {
+              const valuesById = {}, values = $Object.create(valuesById);
+              values[valuesById[0] = "RDF_BASE_DIRECTION_UNSPECIFIED"] = 0;
+              values[valuesById[1] = "RDF_BASE_DIRECTION_LTR"] = 1;
+              values[valuesById[2] = "RDF_BASE_DIRECTION_RTL"] = 2;
+              return values;
             })();
             v1.RdfLiteral = (function() {
               const RdfLiteral = function(properties) {
@@ -204,6 +747,7 @@ var eu = $root.eu = (() => {
               RdfLiteral.prototype.lex = "";
               RdfLiteral.prototype.langtag = null;
               RdfLiteral.prototype.datatype = null;
+              RdfLiteral.prototype.direction = 0;
               let $oneOfFields;
               $Object.defineProperty(RdfLiteral.prototype, "literalKind", {
                 get: $util.oneOfGetter($oneOfFields = ["langtag", "datatype"]),
@@ -234,6 +778,11 @@ var eu = $root.eu = (() => {
                     /* id 3, wireType 0 =*/
                     24
                   ).uint32(message.datatype);
+                if (message.direction != null && $Object.hasOwnProperty.call(message, "direction") && message.direction !== 0)
+                  writer.uint32(
+                    /* id 4, wireType 0 =*/
+                    32
+                  ).int32(message.direction);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                   for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -249,7 +798,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral(), value;
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -282,12 +841,26 @@ var eu = $root.eu = (() => {
                       message.$literalKind = "datatype";
                       continue;
                     }
+                    case 4: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.int32())
+                        message.direction = value;
+                      else
+                        delete message.direction;
+                      continue;
+                    }
                   }
                   reader.skipType(wireType, _depth, tag);
                   if (!reader.discardUnknown) {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -299,6 +872,1284 @@ var eu = $root.eu = (() => {
                 return this.decode(reader, reader.uint32());
               };
               return RdfLiteral;
+            })();
+            v1.RdfTripleTerm = (function() {
+              const RdfTripleTerm = function(properties) {
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfTripleTerm.prototype.sIri = null;
+              RdfTripleTerm.prototype.sBnode = null;
+              RdfTripleTerm.prototype.pIri = null;
+              RdfTripleTerm.prototype.oIri = null;
+              RdfTripleTerm.prototype.oBnode = null;
+              RdfTripleTerm.prototype.oLiteral = null;
+              RdfTripleTerm.prototype.oTripleTerm = null;
+              let $oneOfFields;
+              $Object.defineProperty(RdfTripleTerm.prototype, "subject", {
+                get: $util.oneOfGetter($oneOfFields = ["sIri", "sBnode"]),
+                set: $util.oneOfSetter($oneOfFields)
+              });
+              $Object.defineProperty(RdfTripleTerm.prototype, "object", {
+                get: $util.oneOfGetter($oneOfFields = ["oIri", "oBnode", "oLiteral", "oTripleTerm"]),
+                set: $util.oneOfSetter($oneOfFields)
+              });
+              RdfTripleTerm.create = function(properties) {
+                return new RdfTripleTerm(properties);
+              };
+              RdfTripleTerm.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.sIri != null && $Object.hasOwnProperty.call(message, "sIri"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.sIri, writer.uint32(
+                    /* id 1, wireType 2 =*/
+                    10
+                  ).fork(), _depth + 1).ldelim();
+                if (message.sBnode != null && $Object.hasOwnProperty.call(message, "sBnode"))
+                  writer.uint32(
+                    /* id 2, wireType 2 =*/
+                    18
+                  ).string(message.sBnode);
+                if (message.pIri != null && $Object.hasOwnProperty.call(message, "pIri"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.pIri, writer.uint32(
+                    /* id 5, wireType 2 =*/
+                    42
+                  ).fork(), _depth + 1).ldelim();
+                if (message.oIri != null && $Object.hasOwnProperty.call(message, "oIri"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.oIri, writer.uint32(
+                    /* id 9, wireType 2 =*/
+                    74
+                  ).fork(), _depth + 1).ldelim();
+                if (message.oBnode != null && $Object.hasOwnProperty.call(message, "oBnode"))
+                  writer.uint32(
+                    /* id 10, wireType 2 =*/
+                    82
+                  ).string(message.oBnode);
+                if (message.oLiteral != null && $Object.hasOwnProperty.call(message, "oLiteral"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.encode(message.oLiteral, writer.uint32(
+                    /* id 11, wireType 2 =*/
+                    90
+                  ).fork(), _depth + 1).ldelim();
+                if (message.oTripleTerm != null && $Object.hasOwnProperty.call(message, "oTripleTerm"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.encode(message.oTripleTerm, writer.uint32(
+                    /* id 12, wireType 2 =*/
+                    98
+                  ).fork(), _depth + 1).ldelim();
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfTripleTerm.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfTripleTerm.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 2)
+                        break;
+                      message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sIri);
+                      message.$subject = "sIri";
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 2)
+                        break;
+                      message.sBnode = reader.stringVerify();
+                      message.$subject = "sBnode";
+                      continue;
+                    }
+                    case 5: {
+                      if (wireType !== 2)
+                        break;
+                      message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pIri);
+                      continue;
+                    }
+                    case 9: {
+                      if (wireType !== 2)
+                        break;
+                      message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oIri);
+                      message.$object = "oIri";
+                      continue;
+                    }
+                    case 10: {
+                      if (wireType !== 2)
+                        break;
+                      message.oBnode = reader.stringVerify();
+                      message.$object = "oBnode";
+                      continue;
+                    }
+                    case 11: {
+                      if (wireType !== 2)
+                        break;
+                      message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oLiteral);
+                      message.$object = "oLiteral";
+                      continue;
+                    }
+                    case 12: {
+                      if (wireType !== 2)
+                        break;
+                      message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oTripleTerm);
+                      message.$object = "oTripleTerm";
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfTripleTerm.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfTripleTerm;
+            })();
+            v1.RdfLookupEntryPacked = (function() {
+              const RdfLookupEntryPacked = function(properties) {
+                this.values = [];
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfLookupEntryPacked.prototype.id = 0;
+              RdfLookupEntryPacked.prototype.values = $util.emptyArray;
+              RdfLookupEntryPacked.create = function(properties) {
+                return new RdfLookupEntryPacked(properties);
+              };
+              RdfLookupEntryPacked.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.id != null && $Object.hasOwnProperty.call(message, "id") && message.id !== 0)
+                  writer.uint32(
+                    /* id 1, wireType 0 =*/
+                    8
+                  ).uint32(message.id);
+                if (message.values != null && message.values.length)
+                  for (let i = 0; i < message.values.length; ++i)
+                    writer.uint32(
+                      /* id 2, wireType 2 =*/
+                      18
+                    ).string(message.values[i]);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfLookupEntryPacked.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfLookupEntryPacked.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.id = value;
+                      else
+                        delete message.id;
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.values && message.values.length))
+                        message.values = [];
+                      message.values.push(reader.stringVerify());
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfLookupEntryPacked.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfLookupEntryPacked;
+            })();
+            v1.RdfStreamOptions = (function() {
+              const RdfStreamOptions = function(properties) {
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfStreamOptions.prototype.streamName = "";
+              RdfStreamOptions.prototype.physicalType = 0;
+              RdfStreamOptions.prototype.generalizedStatements = false;
+              RdfStreamOptions.prototype.rdfStar = false;
+              RdfStreamOptions.prototype.streamType = 0;
+              RdfStreamOptions.prototype.rdfVersion = 0;
+              RdfStreamOptions.prototype.maxNameTableSize = 0;
+              RdfStreamOptions.prototype.maxPrefixTableSize = 0;
+              RdfStreamOptions.prototype.maxDatatypeTableSize = 0;
+              RdfStreamOptions.prototype.logicalType = 0;
+              RdfStreamOptions.prototype.version = 0;
+              RdfStreamOptions.create = function(properties) {
+                return new RdfStreamOptions(properties);
+              };
+              RdfStreamOptions.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
+                  writer.uint32(
+                    /* id 1, wireType 2 =*/
+                    10
+                  ).string(message.streamName);
+                if (message.physicalType != null && $Object.hasOwnProperty.call(message, "physicalType") && message.physicalType !== 0)
+                  writer.uint32(
+                    /* id 2, wireType 0 =*/
+                    16
+                  ).int32(message.physicalType);
+                if (message.generalizedStatements != null && $Object.hasOwnProperty.call(message, "generalizedStatements") && message.generalizedStatements !== false)
+                  writer.uint32(
+                    /* id 3, wireType 0 =*/
+                    24
+                  ).bool(message.generalizedStatements);
+                if (message.rdfStar != null && $Object.hasOwnProperty.call(message, "rdfStar") && message.rdfStar !== false)
+                  writer.uint32(
+                    /* id 4, wireType 0 =*/
+                    32
+                  ).bool(message.rdfStar);
+                if (message.streamType != null && $Object.hasOwnProperty.call(message, "streamType") && message.streamType !== 0)
+                  writer.uint32(
+                    /* id 5, wireType 0 =*/
+                    40
+                  ).int32(message.streamType);
+                if (message.rdfVersion != null && $Object.hasOwnProperty.call(message, "rdfVersion") && message.rdfVersion !== 0)
+                  writer.uint32(
+                    /* id 6, wireType 0 =*/
+                    48
+                  ).int32(message.rdfVersion);
+                if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
+                  writer.uint32(
+                    /* id 9, wireType 0 =*/
+                    72
+                  ).uint32(message.maxNameTableSize);
+                if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
+                  writer.uint32(
+                    /* id 10, wireType 0 =*/
+                    80
+                  ).uint32(message.maxPrefixTableSize);
+                if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
+                  writer.uint32(
+                    /* id 11, wireType 0 =*/
+                    88
+                  ).uint32(message.maxDatatypeTableSize);
+                if (message.logicalType != null && $Object.hasOwnProperty.call(message, "logicalType") && message.logicalType !== 0)
+                  writer.uint32(
+                    /* id 14, wireType 0 =*/
+                    112
+                  ).int32(message.logicalType);
+                if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
+                  writer.uint32(
+                    /* id 15, wireType 0 =*/
+                    120
+                  ).uint32(message.version);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfStreamOptions.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfStreamOptions.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 2)
+                        break;
+                      if ((value = reader.stringVerify()).length)
+                        message.streamName = value;
+                      else
+                        delete message.streamName;
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.int32())
+                        message.physicalType = value;
+                      else
+                        delete message.physicalType;
+                      continue;
+                    }
+                    case 3: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.bool())
+                        message.generalizedStatements = value;
+                      else
+                        delete message.generalizedStatements;
+                      continue;
+                    }
+                    case 4: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.bool())
+                        message.rdfStar = value;
+                      else
+                        delete message.rdfStar;
+                      continue;
+                    }
+                    case 5: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.int32())
+                        message.streamType = value;
+                      else
+                        delete message.streamType;
+                      continue;
+                    }
+                    case 6: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.int32())
+                        message.rdfVersion = value;
+                      else
+                        delete message.rdfVersion;
+                      continue;
+                    }
+                    case 9: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.maxNameTableSize = value;
+                      else
+                        delete message.maxNameTableSize;
+                      continue;
+                    }
+                    case 10: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.maxPrefixTableSize = value;
+                      else
+                        delete message.maxPrefixTableSize;
+                      continue;
+                    }
+                    case 11: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.maxDatatypeTableSize = value;
+                      else
+                        delete message.maxDatatypeTableSize;
+                      continue;
+                    }
+                    case 14: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.int32())
+                        message.logicalType = value;
+                      else
+                        delete message.logicalType;
+                      continue;
+                    }
+                    case 15: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.version = value;
+                      else
+                        delete message.version;
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfStreamOptions.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfStreamOptions;
+            })();
+            v1.PhysicalStreamType = (function() {
+              const valuesById = {}, values = $Object.create(valuesById);
+              values[valuesById[0] = "PHYSICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
+              values[valuesById[1] = "PHYSICAL_STREAM_TYPE_TRIPLES"] = 1;
+              values[valuesById[2] = "PHYSICAL_STREAM_TYPE_QUADS"] = 2;
+              values[valuesById[3] = "PHYSICAL_STREAM_TYPE_GRAPHS"] = 3;
+              return values;
+            })();
+            v1.RdfStreamType = (function() {
+              const valuesById = {}, values = $Object.create(valuesById);
+              values[valuesById[0] = "RDF_STREAM_TYPE_FLAT"] = 0;
+              values[valuesById[1] = "RDF_STREAM_TYPE_MESSAGES"] = 1;
+              return values;
+            })();
+            v1.RdfStreamFrame = (function() {
+              const RdfStreamFrame = function(properties) {
+                this.rows = [];
+                this.metadata = {};
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfStreamFrame.prototype.rows = $util.emptyArray;
+              RdfStreamFrame.prototype.columns = null;
+              RdfStreamFrame.prototype.metadata = $util.emptyObject;
+              RdfStreamFrame.create = function(properties) {
+                return new RdfStreamFrame(properties);
+              };
+              RdfStreamFrame.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.rows != null && message.rows.length)
+                  for (let i = 0; i < message.rows.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.encode(message.rows[i], writer.uint32(
+                      /* id 1, wireType 2 =*/
+                      10
+                    ).fork(), _depth + 1).ldelim();
+                if (message.columns != null && $Object.hasOwnProperty.call(message, "columns"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.encode(message.columns, writer.uint32(
+                    /* id 2, wireType 2 =*/
+                    18
+                  ).fork(), _depth + 1).ldelim();
+                if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
+                  for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
+                    writer.uint32(
+                      /* id 15, wireType 2 =*/
+                      122
+                    ).fork().uint32(
+                      /* id 1, wireType 2 =*/
+                      10
+                    ).string(keys[i]).uint32(
+                      /* id 2, wireType 2 =*/
+                      18
+                    ).bytes(message.metadata[keys[i]]).ldelim();
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfStreamFrame.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfStreamFrame.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, key, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.rows && message.rows.length))
+                        message.rows = [];
+                      message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 2)
+                        break;
+                      message.columns = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.decode(reader, reader.uint32(), $undefined, _depth + 1, message.columns);
+                      continue;
+                    }
+                    case 15: {
+                      if (wireType !== 2)
+                        break;
+                      if (message.metadata === $util.emptyObject)
+                        message.metadata = {};
+                      let end2 = reader.uint32() + reader.pos;
+                      if (end2 > reader.len)
+                        throw $RangeError("index out of range");
+                      reader.len = end2;
+                      key = "";
+                      value = [];
+                      while (reader.pos < end2) {
+                        let tag2 = reader.tag();
+                        wireType = tag2 & 7;
+                        switch (tag2 >>>= 3) {
+                          case 1:
+                            if (wireType !== 2)
+                              break;
+                            key = reader.stringVerify();
+                            continue;
+                          case 2:
+                            if (wireType !== 2)
+                              break;
+                            value = reader.bytes();
+                            continue;
+                        }
+                        reader.skipType(wireType, _depth, tag2);
+                      }
+                      if (reader.pos !== end2)
+                        throw $RangeError("index out of range");
+                      reader.len = end;
+                      if (key === "__proto__")
+                        $util.makeProp(message.metadata, key);
+                      message.metadata[key] = value;
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfStreamFrame.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfStreamFrame;
+            })();
+            v1.RdfColumnBatch = (function() {
+              const RdfColumnBatch = function(properties) {
+                this.names = [];
+                this.prefixes = [];
+                this.datatypes = [];
+                this.namespaces = [];
+                this.messageLengths = [];
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfColumnBatch.prototype.rowCount = 0;
+              RdfColumnBatch.prototype.names = $util.emptyArray;
+              RdfColumnBatch.prototype.prefixes = $util.emptyArray;
+              RdfColumnBatch.prototype.datatypes = $util.emptyArray;
+              RdfColumnBatch.prototype.namespaces = $util.emptyArray;
+              RdfColumnBatch.prototype.subjects = null;
+              RdfColumnBatch.prototype.predicates = null;
+              RdfColumnBatch.prototype.objects = null;
+              RdfColumnBatch.prototype.graphs = null;
+              RdfColumnBatch.prototype.messageLengths = $util.emptyArray;
+              RdfColumnBatch.create = function(properties) {
+                return new RdfColumnBatch(properties);
+              };
+              RdfColumnBatch.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.rowCount != null && $Object.hasOwnProperty.call(message, "rowCount") && message.rowCount !== 0)
+                  writer.uint32(
+                    /* id 1, wireType 0 =*/
+                    8
+                  ).uint32(message.rowCount);
+                if (message.names != null && message.names.length)
+                  for (let i = 0; i < message.names.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.names[i], writer.uint32(
+                      /* id 2, wireType 2 =*/
+                      18
+                    ).fork(), _depth + 1).ldelim();
+                if (message.prefixes != null && message.prefixes.length)
+                  for (let i = 0; i < message.prefixes.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.prefixes[i], writer.uint32(
+                      /* id 3, wireType 2 =*/
+                      26
+                    ).fork(), _depth + 1).ldelim();
+                if (message.datatypes != null && message.datatypes.length)
+                  for (let i = 0; i < message.datatypes.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.encode(message.datatypes[i], writer.uint32(
+                      /* id 4, wireType 2 =*/
+                      34
+                    ).fork(), _depth + 1).ldelim();
+                if (message.namespaces != null && message.namespaces.length)
+                  for (let i = 0; i < message.namespaces.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.encode(message.namespaces[i], writer.uint32(
+                      /* id 5, wireType 2 =*/
+                      42
+                    ).fork(), _depth + 1).ldelim();
+                if (message.subjects != null && $Object.hasOwnProperty.call(message, "subjects"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.subjects, writer.uint32(
+                    /* id 6, wireType 2 =*/
+                    50
+                  ).fork(), _depth + 1).ldelim();
+                if (message.predicates != null && $Object.hasOwnProperty.call(message, "predicates"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.predicates, writer.uint32(
+                    /* id 7, wireType 2 =*/
+                    58
+                  ).fork(), _depth + 1).ldelim();
+                if (message.objects != null && $Object.hasOwnProperty.call(message, "objects"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.objects, writer.uint32(
+                    /* id 8, wireType 2 =*/
+                    66
+                  ).fork(), _depth + 1).ldelim();
+                if (message.graphs != null && $Object.hasOwnProperty.call(message, "graphs"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.encode(message.graphs, writer.uint32(
+                    /* id 9, wireType 2 =*/
+                    74
+                  ).fork(), _depth + 1).ldelim();
+                if (message.messageLengths != null && message.messageLengths.length)
+                  writer.uint32(
+                    /* id 15, wireType 2 =*/
+                    122
+                  ).uint32s(message.messageLengths);
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfColumnBatch.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfColumnBatch.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 0)
+                        break;
+                      if (value = reader.uint32())
+                        message.rowCount = value;
+                      else
+                        delete message.rowCount;
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.names && message.names.length))
+                        message.names = [];
+                      message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                    case 3: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.prefixes && message.prefixes.length))
+                        message.prefixes = [];
+                      message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                    case 4: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.datatypes && message.datatypes.length))
+                        message.datatypes = [];
+                      message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                    case 5: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.namespaces && message.namespaces.length))
+                        message.namespaces = [];
+                      message.namespaces.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                    case 6: {
+                      if (wireType !== 2)
+                        break;
+                      message.subjects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.subjects);
+                      continue;
+                    }
+                    case 7: {
+                      if (wireType !== 2)
+                        break;
+                      message.predicates = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.predicates);
+                      continue;
+                    }
+                    case 8: {
+                      if (wireType !== 2)
+                        break;
+                      message.objects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.objects);
+                      continue;
+                    }
+                    case 9: {
+                      if (wireType !== 2)
+                        break;
+                      message.graphs = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.graphs);
+                      continue;
+                    }
+                    case 15: {
+                      if (wireType === 2) {
+                        if (!(message.messageLengths && message.messageLengths.length))
+                          message.messageLengths = [];
+                        reader.uint32s(message.messageLengths);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.messageLengths && message.messageLengths.length))
+                        message.messageLengths = [];
+                      message.messageLengths.push(reader.uint32());
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfColumnBatch.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfColumnBatch;
+            })();
+            v1.RdfNamespaceDeclaration = (function() {
+              const RdfNamespaceDeclaration = function(properties) {
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfNamespaceDeclaration.prototype.name = "";
+              RdfNamespaceDeclaration.prototype.value = null;
+              RdfNamespaceDeclaration.create = function(properties) {
+                return new RdfNamespaceDeclaration(properties);
+              };
+              RdfNamespaceDeclaration.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
+                  writer.uint32(
+                    /* id 1, wireType 2 =*/
+                    10
+                  ).string(message.name);
+                if (message.value != null && $Object.hasOwnProperty.call(message, "value"))
+                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.value, writer.uint32(
+                    /* id 2, wireType 2 =*/
+                    18
+                  ).fork(), _depth + 1).ldelim();
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfNamespaceDeclaration.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfNamespaceDeclaration.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 2)
+                        break;
+                      if ((value = reader.stringVerify()).length)
+                        message.name = value;
+                      else
+                        delete message.name;
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType !== 2)
+                        break;
+                      message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.value);
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfNamespaceDeclaration.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfNamespaceDeclaration;
+            })();
+            v1.RdfColumn = (function() {
+              const RdfColumn = function(properties) {
+                this.layouts = [];
+                this.nameIds = [];
+                this.prefixIds = [];
+                this.lexValues = [];
+                this.literalKinds = [];
+                this.langtags = [];
+                this.langtagDirections = [];
+                this.bnodes = [];
+                this.tripleTerms = [];
+                if (properties) {
+                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                      this[keys[i]] = properties[keys[i]];
+                }
+              };
+              RdfColumn.prototype.kinds = $util.newBuffer([]);
+              RdfColumn.prototype.layouts = $util.emptyArray;
+              RdfColumn.prototype.nameIds = $util.emptyArray;
+              RdfColumn.prototype.prefixIds = $util.emptyArray;
+              RdfColumn.prototype.lexValues = $util.emptyArray;
+              RdfColumn.prototype.literalKinds = $util.emptyArray;
+              RdfColumn.prototype.langtags = $util.emptyArray;
+              RdfColumn.prototype.langtagDirections = $util.emptyArray;
+              RdfColumn.prototype.bnodes = $util.emptyArray;
+              RdfColumn.prototype.tripleTerms = $util.emptyArray;
+              RdfColumn.create = function(properties) {
+                return new RdfColumn(properties);
+              };
+              RdfColumn.encode = function(message, writer, _depth) {
+                if (!writer)
+                  writer = $Writer.create();
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $util.recursionLimit)
+                  throw $Error("max depth exceeded");
+                if (message.kinds != null && $Object.hasOwnProperty.call(message, "kinds") && message.kinds.length)
+                  writer.uint32(
+                    /* id 1, wireType 2 =*/
+                    10
+                  ).bytes(message.kinds);
+                if (message.layouts != null && message.layouts.length)
+                  writer.uint32(
+                    /* id 2, wireType 2 =*/
+                    18
+                  ).uint32s(message.layouts);
+                if (message.nameIds != null && message.nameIds.length)
+                  writer.uint32(
+                    /* id 3, wireType 2 =*/
+                    26
+                  ).uint32s(message.nameIds);
+                if (message.prefixIds != null && message.prefixIds.length)
+                  writer.uint32(
+                    /* id 4, wireType 2 =*/
+                    34
+                  ).uint32s(message.prefixIds);
+                if (message.lexValues != null && message.lexValues.length)
+                  for (let i = 0; i < message.lexValues.length; ++i)
+                    writer.uint32(
+                      /* id 5, wireType 2 =*/
+                      42
+                    ).string(message.lexValues[i]);
+                if (message.literalKinds != null && message.literalKinds.length)
+                  writer.uint32(
+                    /* id 6, wireType 2 =*/
+                    50
+                  ).uint32s(message.literalKinds);
+                if (message.langtags != null && message.langtags.length)
+                  for (let i = 0; i < message.langtags.length; ++i)
+                    writer.uint32(
+                      /* id 7, wireType 2 =*/
+                      58
+                    ).string(message.langtags[i]);
+                if (message.langtagDirections != null && message.langtagDirections.length)
+                  writer.uint32(
+                    /* id 8, wireType 2 =*/
+                    66
+                  ).uint32s(message.langtagDirections);
+                if (message.bnodes != null && message.bnodes.length)
+                  for (let i = 0; i < message.bnodes.length; ++i)
+                    writer.uint32(
+                      /* id 9, wireType 2 =*/
+                      74
+                    ).string(message.bnodes[i]);
+                if (message.tripleTerms != null && message.tripleTerms.length)
+                  for (let i = 0; i < message.tripleTerms.length; ++i)
+                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.encode(message.tripleTerms[i], writer.uint32(
+                      /* id 10, wireType 2 =*/
+                      82
+                    ).fork(), _depth + 1).ldelim();
+                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                  for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+                return writer;
+              };
+              RdfColumn.encodeDelimited = function(message, writer) {
+                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+              };
+              RdfColumn.decode = function(reader, length, _end, _depth, _target) {
+                if (!(reader instanceof $Reader))
+                  reader = $Reader.create(reader);
+                if (_depth === $undefined)
+                  _depth = 0;
+                if (_depth > $Reader.recursionLimit)
+                  throw $Error("max depth exceeded");
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn();
+                while (reader.pos < end) {
+                  let start = reader.pos;
+                  let tag = reader.tag();
+                  if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                  }
+                  let wireType = tag & 7;
+                  switch (tag >>>= 3) {
+                    case 1: {
+                      if (wireType !== 2)
+                        break;
+                      if ((value = reader.bytes()).length)
+                        message.kinds = value;
+                      else
+                        delete message.kinds;
+                      continue;
+                    }
+                    case 2: {
+                      if (wireType === 2) {
+                        if (!(message.layouts && message.layouts.length))
+                          message.layouts = [];
+                        reader.uint32s(message.layouts);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.layouts && message.layouts.length))
+                        message.layouts = [];
+                      message.layouts.push(reader.uint32());
+                      continue;
+                    }
+                    case 3: {
+                      if (wireType === 2) {
+                        if (!(message.nameIds && message.nameIds.length))
+                          message.nameIds = [];
+                        reader.uint32s(message.nameIds);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.nameIds && message.nameIds.length))
+                        message.nameIds = [];
+                      message.nameIds.push(reader.uint32());
+                      continue;
+                    }
+                    case 4: {
+                      if (wireType === 2) {
+                        if (!(message.prefixIds && message.prefixIds.length))
+                          message.prefixIds = [];
+                        reader.uint32s(message.prefixIds);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.prefixIds && message.prefixIds.length))
+                        message.prefixIds = [];
+                      message.prefixIds.push(reader.uint32());
+                      continue;
+                    }
+                    case 5: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.lexValues && message.lexValues.length))
+                        message.lexValues = [];
+                      message.lexValues.push(reader.stringVerify());
+                      continue;
+                    }
+                    case 6: {
+                      if (wireType === 2) {
+                        if (!(message.literalKinds && message.literalKinds.length))
+                          message.literalKinds = [];
+                        reader.uint32s(message.literalKinds);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.literalKinds && message.literalKinds.length))
+                        message.literalKinds = [];
+                      message.literalKinds.push(reader.uint32());
+                      continue;
+                    }
+                    case 7: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.langtags && message.langtags.length))
+                        message.langtags = [];
+                      message.langtags.push(reader.stringVerify());
+                      continue;
+                    }
+                    case 8: {
+                      if (wireType === 2) {
+                        if (!(message.langtagDirections && message.langtagDirections.length))
+                          message.langtagDirections = [];
+                        reader.uint32s(message.langtagDirections);
+                        continue;
+                      }
+                      if (wireType !== 0)
+                        break;
+                      if (!(message.langtagDirections && message.langtagDirections.length))
+                        message.langtagDirections = [];
+                      message.langtagDirections.push(reader.uint32());
+                      continue;
+                    }
+                    case 9: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.bnodes && message.bnodes.length))
+                        message.bnodes = [];
+                      message.bnodes.push(reader.stringVerify());
+                      continue;
+                    }
+                    case 10: {
+                      if (wireType !== 2)
+                        break;
+                      if (!(message.tripleTerms && message.tripleTerms.length))
+                        message.tripleTerms = [];
+                      message.tripleTerms.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                      continue;
+                    }
+                  }
+                  reader.skipType(wireType, _depth, tag);
+                  if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                  }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
+                if (_end !== $undefined)
+                  throw $Error("missing end group");
+                return message;
+              };
+              RdfColumn.decodeDelimited = function(reader) {
+                if (!(reader instanceof $Reader))
+                  reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+              };
+              return RdfColumn;
             })();
             v1.RdfDefaultGraph = (function() {
               const RdfDefaultGraph = function(properties) {
@@ -333,7 +2184,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -346,6 +2207,11 @@ var eu = $root.eu = (() => {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -476,7 +2342,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -576,6 +2452,11 @@ var eu = $root.eu = (() => {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -734,7 +2615,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -863,6 +2754,11 @@ var eu = $root.eu = (() => {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
                 }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
                 return message;
@@ -936,7 +2832,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -980,6 +2886,11 @@ var eu = $root.eu = (() => {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -1025,7 +2936,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -1039,6 +2960,11 @@ var eu = $root.eu = (() => {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
                 }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
                 return message;
@@ -1049,94 +2975,6 @@ var eu = $root.eu = (() => {
                 return this.decode(reader, reader.uint32());
               };
               return RdfGraphEnd;
-            })();
-            v1.RdfNamespaceDeclaration = (function() {
-              const RdfNamespaceDeclaration = function(properties) {
-                if (properties) {
-                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                      this[keys[i]] = properties[keys[i]];
-                }
-              };
-              RdfNamespaceDeclaration.prototype.name = "";
-              RdfNamespaceDeclaration.prototype.value = null;
-              RdfNamespaceDeclaration.create = function(properties) {
-                return new RdfNamespaceDeclaration(properties);
-              };
-              RdfNamespaceDeclaration.encode = function(message, writer, _depth) {
-                if (!writer)
-                  writer = $Writer.create();
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $util.recursionLimit)
-                  throw $Error("max depth exceeded");
-                if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
-                  writer.uint32(
-                    /* id 1, wireType 2 =*/
-                    10
-                  ).string(message.name);
-                if (message.value != null && $Object.hasOwnProperty.call(message, "value"))
-                  $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.encode(message.value, writer.uint32(
-                    /* id 2, wireType 2 =*/
-                    18
-                  ).fork(), _depth + 1).ldelim();
-                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                  for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-                return writer;
-              };
-              RdfNamespaceDeclaration.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-              };
-              RdfNamespaceDeclaration.decode = function(reader, length, _end, _depth, _target) {
-                if (!(reader instanceof $Reader))
-                  reader = $Reader.create(reader);
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $Reader.recursionLimit)
-                  throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration(), value;
-                while (reader.pos < end) {
-                  let start = reader.pos;
-                  let tag = reader.tag();
-                  if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                  }
-                  let wireType = tag & 7;
-                  switch (tag >>>= 3) {
-                    case 1: {
-                      if (wireType !== 2)
-                        break;
-                      if ((value = reader.stringVerify()).length)
-                        message.name = value;
-                      else
-                        delete message.name;
-                      continue;
-                    }
-                    case 2: {
-                      if (wireType !== 2)
-                        break;
-                      message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.value);
-                      continue;
-                    }
-                  }
-                  reader.skipType(wireType, _depth, tag);
-                  if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                  }
-                }
-                if (_end !== $undefined)
-                  throw $Error("missing end group");
-                return message;
-              };
-              RdfNamespaceDeclaration.decodeDelimited = function(reader) {
-                if (!(reader instanceof $Reader))
-                  reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
-              };
-              return RdfNamespaceDeclaration;
             })();
             v1.RdfNameEntry = (function() {
               const RdfNameEntry = function(properties) {
@@ -1183,7 +3021,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry(), value;
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -1217,6 +3065,11 @@ var eu = $root.eu = (() => {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -1274,7 +3127,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry(), value;
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -1308,6 +3171,11 @@ var eu = $root.eu = (() => {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
+                }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
                 }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
@@ -1365,7 +3233,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry(), value;
+                let end, message, value;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -1400,6 +3278,11 @@ var eu = $root.eu = (() => {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
                 }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
                 return message;
@@ -1410,210 +3293,6 @@ var eu = $root.eu = (() => {
                 return this.decode(reader, reader.uint32());
               };
               return RdfDatatypeEntry;
-            })();
-            v1.RdfStreamOptions = (function() {
-              const RdfStreamOptions = function(properties) {
-                if (properties) {
-                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                      this[keys[i]] = properties[keys[i]];
-                }
-              };
-              RdfStreamOptions.prototype.streamName = "";
-              RdfStreamOptions.prototype.physicalType = 0;
-              RdfStreamOptions.prototype.generalizedStatements = false;
-              RdfStreamOptions.prototype.rdfStar = false;
-              RdfStreamOptions.prototype.maxNameTableSize = 0;
-              RdfStreamOptions.prototype.maxPrefixTableSize = 0;
-              RdfStreamOptions.prototype.maxDatatypeTableSize = 0;
-              RdfStreamOptions.prototype.logicalType = 0;
-              RdfStreamOptions.prototype.version = 0;
-              RdfStreamOptions.create = function(properties) {
-                return new RdfStreamOptions(properties);
-              };
-              RdfStreamOptions.encode = function(message, writer, _depth) {
-                if (!writer)
-                  writer = $Writer.create();
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $util.recursionLimit)
-                  throw $Error("max depth exceeded");
-                if (message.streamName != null && $Object.hasOwnProperty.call(message, "streamName") && message.streamName !== "")
-                  writer.uint32(
-                    /* id 1, wireType 2 =*/
-                    10
-                  ).string(message.streamName);
-                if (message.physicalType != null && $Object.hasOwnProperty.call(message, "physicalType") && message.physicalType !== 0)
-                  writer.uint32(
-                    /* id 2, wireType 0 =*/
-                    16
-                  ).int32(message.physicalType);
-                if (message.generalizedStatements != null && $Object.hasOwnProperty.call(message, "generalizedStatements") && message.generalizedStatements !== false)
-                  writer.uint32(
-                    /* id 3, wireType 0 =*/
-                    24
-                  ).bool(message.generalizedStatements);
-                if (message.rdfStar != null && $Object.hasOwnProperty.call(message, "rdfStar") && message.rdfStar !== false)
-                  writer.uint32(
-                    /* id 4, wireType 0 =*/
-                    32
-                  ).bool(message.rdfStar);
-                if (message.maxNameTableSize != null && $Object.hasOwnProperty.call(message, "maxNameTableSize") && message.maxNameTableSize !== 0)
-                  writer.uint32(
-                    /* id 9, wireType 0 =*/
-                    72
-                  ).uint32(message.maxNameTableSize);
-                if (message.maxPrefixTableSize != null && $Object.hasOwnProperty.call(message, "maxPrefixTableSize") && message.maxPrefixTableSize !== 0)
-                  writer.uint32(
-                    /* id 10, wireType 0 =*/
-                    80
-                  ).uint32(message.maxPrefixTableSize);
-                if (message.maxDatatypeTableSize != null && $Object.hasOwnProperty.call(message, "maxDatatypeTableSize") && message.maxDatatypeTableSize !== 0)
-                  writer.uint32(
-                    /* id 11, wireType 0 =*/
-                    88
-                  ).uint32(message.maxDatatypeTableSize);
-                if (message.logicalType != null && $Object.hasOwnProperty.call(message, "logicalType") && message.logicalType !== 0)
-                  writer.uint32(
-                    /* id 14, wireType 0 =*/
-                    112
-                  ).int32(message.logicalType);
-                if (message.version != null && $Object.hasOwnProperty.call(message, "version") && message.version !== 0)
-                  writer.uint32(
-                    /* id 15, wireType 0 =*/
-                    120
-                  ).uint32(message.version);
-                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                  for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-                return writer;
-              };
-              RdfStreamOptions.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-              };
-              RdfStreamOptions.decode = function(reader, length, _end, _depth, _target) {
-                if (!(reader instanceof $Reader))
-                  reader = $Reader.create(reader);
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $Reader.recursionLimit)
-                  throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions(), value;
-                while (reader.pos < end) {
-                  let start = reader.pos;
-                  let tag = reader.tag();
-                  if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                  }
-                  let wireType = tag & 7;
-                  switch (tag >>>= 3) {
-                    case 1: {
-                      if (wireType !== 2)
-                        break;
-                      if ((value = reader.stringVerify()).length)
-                        message.streamName = value;
-                      else
-                        delete message.streamName;
-                      continue;
-                    }
-                    case 2: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.int32())
-                        message.physicalType = value;
-                      else
-                        delete message.physicalType;
-                      continue;
-                    }
-                    case 3: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.bool())
-                        message.generalizedStatements = value;
-                      else
-                        delete message.generalizedStatements;
-                      continue;
-                    }
-                    case 4: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.bool())
-                        message.rdfStar = value;
-                      else
-                        delete message.rdfStar;
-                      continue;
-                    }
-                    case 9: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.uint32())
-                        message.maxNameTableSize = value;
-                      else
-                        delete message.maxNameTableSize;
-                      continue;
-                    }
-                    case 10: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.uint32())
-                        message.maxPrefixTableSize = value;
-                      else
-                        delete message.maxPrefixTableSize;
-                      continue;
-                    }
-                    case 11: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.uint32())
-                        message.maxDatatypeTableSize = value;
-                      else
-                        delete message.maxDatatypeTableSize;
-                      continue;
-                    }
-                    case 14: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.int32())
-                        message.logicalType = value;
-                      else
-                        delete message.logicalType;
-                      continue;
-                    }
-                    case 15: {
-                      if (wireType !== 0)
-                        break;
-                      if (value = reader.uint32())
-                        message.version = value;
-                      else
-                        delete message.version;
-                      continue;
-                    }
-                  }
-                  reader.skipType(wireType, _depth, tag);
-                  if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                  }
-                }
-                if (_end !== $undefined)
-                  throw $Error("missing end group");
-                return message;
-              };
-              RdfStreamOptions.decodeDelimited = function(reader) {
-                if (!(reader instanceof $Reader))
-                  reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
-              };
-              return RdfStreamOptions;
-            })();
-            v1.PhysicalStreamType = (function() {
-              const valuesById = {}, values = $Object.create(valuesById);
-              values[valuesById[0] = "PHYSICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
-              values[valuesById[1] = "PHYSICAL_STREAM_TYPE_TRIPLES"] = 1;
-              values[valuesById[2] = "PHYSICAL_STREAM_TYPE_QUADS"] = 2;
-              values[valuesById[3] = "PHYSICAL_STREAM_TYPE_GRAPHS"] = 3;
-              return values;
             })();
             v1.LogicalStreamType = (function() {
               const valuesById = {}, values = $Object.create(valuesById);
@@ -1719,7 +3398,17 @@ var eu = $root.eu = (() => {
                   _depth = 0;
                 if (_depth > $Reader.recursionLimit)
                   throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow();
+                let end, message;
+                if (length === $undefined)
+                  end = reader.len;
+                else {
+                  end = reader.pos + length;
+                  if (end > reader.len)
+                    throw $RangeError("index out of range");
+                  length = reader.len;
+                  reader.len = end;
+                }
+                message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow();
                 while (reader.pos < end) {
                   let start = reader.pos;
                   let tag = reader.tag();
@@ -1799,6 +3488,11 @@ var eu = $root.eu = (() => {
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
                   }
                 }
+                if (length !== $undefined) {
+                  if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                  reader.len = length;
+                }
                 if (_end !== $undefined)
                   throw $Error("missing end group");
                 return message;
@@ -1810,130 +3504,9 @@ var eu = $root.eu = (() => {
               };
               return RdfStreamRow;
             })();
-            v1.RdfStreamFrame = (function() {
-              const RdfStreamFrame = function(properties) {
-                this.rows = [];
-                this.metadata = {};
-                if (properties) {
-                  for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                      this[keys[i]] = properties[keys[i]];
-                }
-              };
-              RdfStreamFrame.prototype.rows = $util.emptyArray;
-              RdfStreamFrame.prototype.metadata = $util.emptyObject;
-              RdfStreamFrame.create = function(properties) {
-                return new RdfStreamFrame(properties);
-              };
-              RdfStreamFrame.encode = function(message, writer, _depth) {
-                if (!writer)
-                  writer = $Writer.create();
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $util.recursionLimit)
-                  throw $Error("max depth exceeded");
-                if (message.rows != null && message.rows.length)
-                  for (let i = 0; i < message.rows.length; ++i)
-                    $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.encode(message.rows[i], writer.uint32(
-                      /* id 1, wireType 2 =*/
-                      10
-                    ).fork(), _depth + 1).ldelim();
-                if (message.metadata != null && $Object.hasOwnProperty.call(message, "metadata"))
-                  for (let keys = $Object.keys(message.metadata), i = 0; i < keys.length; ++i)
-                    writer.uint32(
-                      /* id 15, wireType 2 =*/
-                      122
-                    ).fork().uint32(
-                      /* id 1, wireType 2 =*/
-                      10
-                    ).string(keys[i]).uint32(
-                      /* id 2, wireType 2 =*/
-                      18
-                    ).bytes(message.metadata[keys[i]]).ldelim();
-                if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                  for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-                return writer;
-              };
-              RdfStreamFrame.encodeDelimited = function(message, writer) {
-                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
-              };
-              RdfStreamFrame.decode = function(reader, length, _end, _depth, _target) {
-                if (!(reader instanceof $Reader))
-                  reader = $Reader.create(reader);
-                if (_depth === $undefined)
-                  _depth = 0;
-                if (_depth > $Reader.recursionLimit)
-                  throw $Error("max depth exceeded");
-                let end = length === $undefined ? reader.len : reader.pos + length, message = _target || new $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame(), key, value;
-                while (reader.pos < end) {
-                  let start = reader.pos;
-                  let tag = reader.tag();
-                  if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                  }
-                  let wireType = tag & 7;
-                  switch (tag >>>= 3) {
-                    case 1: {
-                      if (wireType !== 2)
-                        break;
-                      if (!(message.rows && message.rows.length))
-                        message.rows = [];
-                      message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.uint32(), $undefined, _depth + 1));
-                      continue;
-                    }
-                    case 15: {
-                      if (wireType !== 2)
-                        break;
-                      if (message.metadata === $util.emptyObject)
-                        message.metadata = {};
-                      let end2 = reader.uint32() + reader.pos;
-                      key = "";
-                      value = [];
-                      while (reader.pos < end2) {
-                        let tag2 = reader.tag();
-                        wireType = tag2 & 7;
-                        switch (tag2 >>>= 3) {
-                          case 1:
-                            if (wireType !== 2)
-                              break;
-                            key = reader.stringVerify();
-                            continue;
-                          case 2:
-                            if (wireType !== 2)
-                              break;
-                            value = reader.bytes();
-                            continue;
-                        }
-                        reader.skipType(wireType, _depth, tag2);
-                      }
-                      if (key === "__proto__")
-                        $util.makeProp(message.metadata, key);
-                      message.metadata[key] = value;
-                      continue;
-                    }
-                  }
-                  reader.skipType(wireType, _depth, tag);
-                  if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                  }
-                }
-                if (_end !== $undefined)
-                  throw $Error("missing end group");
-                return message;
-              };
-              RdfStreamFrame.decodeDelimited = function(reader) {
-                if (!(reader instanceof $Reader))
-                  reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
-              };
-              return RdfStreamFrame;
-            })();
             return v1;
           })();
-          return proto2;
+          return proto3;
         })();
         return core;
       })();
@@ -2129,7 +3702,9 @@ function fromOptions(value) {
     maxPrefixTableSize: value.maxPrefixTableSize,
     maxDatatypeTableSize: value.maxDatatypeTableSize,
     logicalType: value.logicalType,
-    version: value.version
+    version: value.version,
+    streamType: value.streamType,
+    rdfVersion: value.rdfVersion
   };
 }
 function fromRow(row) {
@@ -2202,6 +3777,8 @@ function encodeOptionsWire(writer, value) {
   if (value.physicalType !== 0) writer.uint32(16).int32(value.physicalType);
   if (value.generalizedStatements) writer.uint32(24).bool(value.generalizedStatements);
   if (value.rdfStar) writer.uint32(32).bool(value.rdfStar);
+  if (value.streamType) writer.uint32(40).int32(value.streamType);
+  if (value.rdfVersion) writer.uint32(48).int32(value.rdfVersion);
   if (value.maxNameTableSize !== 0) writer.uint32(72).uint32(value.maxNameTableSize);
   if (value.maxPrefixTableSize !== 0) writer.uint32(80).uint32(value.maxPrefixTableSize);
   if (value.maxDatatypeTableSize !== 0) writer.uint32(88).uint32(value.maxDatatypeTableSize);
@@ -2256,6 +3833,7 @@ function encodeFrameWire(writer, frame) {
     encodeRowWire(writer, row);
     writer.ldelim();
   }
+  if (frame.columns) proto.RdfColumnBatch.encode(frame.columns, writer.uint32(18).fork()).ldelim();
   for (const [key, value] of frame.metadata) {
     writer.uint32(122).fork().uint32(10).string(key).uint32(18).bytes(value).ldelim();
   }
@@ -2292,7 +3870,7 @@ function decodeRdfStreamFrame(input) {
     const frame = decodeProtoRdfStreamFrame(input);
     const metadata = /* @__PURE__ */ new Map();
     for (const [key, value] of Object.entries(frame.metadata)) metadata.set(key, new Uint8Array(value));
-    return { rows: frame.rows.map((row) => fromRow(row)), metadata };
+    return { rows: frame.rows.map((row) => fromRow(row)), columns: frame.columns ?? void 0, metadata };
   } catch (error) {
     throw new JellyConformanceError("Invalid Jelly protobuf frame", {
       cause: error instanceof Error ? error : void 0
@@ -2308,271 +3886,22 @@ function decodeProtoRdfStreamFrame(input) {
     });
   }
 }
-
-// src/options.ts
-var MIN_NAME_LOOKUP_SIZE = 8;
-var MIN_PREFIX_LOOKUP_SIZE = 4;
-var MAX_LOOKUP_SIZE = 4096;
-var MAX_DECODED_LOOKUP_SIZE = 1048576;
-var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
-var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
-var DEFAULT_LOOKUP_PRESET = Object.freeze({
-  maxNames: 4e3,
-  maxPrefixes: 150,
-  maxDatatypes: 32
-});
-var SMALL_LOOKUP_PRESET = Object.freeze({
-  maxNames: 128,
-  maxPrefixes: 32,
-  maxDatatypes: 32
-});
-function normalizeLookupPreset(value = {}) {
-  const preset = { ...DEFAULT_LOOKUP_PRESET, ...value };
-  if (!Number.isInteger(preset.maxNames) || preset.maxNames < MIN_NAME_LOOKUP_SIZE || preset.maxNames > MAX_LOOKUP_SIZE) {
-    throw new JellyConformanceError(`Name lookup size must be between ${MIN_NAME_LOOKUP_SIZE} and ${MAX_LOOKUP_SIZE}`);
+function decodeProtoRdfStreamFrameReader(reader, length) {
+  try {
+    return proto.RdfStreamFrame.decode(reader, length);
+  } catch (error) {
+    throw new JellyConformanceError("Invalid Jelly protobuf frame", {
+      cause: error instanceof Error ? error : void 0
+    });
   }
-  for (const [name, size] of [["Prefix", preset.maxPrefixes], ["Datatype", preset.maxDatatypes]]) {
-    if (!Number.isInteger(size) || size < 0 || size > MAX_LOOKUP_SIZE) {
-      throw new JellyConformanceError(`${name} lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
-    }
-  }
-  if (preset.maxPrefixes > 0 && preset.maxPrefixes < MIN_PREFIX_LOOKUP_SIZE) {
-    throw new JellyConformanceError(
-      `Prefix lookup size ${preset.maxPrefixes} cannot encode a statement whose terms use more prefixes than the table holds; use 0 to disable the prefix lookup or at least ${MIN_PREFIX_LOOKUP_SIZE}`
-    );
-  }
-  return preset;
 }
-
-// src/rdfjs/adapter.ts
-function sameTerm(term, other) {
-  if (!other || term.termType !== other.termType || term.value !== other.value) return false;
-  if (term.termType === "Literal" && other.termType === "Literal") {
-    return term.language === other.language && term.direction === other.direction && term.datatype.equals(other.datatype);
-  }
-  if (term.termType === "Quad" && other.termType === "Quad") {
-    return term.subject.equals(other.subject) && term.predicate.equals(other.predicate) && term.object.equals(other.object) && term.graph.equals(other.graph);
-  }
-  return true;
-}
-var NamedNode = class {
-  constructor(value) {
-    this.value = value;
-  }
-  termType = "NamedNode";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var BlankNode = class {
-  constructor(value) {
-    this.value = value;
-  }
-  termType = "BlankNode";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var Variable = class {
-  constructor(value) {
-    this.value = value;
-  }
-  termType = "Variable";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var DefaultGraph = class {
-  termType = "DefaultGraph";
-  value = "";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var Literal = class {
-  constructor(value, language = "", datatype = new NamedNode(language ? RDF_LANG_STRING : XSD_STRING), direction) {
-    this.value = value;
-    this.language = language;
-    this.datatype = datatype;
-    this.direction = direction;
-  }
-  termType = "Literal";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var Quad = class {
-  constructor(subject, predicate, object, graph = defaultGraphSingleton) {
-    this.subject = subject;
-    this.predicate = predicate;
-    this.object = object;
-    this.graph = graph;
-  }
-  termType = "Quad";
-  value = "";
-  equals(other) {
-    return sameTerm(this, other);
-  }
-};
-var defaultGraphSingleton = new DefaultGraph();
-var blankNodeCounter = 0;
-var dataFactory = {
-  namedNode: (value) => new NamedNode(value),
-  blankNode: (value) => new BlankNode(value ?? `b${blankNodeCounter++}`),
-  literal: (value, languageOrDatatype) => {
-    if (typeof languageOrDatatype === "string") {
-      const language = languageOrDatatype.toLowerCase();
-      return new Literal(value, language, new NamedNode(language ? RDF_LANG_STRING : XSD_STRING));
-    }
-    if (languageOrDatatype && !("termType" in languageOrDatatype)) {
-      return new Literal(
-        value,
-        languageOrDatatype.language.toLowerCase(),
-        new NamedNode(RDF_LANG_STRING),
-        languageOrDatatype.direction
-      );
-    }
-    return new Literal(value, "", languageOrDatatype ?? new NamedNode(XSD_STRING));
-  },
-  variable: (value) => new Variable(value),
-  defaultGraph: () => defaultGraphSingleton,
-  quad: (subject, predicate, object, graph = defaultGraphSingleton) => new Quad(subject, predicate, object, graph),
-  fromTerm: (original) => {
-    if (original.termType === "NamedNode") return new NamedNode(original.value);
-    if (original.termType === "BlankNode") return new BlankNode(original.value);
-    if (original.termType === "Variable") return new Variable(original.value);
-    if (original.termType === "DefaultGraph") return defaultGraphSingleton;
-    if (original.termType === "Literal") return new Literal(
-      original.value,
-      original.language,
-      new NamedNode(original.datatype.value),
-      original.direction
-    );
-    return new Quad(
-      dataFactory.fromTerm(original.subject),
-      dataFactory.fromTerm(original.predicate),
-      dataFactory.fromTerm(original.object),
-      dataFactory.fromTerm(original.graph)
-    );
-  },
-  fromQuad: (original) => new Quad(
-    dataFactory.fromTerm(original.subject),
-    dataFactory.fromTerm(original.predicate),
-    dataFactory.fromTerm(original.object),
-    dataFactory.fromTerm(original.graph)
-  )
-};
-var DataFactory = dataFactory;
-
-// src/types.ts
-var PhysicalStreamType = /* @__PURE__ */ ((PhysicalStreamType2) => {
-  PhysicalStreamType2[PhysicalStreamType2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
-  PhysicalStreamType2[PhysicalStreamType2["TRIPLES"] = 1] = "TRIPLES";
-  PhysicalStreamType2[PhysicalStreamType2["QUADS"] = 2] = "QUADS";
-  PhysicalStreamType2[PhysicalStreamType2["GRAPHS"] = 3] = "GRAPHS";
-  return PhysicalStreamType2;
-})(PhysicalStreamType || {});
-var LogicalStreamType = /* @__PURE__ */ ((LogicalStreamType2) => {
-  LogicalStreamType2[LogicalStreamType2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
-  LogicalStreamType2[LogicalStreamType2["FLAT_TRIPLES"] = 1] = "FLAT_TRIPLES";
-  LogicalStreamType2[LogicalStreamType2["FLAT_QUADS"] = 2] = "FLAT_QUADS";
-  LogicalStreamType2[LogicalStreamType2["GRAPHS"] = 3] = "GRAPHS";
-  LogicalStreamType2[LogicalStreamType2["DATASETS"] = 4] = "DATASETS";
-  LogicalStreamType2[LogicalStreamType2["SUBJECT_GRAPHS"] = 13] = "SUBJECT_GRAPHS";
-  LogicalStreamType2[LogicalStreamType2["NAMED_GRAPHS"] = 14] = "NAMED_GRAPHS";
-  LogicalStreamType2[LogicalStreamType2["TIMESTAMPED_NAMED_GRAPHS"] = 114] = "TIMESTAMPED_NAMED_GRAPHS";
-  return LogicalStreamType2;
-})(LogicalStreamType || {});
-var Message = class _Message extends Array {
-  constructor(messageCounter, quads = [], metadata = /* @__PURE__ */ new Map()) {
-    super();
-    this.messageCounter = messageCounter;
-    Object.setPrototypeOf(this, _Message.prototype);
-    for (const quad of quads) this.push(quad);
-    this.metadata = metadata instanceof Map ? metadata : new Map(Object.entries(metadata));
-  }
-  static get [Symbol.species]() {
-    return Array;
-  }
-  metadata;
-};
-function isMessageQuad(value) {
-  return Boolean(value && typeof value === "object" && "quad" in value && "messageCounter" in value);
-}
-function toMessages(output, messageCount) {
-  const messages = [];
-  const inferredCount = messageCount ?? (Array.isArray(output) && "messageCount" in output ? output.messageCount : void 0);
-  let wrapped = false;
-  for (const item of output) {
-    const entry = isMessageQuad(item) ? item : { quad: item, messageCounter: 0 };
-    wrapped ||= isMessageQuad(item);
-    while (messages.length <= entry.messageCounter) messages.push(new Message(messages.length));
-    messages[entry.messageCounter].push(entry.quad);
-  }
-  if (inferredCount !== void 0) {
-    while (messages.length < inferredCount) messages.push(new Message(messages.length));
-  } else if (!wrapped && messages.length === 0) {
-    return [];
-  }
-  return messages;
-}
-
-// src/codec/LookupDecoder.ts
-var LookupDecoder = class {
-  constructor(size, limit = MAX_DECODED_LOOKUP_SIZE) {
-    this.size = size;
-    if (!Number.isInteger(size) || size < 0 || size > limit) {
-      throw new JellyConformanceError(`Lookup size must be between 0 and ${limit}`);
-    }
-  }
-  /**
-   * Grown on demand rather than allocated at the declared size, so a stream may
-   * declare a large table without the parser paying for entries it never fills.
-   */
-  data = [];
-  lastAssignedIndex = 0;
-  lastReusedIndex = 0;
-  assign(index, value) {
-    const resolved = index === 0 ? this.lastAssignedIndex + 1 : index;
-    if (resolved < 1 || resolved > this.size) {
-      throw new JellyConformanceError(`Lookup entry index ${resolved} is outside table size ${this.size}`);
-    }
-    if (resolved > this.data.length) this.reserve(resolved);
-    this.data[resolved - 1] = value;
-    this.lastAssignedIndex = resolved;
-  }
-  /** Extend the backing array by doubling, staying packed and capped at the table size. */
-  reserve(required) {
-    let capacity = this.data.length || 16;
-    while (capacity < required) capacity *= 2;
-    if (capacity > this.size) capacity = this.size;
-    for (let index = this.data.length; index < capacity; index++) this.data.push(void 0);
-  }
-  at(index) {
-    if (index < 1 || index > this.size) throw new JellyConformanceError(`Invalid lookup index ${index}`);
-    const value = index <= this.data.length ? this.data[index - 1] : void 0;
-    if (value === void 0) throw new JellyConformanceError(`Lookup index ${index} has not been assigned`);
-    this.lastReusedIndex = index;
-    return value;
-  }
-  prefix(index) {
-    const resolved = index || this.lastReusedIndex;
-    return resolved === 0 ? "" : this.at(resolved);
-  }
-  name(index) {
-    const resolved = index || this.lastReusedIndex + 1;
-    if (resolved === 0) throw new JellyConformanceError("Zero is not a valid resolved name index");
-    return this.at(resolved);
-  }
-  datatype(index) {
-    if (index === 0) throw new JellyConformanceError("Zero is not a valid datatype index");
-    return this.at(index);
-  }
-};
 
 // src/codec/Decoder.ts
+var import_minimal3 = require("protobufjs/minimal.js");
 var EMPTY_METADATA = /* @__PURE__ */ new Map();
 var Decoder = class {
+  columns;
+  parserOptions;
   factory;
   strict;
   maxSupportedVersion;
@@ -2591,14 +3920,43 @@ var Decoder = class {
   streamOptions;
   namespaces = /* @__PURE__ */ Object.create(null);
   constructor(options = {}, events = {}) {
+    this.parserOptions = options;
     this.factory = options.factory ?? DataFactory;
     this.strict = options.strict ?? true;
-    this.maxSupportedVersion = options.maxSupportedVersion ?? 2;
+    this.maxSupportedVersion = options.maxSupportedVersion ?? 3;
     this.maxLookupTableSize = options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
     this.events = events;
     this.defaultGraph = this.factory.defaultGraph();
   }
+  /** Decodes logical messages, which may cross or share column frames. */
+  decodePayloadMessages(reader, length) {
+    const start = reader.pos;
+    if (!this.streamOptions || this.columns) {
+      const frame = decodeProtoRdfStreamFrameReader(reader, length);
+      if (!frame.rows.length && !frame.columns && !this.columns) return [];
+      const version = frame.rows[0]?.options?.version;
+      if (this.columns || version === 3) {
+        if (3 > this.maxSupportedVersion) throw new JellyUnsupportedFeatureError("Unsupported Jelly protocol version 3");
+        this.columns ??= new ColumnDecoder(this.parserOptions, this.events);
+        const messages = this.columns.decode(frame);
+        this.streamOptions = this.columns.streamOptions;
+        Object.assign(this.namespaces, this.columns.namespaces);
+        return messages;
+      }
+      if (frame.columns) throw new JellyConformanceError("Column batch before version 3 stream options");
+      reader.pos = start;
+    }
+    return [this.decodeRowPayload(reader, length)];
+  }
+  finishMessages() {
+    if (this.columns) return this.columns.finish();
+    this.finish();
+    return [];
+  }
   decode(frame) {
+    if (this.columns || frame.columns || frame.rows.some((r) => r.case === "options" && r.value.version === 3)) {
+      return this.decodeEncodedFrame(encodeRdfStreamFrame(frame));
+    }
     const message = new Message(this.messageCounter++, [], frame.metadata);
     for (const row of frame.rows) {
       if (row.case === "options") {
@@ -2621,6 +3979,9 @@ var Decoder = class {
   }
   decodeProto(frame) {
     const protoFrame = frame;
+    if (this.columns || protoFrame.columns || protoFrame.rows.some((r) => r.options?.version === 3)) {
+      return this.decodeEncodedFrame(proto.RdfStreamFrame.encode(protoFrame).finish());
+    }
     let metadata;
     for (const key in protoFrame.metadata) {
       if (Object.hasOwn(protoFrame.metadata, key)) (metadata ??= /* @__PURE__ */ new Map()).set(key, protoFrame.metadata[key]);
@@ -2649,7 +4010,15 @@ var Decoder = class {
     }
     return message;
   }
+  decodeEncodedFrame(bytes) {
+    return this.decodeProtoPayload(import_minimal3.Reader.create(bytes), bytes.length);
+  }
+  /** Frame-oriented compatibility API; use decodePayloadMessages for logical boundaries. */
   decodeProtoPayload(rawReader, length) {
+    const messages = this.decodePayloadMessages(rawReader, length);
+    return new Message(messages[0]?.messageCounter ?? this.messageCounter, messages.flat(), messages[0]?.metadata);
+  }
+  decodeRowPayload(rawReader, length) {
     const metadata = /* @__PURE__ */ new Map();
     const message = new Message(this.messageCounter++, [], metadata);
     decodeProtoRdfStreamFrameRows(
@@ -2668,6 +4037,10 @@ var Decoder = class {
     return message;
   }
   decodeProtoPayloadTo(rawReader, length, output) {
+    if (!this.streamOptions || this.columns) {
+      for (const message of this.decodePayloadMessages(rawReader, length)) for (const quad of message) output.push(quad);
+      return;
+    }
     this.messageCounter++;
     decodeProtoRdfStreamFrameRows(
       rawReader,
@@ -2959,7 +4332,8 @@ var Decoder = class {
     return this.factory.literal(lex, this.xsdString ??= this.factory.namedNode(XSD_STRING));
   }
   finish() {
-    if (!this.streamOptions) throw new JellyConformanceError("No Jelly stream options row was found");
+    if (this.columns) return;
+    if (!this.streamOptions && this.sawAnyRow) throw new JellyConformanceError("No Jelly stream options row was found");
     if (this.graph !== void 0) throw new JellyConformanceError("Jelly graph stream ended before graph_end");
   }
   ingestOptions(raw) {
@@ -2973,6 +4347,7 @@ var Decoder = class {
     if (raw.version < 1 || raw.version > this.maxSupportedVersion) {
       throw new JellyUnsupportedFeatureError(`Unsupported Jelly protocol version ${raw.version}`);
     }
+    if (raw.version === 3) throw new JellyConformanceError("Cannot change Jelly layout within a stream");
     if (raw.rdfStar) throw new JellyUnsupportedFeatureError("RDF-star Jelly streams are not supported");
     if (raw.generalizedStatements) throw new JellyUnsupportedFeatureError("Generalized RDF Jelly streams are not supported");
     if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > this.maxLookupTableSize) {
@@ -3187,7 +4562,7 @@ var Decoder = class {
 };
 
 // src/codec/MessageDecoder.ts
-var import_minimal3 = require("protobufjs/minimal.js");
+var import_minimal4 = require("protobufjs/minimal.js");
 
 // src/codec/bytes.ts
 function concatBytes(chunks) {
@@ -3212,7 +4587,7 @@ function delimitedHint(first, second, third) {
   return first !== 10 || second === 10 && third !== 10;
 }
 function delimitedJellyHint(input) {
-  return input.byteLength >= 3 && delimitedHint(input[0], input[1], input[2]);
+  return input.byteLength > 0 && (input[0] === 0 || input.byteLength >= 3 && delimitedHint(input[0], input[1], input[2]));
 }
 var FramedMessageDecoder = class {
   constructor(options, decodeFrame, decodeReader) {
@@ -3317,7 +4692,7 @@ var FramedMessageDecoder = class {
       return true;
     }
     if (!final || this.delivered) return true;
-    if (this.retained === 0) throw new JellyConformanceError("Jelly input is empty");
+    if (this.retained === 0) return true;
     const frame = this.decodeFrame(this.buffer.subarray(this.start, this.filled));
     this.delivered = true;
     this.buffer = EMPTY_BYTES;
@@ -3337,7 +4712,7 @@ var FramedMessageDecoder = class {
       let prefixSize;
       let reader;
       try {
-        reader = import_minimal3.Reader.create(buffer.subarray(offset, end));
+        reader = import_minimal4.Reader.create(buffer.subarray(offset, end));
         size = reader.uint32();
         prefixSize = reader.pos;
       } catch (error) {
@@ -3393,8 +4768,8 @@ var DirectMessageDecoder = class extends FramedMessageDecoder {
   constructor(options, decoder) {
     super(
       options,
-      (input) => decoder.decodeProtoPayload(import_minimal3.Reader.create(input), input.byteLength),
-      (reader, length) => decoder.decodeProtoPayload(reader, length)
+      (input) => decoder.decodePayloadMessages(import_minimal4.Reader.create(input), input.byteLength),
+      (reader, length) => decoder.decodePayloadMessages(reader, length)
     );
   }
 };
@@ -3402,7 +4777,7 @@ var DirectQuadDecoder = class extends FramedMessageDecoder {
   constructor(options, decoder, output) {
     super(
       options,
-      (input) => decoder.decodeProtoPayloadTo(import_minimal3.Reader.create(input), input.byteLength, output),
+      (input) => decoder.decodeProtoPayloadTo(import_minimal4.Reader.create(input), input.byteLength, output),
       (reader, length) => decoder.decodeProtoPayloadTo(reader, length, output)
     );
   }
@@ -3462,12 +4837,15 @@ var Parser = class {
     const reader = new DirectMessageDecoder(this.options, decoder);
     const messages = [];
     let messageCount = 0;
-    reader.decodeEach(optimizedBinaryInput(input), (message) => {
-      messageCount++;
-      if (consume) consume(message);
-      else messages.push(message);
-    });
-    decoder.finish();
+    const accept = (batch) => {
+      for (const message of batch) {
+        messageCount++;
+        if (consume) consume(message);
+        else messages.push(message);
+      }
+    };
+    reader.decodeEach(optimizedBinaryInput(input), accept);
+    accept(decoder.finishMessages());
     return { messages, decoder, messageCount };
   }
   decodeQuads(input) {
@@ -3475,7 +4853,7 @@ var Parser = class {
     const decoder = new Decoder(this.options);
     const reader = new DirectQuadDecoder(this.options, decoder, output);
     reader.decodeEach(optimizedBinaryInput(input), () => void 0);
-    decoder.finish();
+    for (const message of decoder.finishMessages()) for (const quad of message) output.push(quad);
     return output;
   }
   flattenQuads(messages) {
@@ -3490,6 +4868,202 @@ var Parser = class {
       for (const quad of message) output.push({ quad, messageCounter: message.messageCounter });
     }
     return output;
+  }
+};
+
+// src/codec/ColumnEncoder.ts
+var proto2 = eu.ostrzyciel.jelly.core.proto.v1;
+var ColumnEncoder = class {
+  constructor(options, sink) {
+    this.options = options;
+    this.sink = sink;
+    this.physicalType = options.physicalType ?? 2 /* QUADS */;
+    if (this.physicalType !== 1 && this.physicalType !== 2) throw new JellyConformanceError("Jelly 1.2 requires TRIPLES or QUADS; use QUADS for named graphs");
+    if (options.logicalType) throw new JellyConformanceError("Jelly 1.2 uses streamType instead of logicalType");
+    this.streamType = options.streamType ?? 0 /* FLAT */;
+    this.rdfVersion = options.rdfVersion ?? 3 /* RDF_1_2 */;
+    if (![0, 1].includes(this.streamType) || ![0, 1, 2, 3].includes(this.rdfVersion)) throw new JellyConformanceError("Invalid streamType or rdfVersion");
+    this.lookup = normalizeLookupPreset(options.lookup);
+    if (this.lookup.maxNames < 128) throw new JellyConformanceError("Jelly 1.2 requires a name lookup size of at least 128");
+    this.size = options.messageSize ?? 250;
+    if (!Number.isInteger(this.size) || this.size < 1 || this.size > 134217727) throw new JellyConformanceError("messageSize must be between 1 and 2^27 - 1");
+  }
+  frames = [];
+  physicalType;
+  lookup;
+  size;
+  streamType;
+  rdfVersion;
+  tables = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
+  quads = [];
+  namespaces = [];
+  first = true;
+  finished = false;
+  inMessage = false;
+  assertOpen() {
+    if (this.finished) throw new JellyConformanceError("Jelly encoder has already ended");
+  }
+  addNamespace(name, iri) {
+    this.assertOpen();
+    this.fit([iri], []);
+    this.tables[0].set(iri, this.tables[0].get(iri) ?? this.tables[0].size + 1);
+    this.namespaces.push([name, iri]);
+  }
+  addQuad(quad) {
+    this.assertOpen();
+    if (this.streamType === 1 && !this.inMessage) throw new JellyConformanceError("Use addMessage() or message counters with streamType MESSAGES");
+    if (this.physicalType === 1 && quad.graph.termType !== "DefaultGraph") throw new JellyConformanceError("TRIPLES streams cannot contain named graph quads");
+    if (!["NamedNode", "BlankNode", "Literal", "Quad"].includes(quad.object.termType)) throw new JellyConformanceError("Invalid RDF object");
+    if (!["NamedNode", "BlankNode"].includes(quad.subject.termType) || quad.predicate.termType !== "NamedNode" || !["DefaultGraph", "NamedNode", "BlankNode"].includes(quad.graph.termType)) throw new JellyConformanceError("Invalid RDF statement");
+    const names = [], datatypes = [];
+    for (const term of [quad.subject, quad.predicate, quad.object, quad.graph]) this.keys(term, names, datatypes);
+    if (this.quads.length >= this.size) this.flush();
+    this.fit(names, datatypes);
+    for (const [values, table] of [[names, this.tables[0]], [datatypes, this.tables[1]]]) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
+    this.quads.push(quad);
+  }
+  addMessage(quads, metadata) {
+    this.assertOpen();
+    if (this.streamType !== 1) throw new JellyConformanceError("Jelly 1.2 addMessage() requires streamType MESSAGES");
+    this.inMessage = true;
+    try {
+      for (const quad of quads) this.addQuad(quad);
+      this.flush(metadata, true);
+    } finally {
+      this.inMessage = false;
+    }
+  }
+  addGraph(_graph, _quads, _metadata) {
+    throw new JellyUnsupportedFeatureError("Jelly 1.2 has no GRAPHS layout; use QUADS and addMessage()");
+  }
+  finish() {
+    this.assertOpen();
+    if (this.first || this.quads.length || this.namespaces.length) this.flush();
+    this.finished = true;
+    return this.frames;
+  }
+  fit(names, datatypes) {
+    const fits = () => [names, datatypes].every((values, i) => (/* @__PURE__ */ new Set([...this.tables[i].keys(), ...values])).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
+    if (!fits()) this.flush();
+    if (!fits()) throw new JellyConformanceError("A single statement does not fit in the configured lookup tables");
+  }
+  keys(term, names, datatypes, depth = 0) {
+    if (term.termType === "NamedNode") names.push(term.value);
+    else if (term.termType === "Literal") {
+      if (term.direction && (!term.language || !["ltr", "rtl"].includes(term.direction))) throw new JellyConformanceError("Invalid directional language literal");
+      if (term.direction && this.rdfVersion === 1) throw new JellyConformanceError("RDF 1.1 does not allow base directions");
+      if (!term.language && term.datatype.value !== XSD_STRING) {
+        if ([RDF_LANG_STRING, RDF_DIR_LANG_STRING].includes(term.datatype.value)) throw new JellyConformanceError("Language datatypes require a language tag");
+        datatypes.push(term.datatype.value);
+      }
+    } else if (term.termType === "Quad") {
+      if (this.rdfVersion === 1 || this.rdfVersion === 2) throw new JellyConformanceError("Declared RDF version does not allow triple terms");
+      if (depth >= 64) throw new JellyConformanceError("Triple terms nested too deeply");
+      if (!["NamedNode", "BlankNode", "Literal", "Quad"].includes(term.object.termType)) throw new JellyConformanceError("Invalid triple term object");
+      if (!["NamedNode", "BlankNode"].includes(term.subject.termType) || term.predicate.termType !== "NamedNode" || term.graph.termType !== "DefaultGraph") throw new JellyConformanceError("Invalid RDF 1.2 triple term");
+      for (const value of [term.subject, term.predicate, term.object]) this.keys(value, names, datatypes, depth + 1);
+    } else if (!["BlankNode", "DefaultGraph"].includes(term.termType)) throw new JellyConformanceError(`Invalid RDF term ${term.termType}`);
+  }
+  literal(term) {
+    if (term.language) return { lex: term.value, langtag: term.language, direction: term.direction === "ltr" ? 1 : term.direction === "rtl" ? 2 : 0 };
+    return term.datatype.value === XSD_STRING ? { lex: term.value } : { lex: term.value, datatype: this.tables[1].get(term.datatype.value) };
+  }
+  triple(term) {
+    const out = { pIri: { nameId: this.tables[0].get(term.predicate.value) } };
+    if (term.subject.termType === "NamedNode") out.sIri = { nameId: this.tables[0].get(term.subject.value) };
+    else out.sBnode = term.subject.value;
+    const o = term.object;
+    if (o.termType === "NamedNode") out.oIri = { nameId: this.tables[0].get(o.value) };
+    else if (o.termType === "BlankNode") out.oBnode = o.value;
+    else if (o.termType === "Literal") out.oLiteral = this.literal(o);
+    else if (o.termType === "Quad") out.oTripleTerm = this.triple(o);
+    return out;
+  }
+  column(terms) {
+    const c = new proto2.RdfColumn();
+    const kinds = [];
+    let skip = 0;
+    for (let i = 0; i < terms.length; ) {
+      const term = terms[i];
+      let end = i + 1;
+      while (end < terms.length && term.equals(terms[end])) end++;
+      const count = end - i;
+      const unbound = term.termType === "DefaultGraph";
+      if (unbound || count > 1) {
+        const length = count - (unbound ? 1 : 2);
+        c.layouts.push(skip * 32 + (unbound ? 16 : 0) + Math.min(length, 15));
+        if (length >= 15) c.layouts.push(length - 15);
+        skip = 0;
+      } else skip++;
+      if (!unbound) {
+        if (term.termType === "NamedNode") {
+          kinds.push(0);
+          c.nameIds.push(this.tables[0].get(term.value));
+        } else if (term.termType === "BlankNode") {
+          kinds.push(2);
+          c.bnodes.push(term.value);
+        } else if (term.termType === "Quad") {
+          kinds.push(3);
+          c.tripleTerms.push(this.triple(term));
+        } else if (term.termType === "Literal") {
+          kinds.push(1);
+          c.lexValues.push(term.value);
+          if (term.language) {
+            const dir = term.direction === "ltr" ? 1 : term.direction === "rtl" ? 2 : 0;
+            let index = c.langtags.findIndex((tag, j) => tag === term.language && c.langtagDirections[j] === dir);
+            if (index < 0) {
+              index = c.langtags.length;
+              c.langtags.push(term.language);
+              c.langtagDirections.push(dir);
+            }
+            c.literalKinds.push((index + 1) * 2);
+          } else c.literalKinds.push(term.datatype.value === XSD_STRING ? 0 : this.tables[1].get(term.datatype.value) * 2 - 1);
+        }
+      }
+      i = end;
+    }
+    if (new Set(kinds).size > 1) {
+      c.kinds = new Uint8Array(Math.ceil(kinds.length / 4));
+      kinds.forEach((kind, i) => {
+        c.kinds[i >> 2] |= kind << 2 * (i & 3);
+      });
+    }
+    if (c.literalKinds.every((v) => v === 0)) c.literalKinds = [];
+    else if (new Set(c.literalKinds).size === 1) c.literalKinds = [c.literalKinds[0]];
+    if (c.langtagDirections.every((v) => v === 0)) c.langtagDirections = [];
+    return c;
+  }
+  flush(metadata, boundary = false) {
+    const columns = {
+      rowCount: this.quads.length,
+      names: this.tables[0].size ? [{ id: 1, values: [...this.tables[0].keys()] }] : [],
+      datatypes: this.tables[1].size ? [{ id: 1, values: [...this.tables[1].keys()] }] : [],
+      namespaces: this.namespaces.map(([name, iri]) => ({ name, value: { nameId: this.tables[0].get(iri) } })),
+      subjects: this.column(this.quads.map((q) => q.subject)),
+      predicates: this.column(this.quads.map((q) => q.predicate)),
+      objects: this.column(this.quads.map((q) => q.object)),
+      ...this.physicalType === 2 ? { graphs: this.column(this.quads.map((q) => q.graph)) } : {},
+      messageLengths: boundary ? [this.quads.length] : []
+    };
+    const frame = { rows: this.first ? [{ case: "options", value: {
+      streamName: this.options.streamName ?? "",
+      physicalType: this.physicalType,
+      generalizedStatements: false,
+      rdfStar: false,
+      logicalType: 0,
+      streamType: this.streamType,
+      rdfVersion: this.rdfVersion,
+      maxNameTableSize: this.lookup.maxNames,
+      maxPrefixTableSize: this.lookup.maxPrefixes,
+      maxDatatypeTableSize: this.lookup.maxDatatypes,
+      version: 3
+    } }] : [], columns, metadata: metadata instanceof Map ? new Map(metadata) : new Map(Object.entries(metadata ?? {})) };
+    if (this.sink) this.sink(frame);
+    else this.frames.push(frame);
+    this.first = false;
+    this.quads = [];
+    this.namespaces = [];
+    for (const table of this.tables) table.clear();
   }
 };
 
@@ -3860,7 +5434,8 @@ var Writer = class {
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
     const buffered = !this.output && this.messageEncoder.delimited;
     if (buffered) this.chunks = [];
-    this.encoder = new Encoder(options, this.streaming ? (frame) => this.writeFrame(frame) : buffered ? (frame) => this.chunks.push(this.messageEncoder.encode(frame)) : void 0);
+    const EncoderClass = options.version === 3 ? ColumnEncoder : Encoder;
+    this.encoder = new EncoderClass(options, this.streaming ? (frame) => this.writeFrame(frame) : buffered ? (frame) => this.chunks.push(this.messageEncoder.encode(frame)) : void 0);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
       this.encoder.addNamespace(prefix, typeof iri === "string" ? iri : iri.value);
     }
@@ -4034,11 +5609,12 @@ var StreamParser = class extends import_node_stream.Transform {
     try {
       this.drainPending();
       this.messageReader.endEach((message) => {
-        this.enqueue(message);
+        for (const item of message) this.enqueue(item);
         this.drainPending();
         return true;
       });
-      this.decoder.finish();
+      for (const message of this.decoder.finishMessages()) this.enqueue(message);
+      this.drainPending();
     } catch (error) {
       this.busy = false;
       callback(error instanceof Error ? error : new Error(String(error)));
@@ -4063,8 +5639,8 @@ var StreamParser = class extends import_node_stream.Transform {
     if (!this.messageReader.paused && this.pendingIndex >= this.pending.length) super._read(size);
   }
   /** Returns false when the readable side is full and decoding should pause. */
-  accept(message) {
-    this.enqueue(message);
+  accept(messages) {
+    for (const message of messages) this.enqueue(message);
     return this.flushPending();
   }
   enqueue(message) {
@@ -4117,6 +5693,7 @@ var StreamWriter = class extends import_node_stream2.Transform {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   BlankNode,
+  ColumnEncoder,
   DEFAULT_LOOKUP_PRESET,
   DataFactory,
   Decoder,
@@ -4138,7 +5715,10 @@ var StreamWriter = class extends import_node_stream2.Transform {
   Parser,
   PhysicalStreamType,
   Quad,
+  RDF_DIR_LANG_STRING,
   RDF_LANG_STRING,
+  RdfStreamType,
+  RdfVersion,
   SMALL_LOOKUP_PRESET,
   StreamParser,
   StreamWriter,
