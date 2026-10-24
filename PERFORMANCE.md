@@ -1,8 +1,8 @@
 # Performance
 
-Measured 2026-10-24 with rdfjs-jelly 0.1.6. Across 6 RiverBench datasets (60,000 messages and 2,103,143 statements), Jelly 1.2 reads at **1.97 million statements/s**, compared with **2.25 million/s** for legacy Jelly row-layout archives (protocol tag 1) and **0.94 million/s** for source-preserving Turtle message logs.
+Measured 2026-10-24 with rdfjs-jelly 0.1.6. Across 6 RiverBench datasets (60,000 messages and 2,103,143 statements), Jelly 1.2 reads at **2.60 million statements/s**, compared with **2.43 million/s** for legacy Jelly row-layout archives (protocol tag 1) and **0.93 million/s** for source-preserving Turtle message logs.
 
-Jelly 1.2 achieves **0.87×** the legacy read throughput and **2.10×** the Turtle throughput. Its downloaded encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip bytes**, and **10.7% fewer zstd bytes** than the legacy archives. All aggregate rates and ratios are geometric means across datasets; they are not pooled throughputs or averages across individual statements.
+Jelly 1.2 achieves **1.07×** the legacy read throughput and **2.79×** the Turtle throughput. Its downloaded encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip bytes**, and **10.7% fewer zstd bytes** than the legacy archives. All aggregate rates and ratios are geometric means across datasets; they are not pooled throughputs or averages across individual statements.
 
 ## Workload and method
 
@@ -33,33 +33,18 @@ All rates are **million statements/s**. These measurements include RDF term, qua
 
 | Dataset | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 | 1.2 / legacy |
 | --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.15 | 1.22 | 2.59 | 3.67 | 1.42× |
-| citypulse-traffic | 1.01 | 1.16 | 2.88 | 2.95 | 1.03× |
-| digital-agenda-indicators | 0.58 | 1.30 | 1.98 | 1.47 | 0.74× |
-| linked-spending | 1.03 | 1.26 | 2.57 | 1.95 | 0.76× |
-| muziekweb | 1.00 | 1.04 | 1.37 | 0.81 | 0.59× |
-| osm2rdf-denmark | 0.96 | 1.24 | 2.52 | 2.29 | 0.91× |
+| assist-iot-weather | 1.14 | 1.26 | 2.82 | 3.95 | 1.40× |
+| citypulse-traffic | 0.95 | 1.25 | 3.02 | 3.67 | 1.22× |
+| digital-agenda-indicators | 0.60 | 1.33 | 2.27 | 1.99 | 0.88× |
+| linked-spending | 1.09 | 1.26 | 2.47 | 2.67 | 1.08× |
+| muziekweb | 1.00 | 1.05 | 1.57 | 1.23 | 0.78× |
+| osm2rdf-denmark | 0.94 | 1.28 | 2.74 | 3.28 | 1.20× |
 
 | Input compression | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 | 1.2 / legacy |
 | --- | --- | --- | --- | --- | --- |
-| none | 0.94 | 1.20 | 2.25 | 1.97 | 0.87× |
-| gzip | 0.86 | 1.09 | 2.07 | 1.90 | 0.92× |
-| zstd | 0.88 | 1.14 | 2.10 | 1.96 | 0.93× |
-
-### Independent read repetition
-
-Each uncompressed Jelly case was measured again in a fresh worker, with two warmups and seven timed iterations. This measures process-to-process variation for the same runtime bundle and input bytes. The main tables use the primary run; these repetitions are reported separately. Rates are million statements/s.
-
-| Dataset | Legacy primary | Legacy repetition | 1.2 primary | 1.2 repetition |
-| --- | --- | --- | --- | --- |
-| assist-iot-weather | 2.59 | 2.82 | 3.67 | 4.42 |
-| citypulse-traffic | 2.88 | 2.95 | 2.95 | 2.90 |
-| digital-agenda-indicators | 1.98 | 2.41 | 1.47 | 1.54 |
-| linked-spending | 2.57 | 2.71 | 1.95 | 2.03 |
-| muziekweb | 1.37 | 1.47 | 0.81 | 0.88 |
-| osm2rdf-denmark | 2.52 | 2.75 | 2.29 | 2.51 |
-
-The Jelly 1.2 geometric mean is 1.97 million statements/s in the primary run and 2.11 million/s in the repetition. Scheduling, heap behavior and thermal state are not controlled; these measurements do not identify which source of variation dominates.
+| none | 0.93 | 1.24 | 2.43 | 2.60 | 1.07× |
+| gzip | 0.88 | 1.13 | 2.21 | 2.41 | 1.09× |
+| zstd | 0.91 | 1.14 | 2.26 | 2.53 | 1.12× |
 
 ## Serialized size
 
@@ -111,12 +96,12 @@ Streaming reads the original Jelly gzip downloads from disk, and the source Turt
 
 | Dataset | Turtle M/s | Legacy tag 1 M/s | Jelly 1.2 M/s | Peak RSS MiB: Turtle / legacy / 1.2 |
 | --- | --- | --- | --- | --- |
-| assist-iot-weather | 0.89 | 2.72 | 3.83 | 119 / 119 / 119 |
-| citypulse-traffic | 0.75 | 1.77 | 1.67 | 109 / 130 / 133 |
-| digital-agenda-indicators | 0.49 | 1.32 | 1.10 | 94 / 74 / 77 |
-| linked-spending | 0.98 | 1.29 | 1.22 | 88 / 101 / 103 |
-| muziekweb | 0.55 | 0.85 | 0.49 | 86 / 96 / 101 |
-| osm2rdf-denmark | 0.91 | 1.58 | 1.29 | 107 / 101 / 129 |
+| assist-iot-weather | 1.04 | 3.14 | 4.00 | 107 / 128 / 103 |
+| citypulse-traffic | 0.87 | 1.96 | 1.94 | 110 / 128 / 130 |
+| digital-agenda-indicators | 0.52 | 1.35 | 1.31 | 87 / 73 / 74 |
+| linked-spending | 0.93 | 1.35 | 1.39 | 89 / 100 / 104 |
+| muziekweb | 0.76 | 0.75 | 0.66 | 91 / 96 / 99 |
+| osm2rdf-denmark | 0.92 | 1.70 | 1.82 | 103 / 99 / 128 |
 
 Peak RSS is the operating system's whole-process high-water mark, including startup, imports, input buffers and warmups. It is not parser-only memory or cumulative allocation. Retaining complete RDF arrays is a different memory workload from consuming and discarding a stream. These measurements do not establish a memory bound for arbitrary blank-node-heavy messages, nested triple terms or slow consumers.
 
@@ -124,68 +109,68 @@ Peak RSS is the operating system's whole-process high-water mark, including star
 
 All writers consume the same decoded source messages. Turtle uses shared prefixes. Jelly uses `Writer.addMessage`, TRIPLES, protocol tag 2 for 1.1 or tag 3 for 1.2, and `messageSize: 1024`. Jelly 1.1 uses logical type GRAPHS; 1.2 uses stream type MESSAGES. The 1.1 size budget includes lookup rows, while the 1.2 budget counts statements, so the same setting does not mean identical physical framing.
 
-Timing includes serialization and collecting the returned output bytes, including UTF-8 encoding for Turtle. It excludes source parsing and compression. Rates are **million statements/s**.
+Jelly 1.2 uses the default persistent dictionaries and leaves message packing disabled. Timing includes serialization and collecting the returned output bytes, including UTF-8 encoding for Turtle. It excludes source parsing and compression. Rates are **million statements/s**.
 
 | Dataset | Turtle | Jelly 1.1 | Jelly 1.2 | 1.2 / 1.1 |
 | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.29 | 1.86 | 2.08 | 1.12× |
-| citypulse-traffic | 1.57 | 1.57 | 1.45 | 0.92× |
-| digital-agenda-indicators | 1.69 | 1.18 | 0.75 | 0.64× |
-| linked-spending | 1.56 | 1.24 | 1.01 | 0.82× |
-| muziekweb | 1.57 | 0.83 | 0.66 | 0.80× |
-| osm2rdf-denmark | 1.48 | 1.60 | 1.28 | 0.80× |
+| assist-iot-weather | 1.30 | 1.76 | 2.18 | 1.24× |
+| citypulse-traffic | 1.57 | 1.63 | 1.60 | 0.98× |
+| digital-agenda-indicators | 1.75 | 1.16 | 0.95 | 0.82× |
+| linked-spending | 1.60 | 1.23 | 1.26 | 1.02× |
+| muziekweb | 1.58 | 0.83 | 0.64 | 0.77× |
+| osm2rdf-denmark | 1.51 | 1.61 | 1.51 | 0.94× |
 
 | Raw written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
 | --- | --- | --- | --- |
-| assist-iot-weather | 75.33 | 19.53 | 44.42 |
-| citypulse-traffic | 91.16 | 34.78 | 67.80 |
-| digital-agenda-indicators | 57.80 | 23.13 | 141.62 |
-| linked-spending | 108.07 | 37.78 | 108.28 |
-| muziekweb | 91.07 | 44.25 | 101.01 |
-| osm2rdf-denmark | 65.00 | 33.80 | 77.25 |
+| assist-iot-weather | 75.33 | 19.53 | 21.30 |
+| citypulse-traffic | 91.16 | 34.78 | 37.40 |
+| digital-agenda-indicators | 57.80 | 23.13 | 25.25 |
+| linked-spending | 108.07 | 37.78 | 36.00 |
+| muziekweb | 91.07 | 44.25 | 46.11 |
+| osm2rdf-denmark | 65.00 | 33.80 | 34.86 |
 
 | gzip written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
 | --- | --- | --- | --- |
-| assist-iot-weather | 1.61 | 1.21 | 0.97 |
-| citypulse-traffic | 8.29 | 8.04 | 7.03 |
-| digital-agenda-indicators | 2.29 | 2.50 | 2.96 |
-| linked-spending | 8.59 | 8.12 | 9.38 |
-| muziekweb | 13.19 | 15.10 | 15.98 |
-| osm2rdf-denmark | 7.77 | 9.43 | 9.31 |
+| assist-iot-weather | 1.61 | 1.21 | 1.48 |
+| citypulse-traffic | 8.29 | 8.04 | 7.81 |
+| digital-agenda-indicators | 2.29 | 2.50 | 2.97 |
+| linked-spending | 8.59 | 8.12 | 8.28 |
+| muziekweb | 13.19 | 15.10 | 15.78 |
+| osm2rdf-denmark | 7.77 | 9.43 | 8.52 |
 
 | zstd written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
 | --- | --- | --- | --- |
-| assist-iot-weather | 1.28 | 0.80 | 0.74 |
-| citypulse-traffic | 8.09 | 7.94 | 6.99 |
-| digital-agenda-indicators | 2.41 | 2.54 | 2.68 |
-| linked-spending | 7.35 | 7.30 | 7.67 |
-| muziekweb | 12.92 | 14.20 | 14.17 |
-| osm2rdf-denmark | 7.98 | 9.01 | 8.35 |
+| assist-iot-weather | 1.28 | 0.80 | 1.05 |
+| citypulse-traffic | 8.09 | 7.94 | 7.93 |
+| digital-agenda-indicators | 2.41 | 2.54 | 2.95 |
+| linked-spending | 7.35 | 7.30 | 7.42 |
+| muziekweb | 12.92 | 14.20 | 15.02 |
+| osm2rdf-denmark | 7.98 | 9.01 | 8.15 |
 
-With default framing, the current Jelly 1.2 writer uses batch-local name/datatype tables and full IRI names without prefix compression. Message packing retains bounded dictionaries across batches, as measured separately below. Its encoding is valid but can be substantially larger than the downloaded Jelly 1.2 streams. For example, weather is 44.42 raw bytes/statement locally versus 9.33 in the archive. The archive read/size results and local writer results describe different byte encodings.
+The current Jelly 1.2 writer keeps bounded name/datatype dictionaries across batches by default (persistentLookups: true), including with one frame per message. Dictionary entries can be resent after eviction. Setting persistentLookups: false uses batch-local tables; that setting is not timed here. Message packing is a separate opt-in setting. Both measured configurations use full IRI names without prefix compression. Its encoding is valid but can be substantially larger than the downloaded Jelly 1.2 streams. For example, weather is 21.30 raw bytes/statement locally versus 9.33 in the archive. The archive read/size results and local writer results describe different byte encodings.
 
 ## Packed-message configuration
 
-With `packMessages: true` and `messageSize: 1024`, messages share column batches and bounded dictionaries remain available across batches. Read throughput on these locally encoded files is **3.14 million statements/s**; writer throughput is **1.82 million/s**, by geometric mean. These are measurements of a current writer configuration, separate from the unchanged archive encodings above.
+With `packMessages: true` and `messageSize: 1024`, messages share column batches and bounded dictionaries remain available across batches. Read throughput on these locally encoded files is **3.56 million statements/s**; writer throughput is **2.03 million/s**, by geometric mean. These are measurements of a current writer configuration, separate from the unchanged archive encodings above.
 
 The following table shows uncompressed read/write throughput and locally written bytes/statement, including framing. gzip uses level 6 and zstd level 3. Compression is excluded from writer timing. Packed reading/writing were measured in separate sequential batches with two warmups and 7 timed iterations per case. They use the same retained-message API, GC policy and source RDF. Output checks cover every message, statement count, RDF equivalence and blank-node scope.
 
 | Dataset | Packed read M/s | Packed write M/s | Raw B/stmt | gzip B/stmt | zstd B/stmt | Frames |
 | --- | --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 4.00 | 2.59 | 20.43 | 1.51 | 1.19 | 1,124 |
-| citypulse-traffic | 3.44 | 2.19 | 36.34 | 7.96 | 7.74 | 352 |
-| digital-agenda-indicators | 2.65 | 1.69 | 21.28 | 2.51 | 2.07 | 81 |
-| linked-spending | 3.42 | 1.97 | 33.85 | 7.74 | 6.90 | 155 |
-| muziekweb | 2.05 | 1.10 | 39.11 | 13.97 | 13.53 | 51 |
-| osm2rdf-denmark | 3.77 | 1.76 | 33.62 | 8.02 | 7.77 | 294 |
+| assist-iot-weather | 4.46 | 2.63 | 20.43 | 1.51 | 1.19 | 1,124 |
+| citypulse-traffic | 4.28 | 2.23 | 36.34 | 7.96 | 7.74 | 352 |
+| digital-agenda-indicators | 2.98 | 1.95 | 21.28 | 2.51 | 2.07 | 81 |
+| linked-spending | 3.65 | 2.10 | 33.85 | 7.74 | 6.90 | 155 |
+| muziekweb | 2.08 | 1.37 | 39.11 | 13.97 | 13.53 | 51 |
+| osm2rdf-denmark | 4.67 | 2.15 | 33.62 | 8.02 | 7.77 | 294 |
 
 | Packed input compression | Read million statements/s |
 | --- | --- |
-| none | 3.14 |
-| gzip | 2.74 |
-| zstd | 3.06 |
+| none | 3.56 |
+| gzip | 3.09 |
+| zstd | 3.32 |
 
-Packed-file reading achieves 1.39× the downloaded legacy tag-1 archive throughput. The files differ in framing and dictionary contents, so this ratio combines encoding and parser effects. It is not a format-only comparison with the JVM.
+Packed-file reading achieves 1.46× the downloaded legacy tag-1 archive throughput. The files differ in framing and dictionary contents, so this ratio combines encoding and parser effects. It is not a format-only comparison with the JVM.
 
 Packing buffers output until a batch fills or the writer ends. Message boundaries and blank-node scopes remain separate; metadata-bearing messages are isolated. Small batches may suit low-latency delivery, whereas larger shared batches amortize setup work. The current writer uses full IRI names without prefix compression in either configuration.
 
@@ -199,9 +184,28 @@ const writer = new Writer({
 });
 ```
 
+## Independent read repetition
+
+Each listed uncompressed Jelly case was measured again in a fresh worker, with two warmups and seven timed iterations. This measures process-to-process variation for the same runtime bundle and input bytes. The main tables use the primary run; these repetitions are reported separately. Rates are million statements/s.
+
+| Dataset | Archive 1.2 primary | Archive 1.2 repetition | Packed 1.2 primary | Packed 1.2 repetition |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 3.95 | 4.45 | 4.46 | 4.78 |
+| citypulse-traffic | 3.67 | 3.76 | 4.28 | 4.27 |
+| digital-agenda-indicators | 1.99 | 2.01 | 2.98 | 2.82 |
+| linked-spending | 2.67 | 2.57 | 3.65 | 3.85 |
+| muziekweb | 1.23 | 1.21 | 2.08 | 2.21 |
+| osm2rdf-denmark | 3.28 | 3.25 | 4.67 | 4.68 |
+
+Archive 1.2 geometric-mean throughput is 2.60 million statements/s in the primary run and 2.64 million/s in the repetition.
+
+Packed 1.2 geometric-mean throughput is 3.56 million statements/s in the primary run and 3.63 million/s in the repetition.
+
+Scheduling, heap behavior and thermal state are not controlled; these measurements do not identify which source of variation dominates.
+
 ## Comparison with the JVM measurements
 
-The [Jelly-RDF JVM benchmark](https://jelly-rdf.github.io/1.2.x/performance/rdf/) reports geometric means of about 19–20 million statements/s for Jelly writing and 28–31 million/s for reading across 13 datasets. Its [1.1/1.2 comparison](https://jelly-rdf.github.io/dev/performance/rdf-1-1-vs-1-2/) reports 1.79×–1.94× read throughput and 1.48×–1.54× write throughput for Jelly 1.2 relative to 1.1 within JVM 4.0.0. With default framing, JavaScript 1.2 writer throughput is 0.84× the 1.1 writer throughput. With message packing, it is 1.36×; that configuration is timed in a separate batch. The JavaScript archive reader comparison uses legacy tag 1 rather than 1.1, so it does not measure the same format-version ratio as the JVM report.
+The [Jelly-RDF JVM benchmark](https://jelly-rdf.github.io/1.2.x/performance/rdf/) reports geometric means of about 19–20 million statements/s for Jelly writing and 28–31 million/s for reading across 13 datasets. Its [1.1/1.2 comparison](https://jelly-rdf.github.io/dev/performance/rdf-1-1-vs-1-2/) reports 1.79×–1.94× read throughput and 1.48×–1.54× write throughput for Jelly 1.2 relative to 1.1 within JVM 4.0.0. With default framing, JavaScript 1.2 writer throughput is 0.95× the 1.1 writer throughput. With message packing, it is 1.53×; that configuration is timed in a separate batch. The JavaScript archive reader comparison uses legacy tag 1 rather than 1.1, so it does not measure the same format-version ratio as the JVM report.
 
 These are different experiments. The JVM benchmark uses flat triple/quad streams, the first 100,000 statements of each dataset, three JVM forks with timed warmup/measurement periods, a discard sink for reading and a null output stream for writing. The version comparison uses 1,024-row frames. It runs GraalVM on an NVIDIA DGX Spark with CPU affinity. Optional validation, blank-node relabeling and pretty-printing are disabled where configurable. This JavaScript benchmark uses six message streams, up to 1.15 million statements per case, Node/V8 on an Intel laptop CPU, retained arrays, message-local blank-node scopes and collected writer bytes.
 
@@ -224,7 +228,8 @@ A controlled explanation would require identical input bytes, factory semantics,
 - CPU: 12th Gen Intel(R) Core(TM) i7-1265U; 12 logical CPUs; 30.8 GiB RAM.
 - Packages at measurement: `n3@2.13.12`, `n3.js-messages@0.2.0`, `rdf-isomorphic@2.0.1`, `protobufjs@8.8.1`, `rdfjs-jelly@0.1.6`.
 - Compression libraries: zlib 1.3.1-e00f703, zstd 1.5.7.
-- Measured ESM bundle SHA-256: `d551cc756e85a2d61c8e89d4ffa65b09771eda14ada0781e2544446dcf4c10f0`.
+- Source revision: `d36c49b2f131dfb1396249f26276661c05034506`.
+- Measured ESM bundle SHA-256: `44230717187be232b953c1ded1b533bd280296d6885c917a4dc06c1b0a8d34a0`.
 
 The recorded bundle matches the current runtime build. All six datasets contain triples; they do not measure named-graph, RDF-star, RDF 1.2 term, SPARQL result, browser, network or slow-consumer throughput. The measurements characterize these dataset/library/API combinations, not universal format rankings.
 
@@ -232,13 +237,13 @@ The recorded bundle matches the current runtime build. All six datasets contain 
 
 | Check | Result |
 | --- | --- |
-| npm run check | Passed: types, lint, protobuf reproducibility, Node/browser builds and declarations, 578 unit tests with coverage, 4 performance harness tests, package checks |
+| npm run check | Passed: types, lint, protobuf reproducibility, Node/browser builds and declarations, 580 unit tests with coverage, 4 performance harness tests, package checks |
 | node --test perf/message-workload.test.mjs | 5 tests passed |
 | npm run test:interop | 32 RDF and 25 SPARQL writer fixtures verified by independent upstream Python decoders |
 | npm run test:browser | Passed with installed Chromium: packaged ESM and global browser bundles, RDF/SPARQL and Web Streams round trips |
 | Current-parser RiverBench semantic checks | All 6 datasets passed: 60,000 messages, 2,103,143 statements, RDF equivalence and blank-node scopes |
 | Original archive checksums | 18/18 matched |
-| Writer output repeatability | 72/72 hashes identical across runs: 54 default writer/codec outputs and 18 packed writer/codec outputs |
+| Local writer output checks | All 18 default format/dataset combinations and all 6 packed cases passed RDF equivalence and blank-node-scope checks |
 
 ## Input provenance and reproduction
 

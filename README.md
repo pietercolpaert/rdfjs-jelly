@@ -84,8 +84,8 @@ messageWriter.addMessage([]);
 For version 3, `messageSize` limits statements per batch; a message may span
 batches. Lookup capacity can also end a batch early. The writer uses packed
 full-IRI name entries and repeat runs. Bounded name and datatype tables remain
-available across batches, so each name is sent once per stream; pass
-`persistentLookups: false` for self-contained batches. `packMessages: true` also
+available across batches and entries are resent after dictionary eviction; pass
+`persistentLookups: false` for batch-local dictionaries. `packMessages: true` also
 shares frames across small messages.
 A statement that cannot fit an empty batch raises an error. The name table must hold at least 128 entries.
 
@@ -285,23 +285,23 @@ a separate compression library, depending on the compression format.
 ## Performance
 
 Across six RiverBench datasets containing 60,000 messages and 2.10 million
-statements, the current Jelly 1.2 reader achieves **1.97 million statements/s**
-on downloaded archives. Locally packed message streams read at **3.14 million/s**.
+statements, the current Jelly 1.2 reader achieves **2.60 million statements/s**
+on downloaded archives. Locally packed message streams read at **3.56 million/s**.
 These are geometric means of per-dataset rates, measured on 2026-10-24 with
 Node v25.9.0 / V8 14.1 on an Intel Core i7-1265U with 30.8 GiB RAM.
 
 | Retained-message parsing | Million statements/s |
 | --- | ---: |
-| Turtle source logs, N3 message parser | 0.94 |
-| Legacy Jelly archives, row layout, tag 1 (1.0) | 2.25 |
-| Jelly 1.2 archives, column layout, tag 3 | 1.97 |
-| Jelly 1.2 archives + gzip, including decompression | 1.90 |
-| Jelly 1.2 archives + zstd, including decompression | 1.96 |
-| Locally packed Jelly 1.2 messages | 3.14 |
+| Turtle source logs, N3 message parser | 0.93 |
+| Legacy Jelly archives, row layout, tag 1 (1.0) | 2.43 |
+| Jelly 1.2 archives, column layout, tag 3 | 2.60 |
+| Jelly 1.2 archives + gzip, including decompression | 2.41 |
+| Jelly 1.2 archives + zstd, including decompression | 2.53 |
+| Locally packed Jelly 1.2 messages | 3.56 |
 
-Downloaded Jelly 1.2 reads **2.10×** as fast as source Turtle logs and
-**0.87×** as fast as the legacy archives. Packed-file reading reaches
-**1.39×** the legacy archive throughput, but changes framing and dictionary
+Downloaded Jelly 1.2 reads **2.79×** as fast as source Turtle logs and
+**1.07×** as fast as the legacy archives. Packed-file reading reaches
+**1.46×** the legacy archive throughput, but changes framing and dictionary
 contents as well as the parser's input. This is not a format-only comparison.
 
 The downloaded 1.2 encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip
@@ -311,14 +311,15 @@ data, representation and codec settings.
 
 | Writing the same source messages | Million statements/s |
 | --- | ---: |
-| Turtle with shared prefixes | 1.52 |
-| Jelly 1.1, tag 2 | 1.34 |
-| Jelly 1.2, default message framing | 1.12 |
-| Jelly 1.2, packed messages | 1.82 |
+| Turtle with shared prefixes | 1.55 |
+| Jelly 1.1, tag 2 | 1.33 |
+| Jelly 1.2, default message framing | 1.26 |
+| Jelly 1.2, packed messages | 2.03 |
 
 Writer timing includes collecting serialized bytes and excludes compression.
-Default framing completes a batch at each message boundary. Packing lets small
-messages share batches and retains bounded dictionaries across batches:
+Default framing completes a batch at each message boundary. Both configurations
+retain bounded lookup dictionaries across batches by default. Packing additionally
+lets small messages share batches:
 
 ```js
 const writer = new Writer({
@@ -333,13 +334,13 @@ const writer = new Writer({
 Packing buffers output until a batch fills or the writer ends, while keeping
 message boundaries and blank-node scopes separate. Metadata-bearing messages
 are isolated. Packed weather output uses **20.43 raw bytes/statement**, versus
-**44.42** with default framing and **9.33** in the downloaded archive. The local
+**21.30** with default framing and **9.33** in the downloaded archive. The local
 writer uses full IRI names without prefix compression, so its output sizes differ
 from RiverBench's encodings. Packed reads and writes were measured in separate
 sequential batches using the same source RDF and timing policy.
 
-Gzip file streaming into a discard sink delivers **0.49–3.83 million statements/s**
-for Jelly 1.2, with **77–133 MiB** whole-process peak RSS across these datasets.
+Gzip file streaming into a discard sink delivers **0.66–4.00 million statements/s**
+for Jelly 1.2, with **74–130 MiB** whole-process peak RSS across these datasets.
 RSS includes startup, input buffers and warmups; it is not parser-only memory.
 
 Retained reads keep complete RDF/JS message arrays in memory. Each case runs in
@@ -352,7 +353,7 @@ triples; these results do not measure browser, named-graph, RDF 1.2 term, SPARQL
 result, network or slow-consumer performance.
 
 An independent repetition of the uncompressed Jelly reads, using new worker
-processes, gives 2.11 million statements/s for Jelly 1.2. The main tables
+processes, gives 2.64 million statements/s for Jelly 1.2. The main tables
 use the primary run; the repetition and per-dataset rates in PERFORMANCE.md
 show the observed process-to-process variation.
 
