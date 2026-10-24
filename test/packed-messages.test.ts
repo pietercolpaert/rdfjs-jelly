@@ -104,3 +104,32 @@ describe('opt-in Jelly 1.2 message packing', () => {
     expect(counters).toEqual(expected.flatMap(m => m.map(() => m.messageCounter)));
   });
 });
+
+describe('Jelly 1.2 persistent lookups with one frame per message', () => {
+  const messages = Array.from({ length: 600 }, (_, i) => [
+    f.quad(f.namedNode(`urn:s${i}`), f.namedNode('urn:p'), f.namedNode(`urn:o${i % 180}`)),
+    f.quad(f.namedNode(`urn:s${i}`), f.namedNode('urn:type'), f.literal(String(i), f.namedNode(`urn:dt${i % 3}`))),
+  ]);
+  const write = (persistentLookups?: boolean): Uint8Array => {
+    const writer = new Writer({ version: 3, physicalType: PhysicalStreamType.TRIPLES, streamType: RdfStreamType.MESSAGES,
+      messageSize: 1024, lookup: { maxNames: 128, maxDatatypes: 2 }, persistentLookups });
+    for (const message of messages) writer.addMessage(message);
+    let bytes!: Uint8Array; writer.end((error, data) => { if (error) throw error; bytes = data!; });
+    return bytes;
+  };
+
+  it('is the default and keeps every message in its own frame, even when slots are evicted', () => {
+    const bytes = write();
+    expect(new MessageDecoder().end(bytes)).toHaveLength(messages.length);
+    const output = new Parser().parseMessages(bytes);
+    expect(output.map(m => m.length)).toEqual(messages.map(m => m.length));
+    expect(output.every((m, i) => m.every((q, j) => q.equals(messages[i]![j]!)))).toBe(true);
+  });
+
+  it('sends each reused name once per stream; false restores self-contained batches', () => {
+    const persistent = write(), local = write(false);
+    expect(persistent.length).toBeLessThan(local.length);
+    const output = new Parser().parseMessages(local);
+    expect(output.every((m, i) => m.every((q, j) => q.equals(messages[i]![j]!)))).toBe(true);
+  });
+});

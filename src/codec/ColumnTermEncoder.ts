@@ -20,9 +20,9 @@ export class ColumnTermEncoder {
       this.tableFits(this.tables[1]!, datatypes, lookup.maxDatatypes);
   }
   private tableFits(table: ReadonlyMap<string, number>, values: readonly string[], capacity: number): boolean {
-    this.pendingKeys.clear();
     // Even if every incoming key is new, there is enough room.
     if (table.size + values.length <= capacity) return true;
+    this.pendingKeys.clear();
     let remaining = capacity - table.size;
     for (const value of values) {
       if (table.has(value) || this.pendingKeys.has(value)) continue;

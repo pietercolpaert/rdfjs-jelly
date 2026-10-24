@@ -45,8 +45,8 @@ export class Message extends Array<RDF.Quad> {
     metadata: MessageMetadata = new Map(),
   ) {
     super();
-    Object.setPrototypeOf(this, Message.prototype);
-    for (const quad of quads) this.push(quad);
+    if (Array.isArray(quads)) for (let i = 0; i < quads.length; i++) this.push(quads[i]!);
+    else for (const quad of quads) this.push(quad);
     this.metadata = metadata instanceof Map ? metadata : new Map(Object.entries(metadata));
   }
 }
@@ -95,6 +95,10 @@ export interface WriterOptions {
    * because it delays streaming output until a batch fills or the writer ends.
    * Messages carrying metadata are emitted separately. */
   packMessages?: boolean;
+  /** Jelly 1.2: keep bounded name and datatype tables across batches, so a name
+   * is sent once per stream rather than once per batch. Defaults to true;
+   * `false` makes every batch self-contained, at a large cost in output size. */
+  persistentLookups?: boolean;
   streamName?: string;
   namespaces?: Record<string, string | RDF.NamedNode>;
   lookup?: Partial<LookupPreset>;

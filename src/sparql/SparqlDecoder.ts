@@ -43,7 +43,9 @@ export class SparqlDecoder extends ColumnTermDecoder {
     this.first = false;
     this.checkRowCount(frame.rowCount);
     const entries = frame.names as eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
-    this.applyLookups([[entries, this.names], [frame.prefixes, this.prefixes], [frame.datatypes, this.datatypes]]);
+    this.applyLookups(entries, this.names);
+    this.applyLookups(frame.prefixes, this.prefixes);
+    this.applyLookups(frame.datatypes, this.datatypes);
     if (frame.askResult) {
       if (!first) fail('ASK result must be in the first frame of its result set');
       if (frame.variables.length || frame.columns.length || frame.rowCount) fail('ASK frame cannot contain variables, columns, or rows');

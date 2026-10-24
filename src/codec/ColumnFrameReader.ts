@@ -2,7 +2,6 @@ import { Reader } from 'protobufjs/minimal.js';
 import { proto, decodeProtoRdfStreamFrameReader, type ProtoFrame } from '../generated/rdf_pb';
 import { JellyConformanceError } from '../errors';
 
-type Column = InstanceType<typeof proto.RdfColumn>;
 type Entry = InstanceType<typeof proto.RdfLookupEntryPacked>;
 
 /** Private reusable protobuf storage for ordinary column-only RDF frames.
@@ -13,7 +12,7 @@ type Entry = InstanceType<typeof proto.RdfLookupEntryPacked>;
  */
 export class ColumnFrameReader {
   private readonly batch = new proto.RdfColumnBatch();
-  private readonly columns = [new proto.RdfColumn(), new proto.RdfColumn(), new proto.RdfColumn(), new proto.RdfColumn()];
+  private readonly columns = [new ReusableColumn(), new ReusableColumn(), new ReusableColumn(), new ReusableColumn()];
   private readonly entries: Entry[][] = [[], [], []];
   private readonly frame = new proto.RdfStreamFrame({ columns: this.batch });
 
@@ -42,14 +41,19 @@ export class ColumnFrameReader {
   private readBatch(reader: Reader, end: number): boolean {
     const batch = this.batch;
     batch.rowCount = 0;
-    batch.names.length = batch.prefixes.length = batch.datatypes.length = batch.messageLengths.length = 0;
+    batch.names = batch.prefixes = batch.datatypes = EMPTY_ENTRIES;
+    batch.messageLengths = EMPTY_LIST;
     batch.subjects = batch.predicates = batch.objects = batch.graphs = null;
     let seen = 0;
     while (reader.pos < end) {
       const tag = reader.tag(), field = tag >>> 3, wire = tag & 7;
       if (field === 1 && wire === 0) batch.rowCount = reader.uint32();
       else if (field >= 2 && field <= 4 && wire === 2) {
-        const list = field === 2 ? batch.names : field === 3 ? batch.prefixes : batch.datatypes;
+        let list = field === 2 ? batch.names : field === 3 ? batch.prefixes : batch.datatypes;
+        if (list === EMPTY_ENTRIES) {
+          list = [];
+          if (field === 2) batch.names = list; else if (field === 3) batch.prefixes = list; else batch.datatypes = list;
+        }
         const pool = this.entries[field - 2]!;
         const entry = pool[list.length] ?? (pool[list.length] = new proto.RdfLookupEntryPacked());
         const entryEnd = reader.size() + reader.pos;
@@ -83,6 +87,7 @@ export class ColumnFrameReader {
         else if (field === 8) batch.objects = column;
         else batch.graphs = column;
       } else if (field === 15 && (wire === 0 || wire === 2)) {
+        if (batch.messageLengths === EMPTY_LIST) batch.messageLengths = [];
         if (wire === 0) batch.messageLengths.push(reader.uint32());
         else reader.uint32s(batch.messageLengths);
       } else return false;
@@ -90,24 +95,72 @@ export class ColumnFrameReader {
     return reader.pos === end;
   }
 
-  private readColumn(reader: Reader, column: Column, end: number): boolean {
+  private readColumn(reader: Reader, column: ReusableColumn, end: number): boolean {
     column.kinds = EMPTY_BYTES;
-    column.layouts.length = column.nameIds.length = column.prefixIds.length = column.lexValues.length = 0;
-    column.literalKinds.length = column.langtags.length = column.langtagDirections.length = column.bnodes.length = 0;
+    column.kindsLength = column.layoutCount = column.nameIdCount = column.prefixIdCount = column.lexCount = 0;
+    column.literalKindCount = column.langtagCount = column.directionCount = column.bnodeCount = 0;
     while (reader.pos < end) {
       const tag = reader.tag(), field = tag >>> 3, wire = tag & 7;
-      if (field === 1 && wire === 2) column.kinds = reader.bytes();
-      else if ((field === 2 || field === 3 || field === 4 || field === 6 || field === 8) && (wire === 0 || wire === 2)) {
-        const values = field === 2 ? column.layouts : field === 3 ? column.nameIds : field === 4 ? column.prefixIds
-          : field === 6 ? column.literalKinds : column.langtagDirections;
-        if (wire === 0) values.push(reader.uint32());
-        else reader.uint32s(values);
-      } else if ((field === 5 || field === 7 || field === 9) && wire === 2) {
-        const values = field === 5 ? column.lexValues : field === 7 ? column.langtags : column.bnodes;
-        values.push(reader.string());
-      } else return false;
+      if (field === 1 && wire === 2) {
+        column.kindsLength = reader.uint32();
+        column.kindsOffset = reader.pos;
+        if (column.kindsOffset + column.kindsLength > end) throw new RangeError('Truncated Jelly column kinds');
+        column.kinds = reader.buf;
+        reader.pos += column.kindsLength;
+      } else if (field === 2 && (wire === 0 || wire === 2)) column.layoutCount = readNumbers(reader, wire, column.layouts, column.layoutCount);
+      else if (field === 3 && (wire === 0 || wire === 2)) column.nameIdCount = readNumbers(reader, wire, column.nameIds, column.nameIdCount);
+      else if (field === 4 && (wire === 0 || wire === 2)) column.prefixIdCount = readNumbers(reader, wire, column.prefixIds, column.prefixIdCount);
+      else if (field === 6 && (wire === 0 || wire === 2)) column.literalKindCount = readNumbers(reader, wire, column.literalKinds, column.literalKindCount);
+      else if (field === 8 && (wire === 0 || wire === 2)) column.directionCount = readNumbers(reader, wire, column.langtagDirections, column.directionCount);
+      else if (field === 5 && wire === 2) column.lexValues[column.lexCount++] = reader.string();
+      else if (field === 7 && wire === 2) column.langtags[column.langtagCount++] = reader.string();
+      else if (field === 9 && wire === 2) column.bnodes[column.bnodeCount++] = reader.string();
+      else return false;
     }
     return reader.pos === end;
   }
 }
+
+/**
+ * Column storage kept between frames. Truncating arrays would drop their
+ * backing stores, so each list keeps its capacity and only the first `*Count`
+ * entries are live. Consumers must not read `.length` of these lists.
+ */
+export class ReusableColumn extends proto.RdfColumn {
+  public layoutCount = 0;
+  public nameIdCount = 0;
+  public prefixIdCount = 0;
+  public lexCount = 0;
+  public literalKindCount = 0;
+  public langtagCount = 0;
+  public directionCount = 0;
+  public bnodeCount = 0;
+  /** `kinds` aliases the input buffer: its live bytes are `kindsLength` bytes at `kindsOffset`. */
+  public kindsOffset = 0;
+  public kindsLength = 0;
+}
+
+/** Appends a packed or single unpacked varint to `values[count...]` and returns the new count. */
+function readNumbers(reader: Reader, wire: number, values: number[], count: number): number {
+  if (wire === 0) { values[count++] = reader.uint32(); return count; }
+  const size = reader.uint32(), end = reader.pos + size;
+  if (end > reader.len) throw new RangeError('Truncated Jelly packed column list');
+  const buf = reader.buf;
+  let pos = reader.pos;
+  while (pos < end) {
+    // Single-byte values dominate lookup ids and layout tokens.
+    const value = buf[pos]!;
+    if (value < 128) { values[count++] = value; pos++; } else {
+      reader.pos = pos;
+      values[count++] = reader.uint32();
+      pos = reader.pos;
+    }
+  }
+  if (pos !== end) throw new RangeError('Invalid Jelly packed column list');
+  reader.pos = pos;
+  return count;
+}
+// Absent batch-level lists share these read-only sentinels; they are never mutated.
 const EMPTY_BYTES = new Uint8Array();
+const EMPTY_LIST: number[] = [];
+const EMPTY_ENTRIES: Entry[] = [];

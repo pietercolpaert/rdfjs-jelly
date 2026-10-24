@@ -83,8 +83,10 @@ messageWriter.addMessage([]);
 
 For version 3, `messageSize` limits statements per batch; a message may span
 batches. Lookup capacity can also end a batch early. The writer uses packed
-full-IRI name entries and repeat runs. With `packMessages: true`, bounded lookup
-tables remain available across batches; default framing uses batch-local tables.
+full-IRI name entries and repeat runs. Bounded name and datatype tables remain
+available across batches, so each name is sent once per stream; pass
+`persistentLookups: false` for self-contained batches. `packMessages: true` also
+shares frames across small messages.
 A statement that cannot fit an empty batch raises an error. The name table must hold at least 128 entries.
 
 The 1.2 layout supports `TRIPLES` and `QUADS`. Use `QUADS` for named graphs;

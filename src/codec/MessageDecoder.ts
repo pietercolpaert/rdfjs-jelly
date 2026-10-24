@@ -182,14 +182,17 @@ export class FramedMessageDecoder<Frame> {
     consume: FrameConsumer<Frame>,
   ): number {
     let offset = from;
+    // One reader serves every frame: allocating a buffer view and reader per
+    // frame is measurable when frames hold only a handful of rows.
+    const reader = Reader.create(buffer.subarray(from, end));
     while (offset < end) {
       let size: number;
       let prefixSize: number;
-      let reader: Reader;
       try {
-        reader = Reader.create(buffer.subarray(offset, end));
+        reader.pos = offset - from;
+        reader.len = end - from;
         size = reader.uint32();
-        prefixSize = reader.pos;
+        prefixSize = reader.pos - (offset - from);
       } catch (error) {
         if (!final) break;
         throw new JellyConformanceError('Invalid Jelly message length prefix', {

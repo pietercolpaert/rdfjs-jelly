@@ -88,7 +88,10 @@ export class Decoder {
         this.columns ??= new ColumnDecoder(this.parserOptions, this.events);
         const messages = this.columns.decode(frame, output);
         this.streamOptions = this.columns.streamOptions;
-        Object.assign(this.namespaces, this.columns.namespaces);
+        if (this.columns.namespacesChanged) {
+          Object.assign(this.namespaces, this.columns.namespaces);
+          this.columns.namespacesChanged = false;
+        }
         return messages;
       }
       if (frame.columns) throw new JellyConformanceError('Column batch before version 3 stream options');

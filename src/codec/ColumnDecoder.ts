@@ -14,6 +14,8 @@ const EMPTY_METADATA: ReadonlyMap<string, Uint8Array> = new Map();
 /** The column layout has independent IRI inference sequences and message boundaries. */
 export class ColumnDecoder extends ColumnTermDecoder {
   public streamOptions?: StreamOptions;
+  /** Set when a frame declared namespaces; the owner clears it after copying them. */
+  public namespacesChanged = false;
   public readonly namespaces: Record<string, RDF.NamedNode> = Object.create(null);
   private current: RDF.Quad[] = [];
   private openMessage = false;
@@ -37,12 +39,6 @@ export class ColumnDecoder extends ColumnTermDecoder {
       for (const quad of this.current) output.push(quad);
       this.current = [];
     }
-    const endMessage = (): void => {
-      if (!output) out.push(this.current instanceof Message ? this.current : new Message(this.counter, this.current, metadata));
-      this.counter++;
-      this.current = [];
-      this.openMessage = false;
-    };
     if (frame.rows.length > 1) fail('Column layout permits only one options row per frame');
     for (const row of frame.rows) {
       const kind = (row as typeof row & { $row?: string }).$row ?? row.row;
@@ -56,7 +52,7 @@ export class ColumnDecoder extends ColumnTermDecoder {
       if (raw.rdfVersion < 0 || raw.rdfVersion > 3) fail(`Unknown RDF version ${raw.rdfVersion}`);
       if (old && (raw.physicalType !== old.physicalType || raw.streamType !== old.streamType)) fail('Restated options must preserve physical type, stream type, and version');
       if (old?.streamType === 1) {
-        if (this.openMessage) endMessage();
+        if (this.openMessage) this.endMessage(out, output, metadata);
         this.resetBlankNodeScope();
       }
       this.resetLookups(raw);
@@ -72,12 +68,15 @@ export class ColumnDecoder extends ColumnTermDecoder {
     if (!this.streamOptions) fail('Column batch before stream options');
     const n = b.rowCount;
     this.checkRowCount(n);
-    this.applyLookups([[b.names, this.names], [b.prefixes, this.prefixes], [b.datatypes, this.datatypes]]);
-    const nsState = [0, 0];
+    this.applyLookups(b.names, this.names);
+    this.applyLookups(b.prefixes, this.prefixes);
+    this.applyLookups(b.datatypes, this.datatypes);
+    const nsState = b.namespaces.length ? [0, 0] : undefined;
     for (const rawNs of b.namespaces) {
       const ns = rawNs as eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration;
-      const term = this.iri((ns.value ?? {}) as I, nsState);
+      const term = this.iri((ns.value ?? {}) as I, nsState!);
       this.namespaces[ns.name] = term;
+      this.namespacesChanged = true;
       this.events.namespace?.(ns.name, term);
     }
     if (this.streamOptions.physicalType === 1 && b.graphs) fail('Graphs column in a TRIPLES stream');
@@ -88,7 +87,9 @@ export class ColumnDecoder extends ColumnTermDecoder {
     if (!graphs) this.graphCells.length = 0;
     const lengths = b.messageLengths;
     if (this.streamOptions.streamType === 0 && lengths.length) fail('Message boundaries in a FLAT stream');
-    if (lengths.reduce((sum, v) => sum + v, 0) > n) fail('Message lengths exceed row_count');
+    let total = 0;
+    for (let i = 0; i < lengths.length; i++) total += lengths[i]!;
+    if (total > n) fail('Message lengths exceed row_count');
     // A complete message can be built in its final container. Partial messages
     // still use the accumulation path so their terminating frame owns metadata.
     if (!output && !this.openMessage && lengths.length === 1 && lengths[0] === n) {
@@ -96,34 +97,48 @@ export class ColumnDecoder extends ColumnTermDecoder {
     }
     const scoped = this.streamOptions.streamType === 1;
     let pos = 0;
-    const append = (count: number): void => {
-      for (const end = pos + count; pos < end; pos++) {
-        // Remap blank nodes per logical message, including those in triple terms.
-        const s = subjects[pos], p = predicates[pos], o = objects[pos], g = graphs?.[pos];
-        if (!s || (s.termType !== 'NamedNode' && s.termType !== 'BlankNode')) fail('Invalid or unbound subject in column');
-        if (!p || p.termType !== 'NamedNode') fail('Invalid or unbound predicate in column');
-        if (!o) fail('Unbound object in column');
-        if (g && g.termType !== 'NamedNode' && g.termType !== 'BlankNode') fail('Invalid graph in column');
-        const quad = this.factory.quad(
-          (scoped && s.termType === 'BlankNode' ? this.scopeTerm(s, this.counter) : s) as RDF.Quad_Subject,
-          p,
-          (scoped && (o.termType === 'BlankNode' || o.termType === 'Quad') ? this.scopeTerm(o, this.counter) : o) as RDF.Quad_Object,
-          g ? (scoped && g.termType === 'BlankNode' ? this.scopeTerm(g, this.counter) : g) as RDF.Quad_Graph : this.defaultGraph,
-        );
-        (output ?? this.current).push(quad);
-        this.openMessage = true;
-      }
-    };
-    for (const length of lengths) {
-      append(length);
-      endMessage();
+    for (let i = 0; i < lengths.length; i++) {
+      this.append(output, pos, lengths[i]!, subjects, predicates, objects, graphs, scoped);
+      pos += lengths[i]!;
+      this.endMessage(out, output, metadata);
       this.resetBlankNodeScope();
     }
-    append(n - pos);
+    this.append(output, pos, n - pos, subjects, predicates, objects, graphs, scoped);
     // FLAT streams expose batches through the existing message API; only
     // MESSAGES streams retain an unfinished message across frame boundaries.
-    if (this.streamOptions.streamType === 0) endMessage();
+    if (this.streamOptions.streamType === 0) this.endMessage(out, output, metadata);
     return out;
+  }
+
+  private endMessage(out: Message[], output: RDF.Quad[] | undefined, metadata: ReadonlyMap<string, Uint8Array>): void {
+    if (!output) out.push(this.current instanceof Message ? this.current : new Message(this.counter, this.current, metadata));
+    this.counter++;
+    this.current = [];
+    this.openMessage = false;
+  }
+
+  private append(
+    output: RDF.Quad[] | undefined, start: number, count: number,
+    subjects: ReadonlyArray<RDF.Term | undefined>, predicates: ReadonlyArray<RDF.Term | undefined>,
+    objects: ReadonlyArray<RDF.Term | undefined>, graphs: ReadonlyArray<RDF.Term | undefined> | undefined, scoped: boolean,
+  ): void {
+    if (!count) return;
+    const target = output ?? this.current, factory = this.factory, defaultGraph = this.defaultGraph, counter = this.counter;
+    for (let pos = start, end = start + count; pos < end; pos++) {
+      // Remap blank nodes per logical message, including those in triple terms.
+      const s = subjects[pos], p = predicates[pos], o = objects[pos], g = graphs?.[pos];
+      if (!s || (s.termType !== 'NamedNode' && s.termType !== 'BlankNode')) fail('Invalid or unbound subject in column');
+      if (!p || p.termType !== 'NamedNode') fail('Invalid or unbound predicate in column');
+      if (!o) fail('Unbound object in column');
+      if (g && g.termType !== 'NamedNode' && g.termType !== 'BlankNode') fail('Invalid graph in column');
+      target.push(factory.quad(
+        (scoped && s.termType === 'BlankNode' ? this.scopeTerm(s, counter) : s) as RDF.Quad_Subject,
+        p,
+        (scoped && (o.termType === 'BlankNode' || o.termType === 'Quad') ? this.scopeTerm(o, counter) : o) as RDF.Quad_Object,
+        g ? (scoped && g.termType === 'BlankNode' ? this.scopeTerm(g, counter) : g) as RDF.Quad_Graph : defaultGraph,
+      ));
+    }
+    this.openMessage = true;
   }
 
   public finish(): Message[] {

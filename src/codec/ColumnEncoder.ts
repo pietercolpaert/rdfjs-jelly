@@ -20,6 +20,8 @@ export class ColumnEncoder extends ColumnTermEncoder {
   private finished = false;
   private inMessage = false;
   private messageLengths: number[] = [];
+  private readonly rowNames: string[] = [];
+  private readonly rowDatatypes: string[] = [];
   private lastBoundary = 0;
   private readonly persistentLookups?: readonly [ColumnLookupEncoder, ColumnLookupEncoder];
 
@@ -31,7 +33,7 @@ export class ColumnEncoder extends ColumnTermEncoder {
     this.streamType = options.streamType ?? RdfStreamType.FLAT;
     if (![0, 1].includes(this.streamType) || ![0, 1, 2, 3].includes(this.rdfVersion)) throw new JellyConformanceError('Invalid streamType or rdfVersion');
     this.lookup = normalizeColumnLookupPreset(options.lookup);
-    if (options.packMessages) this.persistentLookups = [new ColumnLookupEncoder(this.lookup.maxNames), new ColumnLookupEncoder(this.lookup.maxDatatypes)];
+    if (options.persistentLookups ?? true) this.persistentLookups = [new ColumnLookupEncoder(this.lookup.maxNames), new ColumnLookupEncoder(this.lookup.maxDatatypes)];
     if (this.lookup.maxNames < 128) throw new JellyConformanceError('Jelly 1.2 requires a name lookup size of at least 128');
     this.size = options.messageSize ?? 250;
     if (!Number.isInteger(this.size) || this.size < 1 || this.size > 0x7ffffff) throw new JellyConformanceError('messageSize must be between 1 and 2^27 - 1');
@@ -48,10 +50,18 @@ export class ColumnEncoder extends ColumnTermEncoder {
     this.assertOpen();
     if (this.streamType === 1 && !this.inMessage) throw new JellyConformanceError('Use addMessage() or message counters with streamType MESSAGES');
     if (this.physicalType === 1 && quad.graph.termType !== 'DefaultGraph') throw new JellyConformanceError('TRIPLES streams cannot contain named graph quads');
-    if (!['NamedNode', 'BlankNode', 'Literal', 'Quad'].includes(quad.object.termType)) throw new JellyConformanceError('Invalid RDF object');
-    if (!['NamedNode', 'BlankNode'].includes(quad.subject.termType) || quad.predicate.termType !== 'NamedNode' || !['DefaultGraph', 'NamedNode', 'BlankNode'].includes(quad.graph.termType)) throw new JellyConformanceError('Invalid RDF statement');
-    const names: string[] = [], datatypes: string[] = [];
-    for (const term of [quad.subject, quad.predicate, quad.object, quad.graph]) this.keys(term, names, datatypes);
+    const { subject, predicate, object, graph } = quad;
+    const objectType = object.termType, graphType = graph.termType;
+    if (objectType !== 'NamedNode' && objectType !== 'BlankNode' && objectType !== 'Literal' && objectType !== 'Quad') throw new JellyConformanceError('Invalid RDF object');
+    if ((subject.termType !== 'NamedNode' && subject.termType !== 'BlankNode') || predicate.termType !== 'NamedNode' ||
+      (graphType !== 'DefaultGraph' && graphType !== 'NamedNode' && graphType !== 'BlankNode')) throw new JellyConformanceError('Invalid RDF statement');
+    // Reused per statement; neither list outlives this call.
+    const names = this.rowNames, datatypes = this.rowDatatypes;
+    names.length = datatypes.length = 0;
+    this.keys(subject, names, datatypes);
+    this.keys(predicate, names, datatypes);
+    this.keys(object, names, datatypes);
+    this.keys(graph, names, datatypes);
     if (this.quads.length >= this.size) this.flush();
     this.fit(names, datatypes);
     this.register(names, datatypes);

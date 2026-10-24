@@ -5,12 +5,52 @@ import { MAX_DECODED_LOOKUP_SIZE, RDF_DIR_LANG_STRING, RDF_LANG_STRING, XSD_STRI
 import type { ParserOptions } from '../types';
 import { DataFactory } from '../rdfjs/adapter';
 import { LookupDecoder } from './LookupDecoder';
+import { ReusableColumn } from './ColumnFrameReader';
 
 type C = eu.ostrzyciel.jelly.core.proto.v1.RdfColumn;
 type T = eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm;
 type I = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
 type L = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral;
 function fail(message: string): never { throw new JellyConformanceError(message); }
+
+/**
+ * Reusable view of one column plus the position state while decoding it. Lists
+ * may be longer than their counts when they come from a `ReusableColumn`.
+ */
+class ColumnCursor {
+  layouts: ArrayLike<number> = []; layoutCount = 0;
+  nameIds: ArrayLike<number> = []; nameCount = 0;
+  prefixIds: ArrayLike<number> = []; prefixCount = 0;
+  lexValues: ArrayLike<string> = []; lexCount = 0;
+  literalKinds: ArrayLike<number> = []; literalKindCount = 0;
+  langtags: ArrayLike<string> = []; langtagCount = 0;
+  directions: ArrayLike<number> = []; directionCount = 0;
+  bnodes: ArrayLike<string> = []; bnodeCount = 0;
+  tripleTerms: ArrayLike<T> = []; tripleCount = 0;
+  kinds: Uint8Array = new Uint8Array(); kindsOffset = 0; kindsLength = 0;
+  next = 0; iriIndex = 0; literalIndex = 0; blankIndex = 0; tripleIndex = 0;
+  prefixId = 0; nameId = 0; total = 0; mixed = false; uniform = -1;
+  readonly tripleState = [0, 0];
+
+  load(c: C): void {
+    this.layouts = c.layouts; this.nameIds = c.nameIds; this.prefixIds = c.prefixIds; this.lexValues = c.lexValues;
+    this.literalKinds = c.literalKinds; this.langtags = c.langtags; this.directions = c.langtagDirections; this.bnodes = c.bnodes;
+    this.tripleTerms = c.tripleTerms as T[];
+    if (c instanceof ReusableColumn) {
+      this.layoutCount = c.layoutCount; this.nameCount = c.nameIdCount; this.prefixCount = c.prefixIdCount; this.lexCount = c.lexCount;
+      this.literalKindCount = c.literalKindCount; this.langtagCount = c.langtagCount; this.directionCount = c.directionCount;
+      this.bnodeCount = c.bnodeCount; this.tripleCount = 0;
+      this.kinds = c.kinds; this.kindsOffset = c.kindsOffset; this.kindsLength = c.kindsLength;
+    } else {
+      this.layoutCount = c.layouts.length; this.nameCount = c.nameIds.length; this.prefixCount = c.prefixIds.length; this.lexCount = c.lexValues.length;
+      this.literalKindCount = c.literalKinds.length; this.langtagCount = c.langtags.length; this.directionCount = c.langtagDirections.length;
+      this.bnodeCount = c.bnodes.length; this.tripleCount = c.tripleTerms.length;
+      this.kinds = c.kinds; this.kindsOffset = 0; this.kindsLength = c.kinds.length;
+    }
+    this.next = this.iriIndex = this.literalIndex = this.blankIndex = this.tripleIndex = 0;
+    this.prefixId = this.nameId = this.tripleState[0] = this.tripleState[1] = 0;
+  }
+}
 
 /** Shared lookup and term-column decoding for Jelly-RDF and Jelly-SPARQL. */
 export class ColumnTermDecoder {
@@ -24,6 +64,7 @@ export class ColumnTermDecoder {
   private readonly iriPrefixes: string[] = [];
   private readonly datatypeNodes: Array<RDF.NamedNode | undefined> = [];
   private lastNameAssignment = 0;
+  private readonly cursor = new ColumnCursor();
   private simpleDatatype?: RDF.NamedNode;
   private readonly scopedBlankNodes = new Map<string, RDF.BlankNode>();
   public constructor(protected readonly options: ParserOptions = {}) {
@@ -40,13 +81,14 @@ export class ColumnTermDecoder {
     this.iriNodes.length = this.iriNames.length = this.iriPrefixes.length = this.datatypeNodes.length = 0;
     this.lastNameAssignment = 0;
   }
-  protected applyLookups(groups: ReadonlyArray<readonly [readonly eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[], LookupDecoder]>): void {
-    for (const [entries, table] of groups) for (const entry of entries) {
-      const values = entry.values ?? [];
+  protected applyLookups(entries: readonly eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[], table: LookupDecoder): void {
+    const isNames = table === this.names;
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]!, values = entry.values ?? [];
       for (let j = 0; j < values.length; j++) {
         const id = j === 0 ? entry.id ?? 0 : 0;
         table.assign(id, values[j]!);
-        if (table === this.names) {
+        if (isNames) {
           const slot = id || this.lastNameAssignment + 1;
           this.lastNameAssignment = slot;
           if (this.iriNames[slot] !== values[j]) this.iriNodes[slot] = undefined;
@@ -141,61 +183,63 @@ export class ColumnTermDecoder {
       cells.length = n;
       return cells;
     }
-    const { nameIds, prefixIds, lexValues, literalKinds, langtags, langtagDirections } = c;
-    if (prefixIds.length !== 0 && prefixIds.length !== 1 && prefixIds.length !== nameIds.length) fail('Invalid prefix_ids length');
-    if (literalKinds.length !== 0 && literalKinds.length !== 1 && literalKinds.length !== lexValues.length) fail('Invalid literal_kinds length');
-    if (langtagDirections.length && langtagDirections.length !== langtags.length) fail('Invalid langtag_directions length');
-    const total = nameIds.length + lexValues.length + c.bnodes.length + c.tripleTerms.length;
+    const cursor = this.cursor;
+    cursor.load(c);
+    const { layouts, layoutCount, nameCount, lexCount, bnodeCount, tripleCount, kindsLength } = cursor;
+    if (cursor.prefixCount !== 0 && cursor.prefixCount !== 1 && cursor.prefixCount !== nameCount) fail('Invalid prefix_ids length');
+    if (cursor.literalKindCount !== 0 && cursor.literalKindCount !== 1 && cursor.literalKindCount !== lexCount) fail('Invalid literal_kinds length');
+    if (cursor.directionCount && cursor.directionCount !== cursor.langtagCount) fail('Invalid langtag_directions length');
+    const total = nameCount + lexCount + bnodeCount + tripleCount;
     let uniform = -1, populated = 0;
-    if (nameIds.length) { uniform = 0; populated++; }
-    if (lexValues.length) { uniform = 1; populated++; }
-    if (c.bnodes.length) { uniform = 2; populated++; }
-    if (c.tripleTerms.length) { uniform = 3; populated++; }
-    const mixed = c.kinds.length !== 0 || populated > 1;
+    if (nameCount) { uniform = 0; populated++; }
+    if (lexCount) { uniform = 1; populated++; }
+    if (bnodeCount) { uniform = 2; populated++; }
+    if (tripleCount) { uniform = 3; populated++; }
+    const mixed = kindsLength !== 0 || populated > 1;
     if (mixed) {
-      if (c.kinds.length !== Math.ceil(total / 4)) fail('Invalid kinds length');
-      if (total % 4 && c.kinds[c.kinds.length - 1]! >>> (2 * (total % 4))) fail('Nonzero unused kinds bits');
+      if (kindsLength !== Math.ceil(total / 4)) fail('Invalid kinds length');
+      if (total % 4 && cursor.kinds[cursor.kindsOffset + kindsLength - 1]! >>> (2 * (total % 4))) fail('Nonzero unused kinds bits');
     }
-    let next = 0, iriIndex = 0, literalIndex = 0, blankIndex = 0, tripleIndex = 0;
-    let prefixId = 0, nameId = 0;
+    const { nameIds, prefixIds, lexValues, literalKinds, langtags, directions, bnodes, tripleTerms, kinds, kindsOffset } = cursor;
+    const { prefixCount, literalKindCount, langtagCount, directionCount } = cursor;
+    let next = 0, iriIndex = 0, literalIndex = 0, blankIndex = 0, tripleIndex = 0, prefixId = 0, nameId = 0;
     const tripleState = [0, 0];
-    // Consume each run directly into its final cells. There are no per-kind
-    // term arrays or mixed-value array, and a repeat run decodes its node once.
+    // Consume each run directly into its final cells; a repeat run decodes its node once.
     const read = (): RDF.Term => {
       if (next >= total) return fail('Column layout references missing run value');
-      const kind = mixed ? (c.kinds[next >> 2]! >> (2 * (next & 3))) & 3 : uniform;
+      const kind = mixed ? (kinds[kindsOffset + (next >> 2)]! >> (2 * (next & 3))) & 3 : uniform;
       next++;
       if (kind === 0) {
-        if (iriIndex >= nameIds.length) return fail('Kinds references missing run value');
+        if (iriIndex >= nameCount) return fail('Kinds references missing run value');
         nameId = nameIds[iriIndex] || nameId + 1;
-        prefixId = prefixIds.length === 1 ? prefixIds[0]! : prefixIds[iriIndex] || prefixId;
+        prefixId = prefixCount === 1 ? prefixIds[0]! : prefixIds[iriIndex] || prefixId;
         iriIndex++;
         return this.resolve(prefixId, nameId);
       }
       if (kind === 1) {
-        if (literalIndex >= lexValues.length) return fail('Kinds references missing run value');
+        if (literalIndex >= lexCount) return fail('Kinds references missing run value');
         const j = literalIndex++;
-        const literalKind = literalKinds.length === 1 ? literalKinds[0]! : literalKinds[j] ?? 0;
+        const literalKind = literalKindCount === 1 ? literalKinds[0]! : j < literalKindCount ? literalKinds[j]! : 0;
         if (literalKind === 0) return this.literal(lexValues[j]!);
         if (literalKind % 2) return this.literal(lexValues[j]!, undefined, 0, (literalKind + 1) / 2);
         const index = literalKind / 2 - 1;
-        if (index >= langtags.length) return fail('Invalid language tag index');
-        return this.literal(lexValues[j]!, langtags[index]!, langtagDirections[index] ?? 0);
+        if (index >= langtagCount) return fail('Invalid language tag index');
+        return this.literal(lexValues[j]!, langtags[index]!, index < directionCount ? directions[index]! : 0);
       }
       if (kind === 2) {
-        if (blankIndex >= c.bnodes.length) return fail('Kinds references missing run value');
-        return this.factory.blankNode(c.bnodes[blankIndex++]!);
+        if (blankIndex >= bnodeCount) return fail('Kinds references missing run value');
+        return this.factory.blankNode(bnodes[blankIndex++]!);
       }
-      if (tripleIndex >= c.tripleTerms.length) return fail('Kinds references missing run value');
-      return this.triple(c.tripleTerms[tripleIndex++] as T, tripleState);
+      if (tripleIndex >= tripleCount) return fail('Kinds references missing run value');
+      return this.triple(tripleTerms[tripleIndex++]!, tripleState);
     };
     let pos = 0;
-    for (let k = 0; k < c.layouts.length; k++) {
-      const token = c.layouts[k]!, skip = token >>> 5, unbound = (token >>> 4) & 1;
+    for (let k = 0; k < layoutCount; k++) {
+      const token = layouts[k]!, skip = token >>> 5, unbound = (token >>> 4) & 1;
       let length = token & 15;
       if (length === 15) {
-        if (++k >= c.layouts.length) fail('Layout escape without extension');
-        length += c.layouts[k]!;
+        if (++k >= layoutCount) fail('Layout escape without extension');
+        length += layouts[k]!;
       }
       const count = length + (unbound ? 1 : 2);
       if (next + skip > total || pos + skip + count > n) fail('Column layout exceeds bounds');
