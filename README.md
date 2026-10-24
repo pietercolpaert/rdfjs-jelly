@@ -502,6 +502,11 @@ npm run test:interop -- /path/to/jelly-protobuf-v1.2.0
 `PERF_BASE_REF` (default `HEAD`), building both with the same installed tools.
 It includes message boundaries and small lookup tables, takes the median of
 five samples, and warns when elapsed time increases by more than 20%.
+Historical baselines run only the features they export: new Jelly-RDF 1.2 or
+SPARQL workloads are reported with current timings and a reason for the missing
+comparison. Shared Jelly 1.1 read/write workloads still run. The current build
+must support every workload, and failures in supported features are never skipped.
+`npm run test:perf` tests these compatibility rules.
 Correctness or build failures still fail the job. CI compares PRs against their
 base branch and main commits against their parent. This check requires Git
 and tar and runs separately from the release gate to avoid noisy timing failures.

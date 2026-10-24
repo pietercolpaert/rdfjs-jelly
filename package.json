@@ -61,7 +61,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --cache --max-warnings 0",
-    "check": "npm run typecheck && npm run lint && npm run proto:check && npm run build && npm run test:coverage && npm run lint:package && npm run test:package",
+    "check": "npm run typecheck && npm run lint && npm run proto:check && npm run build && npm run test:perf && npm run test:coverage && npm run lint:package && npm run test:package",
     "ci": "npm run check",
     "prepare": "npm run build",
     "proto:generate": "node scripts/generate-proto.mjs",
@@ -82,7 +82,8 @@
     "perf:regression": "node --expose-gc perf/regression.mjs",
     "perf:quality": "node --expose-gc perf/quality.mjs --profile",
     "test:interop": "node scripts/test-writer-interop.mjs",
-    "hooks:install": "git config core.hooksPath .githooks"
+    "hooks:install": "git config core.hooksPath .githooks",
+    "test:perf": "node --test perf/quality.test.mjs"
   },
   "dependencies": {
     "@rdfjs/types": "^2.0.1",

@@ -7,7 +7,15 @@ import { setImmediate, setTimeout } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
 const modulePath = process.env.JELLY_BENCH_MODULE;
-const { DataFactory: f, Writer, Parser, SparqlWriter, SparqlParser } = await import(modulePath ? pathToFileURL(modulePath).href : new URL('../dist/index.mjs', import.meta.url).href);
+const api = await import(modulePath ? pathToFileURL(modulePath).href : new URL('../dist/index.mjs', import.meta.url).href);
+const { DataFactory: f, Writer, Parser, SparqlWriter, SparqlParser } = api;
+// Only a historical baseline may lack features. Do not turn codec failures into
+// skips: advertised capabilities must successfully construct and run workloads.
+const allowLegacy = process.env.JELLY_BENCH_ALLOW_LEGACY === '1';
+const supportsRdf12 = typeof api.ColumnEncoder === 'function';
+const supportsSparql = typeof SparqlWriter === 'function' && typeof SparqlParser === 'function';
+assert.ok(allowLegacy || supportsRdf12, 'Current build must support Jelly-RDF 1.2');
+assert.ok(allowLegacy || supportsSparql, 'Current build must support Jelly-SPARQL');
 const count = Number(process.env.PERF_QUADS ?? 10000);
 const samples = Number(process.env.PERF_SAMPLES ?? 5);
 assert.ok(Number.isInteger(count) && count > 0);
@@ -34,19 +42,34 @@ function messageWrite() {
   writer.end((error, bytes) => { if (error) throw error; output = bytes; });
   return output;
 }
-const messages = messageWrite();
-const rdf2 = rdfWrite(2, 250), rdf3 = rdfWrite(3, 250), sparql = sparqlWrite(250);
+const rdf2 = rdfWrite(2, 250);
 const cases = {
   'rdf-1.1-read': () => new Parser().parse(rdf2).length,
+  'rdf-1.1-write': () => rdfWrite(2, 250).length,
+};
+const skipped = {};
+function register(supported, reason, workloads) {
+  for (const [name, operation] of Object.entries(workloads)) {
+    if (supported) cases[name] = operation;
+    else skipped[name] = reason;
+  }
+}
+// Generate inputs lazily so legacy baselines never instantiate newer writers.
+let messages, rdf3, sparql;
+if (supportsRdf12) { messages = messageWrite(); rdf3 = rdfWrite(3, 250); }
+if (supportsSparql) sparql = sparqlWrite(250);
+register(supportsRdf12, 'Baseline predates Jelly-RDF 1.2 support', {
   'rdf-1.2-read': () => new Parser().parse(rdf3).length,
   'rdf-1.2-messages': () => new Parser().parseMessages(messages).reduce((sum, message) => sum + message.length, 0),
   'rdf-1.2-write-messages': () => messageWrite().length,
   'rdf-1.2-write': () => rdfWrite(3, 250).length,
   'rdf-1.2-write-small-lookup': () => rdfWrite(3, 4000, { maxNames: 128, maxDatatypes: 8 }).length,
+});
+register(supportsSparql, 'Baseline predates Jelly-SPARQL support', {
   'sparql-read': () => new SparqlParser().parse(sparql)[0].bindings.length,
   'sparql-write': () => sparqlWrite(250).length,
   'sparql-write-small-lookup': () => sparqlWrite(4000, { maxNames: 128, maxDatatypes: 8 }).length,
-};
+});
 const results = {};
 for (const [name, operation] of Object.entries(cases)) {
   const expected = operation();
@@ -92,6 +115,6 @@ for (const [name, operation] of Object.entries(cases)) {
     }
   }
 }
-const report = { node: process.version, count, samples, results };
+const report = { node: process.version, count, samples, results, skipped };
 if (process.env.PERF_OUTPUT) writeFileSync(process.env.PERF_OUTPUT, JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify(report, null, 2));

@@ -28,11 +28,19 @@ try {
   const reports = {};
   for (const [name, module] of [['baseline', join(baseline, 'dist/index.mjs')], ['current', join(root, 'dist/index.mjs')]]) {
     const output = join(directory, `${name}.json`);
-    run(process.execPath, ['--expose-gc', join(root, 'perf/quality.mjs')], { env: { ...process.env, JELLY_BENCH_MODULE: module, PERF_OUTPUT: output } });
+    run(process.execPath, ['--expose-gc', join(root, 'perf/quality.mjs')], { env: { ...process.env, JELLY_BENCH_MODULE: module, JELLY_BENCH_ALLOW_LEGACY: name === 'baseline' ? '1' : '0', PERF_OUTPUT: output } });
     reports[name] = JSON.parse(readFileSync(output, 'utf8'));
   }
   const comparisons = [];
   for (const [name, value] of Object.entries(reports.current.results)) {
+    const previous = reports.baseline.results[name];
+    if (!previous) {
+      const reason = reports.baseline.skipped[name];
+      assert.ok(reason, `${name}: missing baseline result without a capability skip`);
+      comparisons.push({ name, status: 'new', reason, currentMs: value.medianMs });
+      console.log(`${name}: new workload; ${reason}`);
+      continue;
+    }
     if (!name.includes('write')) assert.equal(value.count, reports.baseline.results[name].count, `${name}: baseline and current output counts differ`);
     const slowdown = (value.medianMs / reports.baseline.results[name].medianMs - 1) * 100;
     comparisons.push({ name, baselineMs: reports.baseline.results[name].medianMs, currentMs: value.medianMs, slowdownPercent: slowdown });
