@@ -16,8 +16,6 @@ export class SparqlDecoder extends ColumnTermDecoder {
   private trailer = false;
   private resultIndex = 0;
   private resultError?: string;
-  private readonly bnodes = new Map<string, RDF.BlankNode>();
-  private readonly usedLabels = new Set<string>();
   private ended = false;
 
   public constructor(private readonly config: SparqlParserOptions = {}) {
@@ -99,7 +97,7 @@ export class SparqlDecoder extends ColumnTermDecoder {
         this.header = undefined;
         this.resultError = undefined;
         this.trailer = false;
-        this.bnodes.clear();
+        this.resetBlankNodeScope();
       }
     }
     return events;
@@ -114,17 +112,6 @@ export class SparqlDecoder extends ColumnTermDecoder {
     return { type: 'end', resultIndex: this.resultIndex, complete: this.trailer && !this.resultError, ...(this.resultError ? { error: this.resultError } : {}) };
   }
   private scoped(term: RDF.Term): RDF.Term {
-    if (this.streamType === 0) return term;
-    if (term.termType === 'Quad') return this.factory.quad(this.scoped(term.subject) as RDF.Quad_Subject, term.predicate as RDF.Quad_Predicate, this.scoped(term.object) as RDF.Quad_Object);
-    if (term.termType !== 'BlankNode') return term;
-    let node = this.bnodes.get(term.value);
-    if (!node) {
-      let label = term.value;
-      while (this.usedLabels.has(label)) label = `sparql${this.resultIndex}_${label}`;
-      this.usedLabels.add(label);
-      node = this.factory.blankNode(label);
-      this.bnodes.set(term.value, node);
-    }
-    return node;
+    return this.streamType === 1 ? this.scopeTerm(term, this.resultIndex) : term;
   }
 }

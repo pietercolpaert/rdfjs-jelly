@@ -9,24 +9,35 @@ type P = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
 type C = eu.ostrzyciel.jelly.core.proto.v1.RdfColumn;
 type I = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
 function fail(message: string): never { throw new JellyConformanceError(message); }
+const EMPTY_METADATA: ReadonlyMap<string, Uint8Array> = new Map();
 
 /** The column layout has independent IRI inference sequences and message boundaries. */
 export class ColumnDecoder extends ColumnTermDecoder {
   public streamOptions?: StreamOptions;
   public readonly namespaces: Record<string, RDF.NamedNode> = Object.create(null);
   private current: RDF.Quad[] = [];
+  private openMessage = false;
   private counter = 0;
-  private readonly blankNodes = new Map<string, RDF.BlankNode>();
-  private readonly usedBlankLabels = new Set<string>();
 
   public constructor(options: ParserOptions, private readonly events: DecoderEvents) { super(options); }
 
-  public decode(frame: P): Message[] {
+  public decode(frame: P, output?: RDF.Quad[]): Message[] {
     const out: Message[] = [];
-    const metadata = new Map(Object.entries(frame.metadata).map(([k, v]) => [k, new Uint8Array(v)]));
-    const endMessage = (): void => {
-      out.push(new Message(this.counter++, this.current, metadata));
+    let metadata = EMPTY_METADATA;
+    if (!output) for (const key in frame.metadata) {
+      if (!Object.hasOwn(frame.metadata, key)) continue;
+      if (metadata === EMPTY_METADATA) metadata = new Map();
+      (metadata as Map<string, Uint8Array>).set(key, new Uint8Array(frame.metadata[key]!));
+    }
+    if (output && this.current.length) {
+      for (const quad of this.current) output.push(quad);
       this.current = [];
+    }
+    const endMessage = (): void => {
+      if (!output) out.push(new Message(this.counter, this.current, metadata));
+      this.counter++;
+      this.current = [];
+      this.openMessage = false;
     };
     if (frame.rows.length > 1) fail('Column layout permits only one options row per frame');
     for (const row of frame.rows) {
@@ -41,8 +52,8 @@ export class ColumnDecoder extends ColumnTermDecoder {
       if (raw.rdfVersion < 0 || raw.rdfVersion > 3) fail(`Unknown RDF version ${raw.rdfVersion}`);
       if (old && (raw.physicalType !== old.physicalType || raw.streamType !== old.streamType)) fail('Restated options must preserve physical type, stream type, and version');
       if (old?.streamType === 1) {
-        if (this.current.length) endMessage();
-        this.blankNodes.clear();
+        if (this.openMessage) endMessage();
+        this.resetBlankNodeScope();
       }
       this.resetLookups(raw);
       this.streamOptions = {
@@ -66,7 +77,10 @@ export class ColumnDecoder extends ColumnTermDecoder {
       this.events.namespace?.(ns.name, term);
     }
     if (this.streamOptions.physicalType === 1 && b.graphs) fail('Graphs column in a TRIPLES stream');
-    const columns = [b.subjects, b.predicates, b.objects, b.graphs].map(c => this.column(c as C | null, n));
+    const subjects = this.column(b.subjects as C | null, n);
+    const predicates = this.column(b.predicates as C | null, n);
+    const objects = this.column(b.objects as C | null, n);
+    const graphs = b.graphs ? this.column(b.graphs as C, n) : undefined;
     const lengths = b.messageLengths;
     if (this.streamOptions.streamType === 0 && lengths.length) fail('Message boundaries in a FLAT stream');
     if (lengths.reduce((sum, v) => sum + v, 0) > n) fail('Message lengths exceed row_count');
@@ -74,18 +88,20 @@ export class ColumnDecoder extends ColumnTermDecoder {
     const append = (count: number): void => {
       for (const end = pos + count; pos < end; pos++) {
         // Remap blank nodes per logical message, including those in triple terms.
-        const [s, p, o, g] = columns.map(c => c[pos]);
+        const s = subjects[pos], p = predicates[pos], o = objects[pos], g = graphs?.[pos];
         if (!s || (s.termType !== 'NamedNode' && s.termType !== 'BlankNode')) fail('Invalid or unbound subject in column');
         if (!p || p.termType !== 'NamedNode') fail('Invalid or unbound predicate in column');
         if (!o) fail('Unbound object in column');
         if (g && g.termType !== 'NamedNode' && g.termType !== 'BlankNode') fail('Invalid graph in column');
-        this.current.push(this.factory.quad(this.scoped(s) as RDF.Quad_Subject, p, this.scoped(o) as RDF.Quad_Object, g ? this.scoped(g) as RDF.Quad_Graph : this.factory.defaultGraph()));
+        const quad = this.factory.quad(this.scoped(s) as RDF.Quad_Subject, p, this.scoped(o) as RDF.Quad_Object, g ? this.scoped(g) as RDF.Quad_Graph : this.defaultGraph);
+        (output ?? this.current).push(quad);
+        this.openMessage = true;
       }
     };
     for (const length of lengths) {
       append(length);
       endMessage();
-      this.blankNodes.clear();
+      this.resetBlankNodeScope();
     }
     append(n - pos);
     // FLAT streams expose batches through the existing message API; only
@@ -96,25 +112,14 @@ export class ColumnDecoder extends ColumnTermDecoder {
 
   public finish(): Message[] {
     if (!this.streamOptions) fail('No Jelly stream options row was found');
-    if (!this.current.length) return [];
+    if (!this.openMessage) return [];
     const out = new Message(this.counter++, this.current);
     this.current = [];
+    this.openMessage = false;
     return [out];
   }
 
   private scoped(term: RDF.Term): RDF.Term {
-    if (this.streamOptions!.streamType !== 1) return term;
-    if (term.termType === 'Quad') return this.factory.quad(this.scoped(term.subject) as RDF.Quad_Subject, term.predicate as RDF.Quad_Predicate, this.scoped(term.object) as RDF.Quad_Object);
-    if (term.termType !== 'BlankNode') return term;
-    let node = this.blankNodes.get(term.value);
-    if (!node) {
-      // Preserve labels in their first scope, and allocate unique labels later.
-      let label = term.value;
-      while (this.usedBlankLabels.has(label)) label = `jelly${this.counter}_${label}`;
-      this.usedBlankLabels.add(label);
-      node = this.factory.blankNode(label);
-      this.blankNodes.set(term.value, node);
-    }
-    return node;
+    return this.streamOptions!.streamType === 1 ? this.scopeTerm(term, this.counter) : term;
   }
 }

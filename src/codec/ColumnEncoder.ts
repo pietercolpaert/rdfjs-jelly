@@ -68,9 +68,9 @@ export class ColumnEncoder extends ColumnTermEncoder {
     return this.frames;
   }
   private fit(names: string[], datatypes: string[]): void {
-    const fits = (): boolean => [names, datatypes].every((values, i) => new Set([...this.tables[i]!.keys(), ...values]).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
-    if (!fits()) this.flush();
-    if (!fits()) throw new JellyConformanceError('A single statement does not fit in the configured lookup tables');
+    if (this.workingSetFits(names, datatypes, this.lookup)) return;
+    this.flush();
+    if (!this.workingSetFits(names, datatypes, this.lookup)) throw new JellyConformanceError('A single statement does not fit in the configured lookup tables');
   }
   private flush(metadata?: MessageMetadata, boundary = false): void {
     const columns: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties = {

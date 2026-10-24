@@ -115,7 +115,8 @@ For Jelly 1.0/1.1, `parseMessages()` and `messages: true` expose frame boundarie
 and preserve blank-node labels; consumers must retain the appropriate scope.
 For 1.2 streams with `streamType: MESSAGES`, these APIs expose the explicit
 logical messages, including empty messages. Messages may span frames or share a
-frame. Blank nodes are assigned distinct identities across messages. A final
+frame. Blank nodes are assigned distinct identities across messages; their scoped
+labels are opaque and may be renamed. A final
 unfinished message with statements is emitted at end of input. Restated options
 reset lookup tables and close an unfinished message, while preserving namespaces.
 Frame metadata is attached to messages that end in that frame; a message closed
@@ -178,7 +179,8 @@ results, create a writer with `streamType: SparqlStreamType.PUNCTUATED`, then ca
 `startSelect()` / `addBinding()` / `endResult()` or `addAsk()` for each result.
 `addResult()` accepts a complete result object, including those returned by the
 parser. Blank nodes share scope within one result set, across frames and repeated
-options, and get distinct identities across punctuated result sets.
+options, and get distinct identities across punctuated result sets. Scoped labels
+are opaque and may be renamed.
 
 A missing trailer returns the rows already read with `complete: false`. A producer
 error trailer throws `JellySparqlResultError`, with its message and `resultIndex`.
@@ -280,6 +282,12 @@ Browser users can wrap the parser with native `DecompressionStream` support or
 a separate compression library, depending on the compression format.
 
 ## Performance
+
+The [RiverBench Jelly 1.2 audit](docs/riverbench-performance-audit-2026-10-24.md)
+and [implementation follow-up](docs/riverbench-performance-followup-2026-10-24.md)
+include full-dataset streaming, writer timings, and allocation/GC measurements for
+Jelly-RDF and Jelly-SPARQL. The follow-up replaces whole-table writer capacity
+checks and reduces reader temporary allocations.
 
 These are local microbenchmarks, not universal rankings. Recorded on 2026-09-12
 with Node.js 25.9.0 on Linux, using an Intel Core i7-1265U and 30 GiB RAM,

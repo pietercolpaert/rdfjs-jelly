@@ -73,7 +73,7 @@ export class Decoder {
   }
 
   /** Decodes logical messages, which may cross or share column frames. */
-  public decodePayloadMessages(reader: Reader, length: number): Message[] {
+  public decodePayloadMessages(reader: Reader, length: number, output?: RDF.Quad[]): Message[] {
     const start = reader.pos;
     if (!this.streamOptions || this.columns) {
       const frame = decodeProtoRdfStreamFrameReader(reader, length);
@@ -82,7 +82,7 @@ export class Decoder {
       if (this.columns || version === 3) {
         if (3 > this.maxSupportedVersion) throw new JellyUnsupportedFeatureError('Unsupported Jelly protocol version 3');
         this.columns ??= new ColumnDecoder(this.parserOptions, this.events);
-        const messages = this.columns.decode(frame);
+        const messages = this.columns.decode(frame, output);
         this.streamOptions = this.columns.streamOptions;
         Object.assign(this.namespaces, this.columns.namespaces);
         return messages;
@@ -178,7 +178,7 @@ export class Decoder {
 
   public decodeProtoPayloadTo(rawReader: unknown, length: number, output: RDF.Quad[]): void {
     if (!this.streamOptions || this.columns) {
-      for (const message of this.decodePayloadMessages(rawReader as Reader, length)) for (const quad of message) output.push(quad);
+      for (const message of this.decodePayloadMessages(rawReader as Reader, length, output)) for (const quad of message) output.push(quad);
       return;
     }
     this.messageCounter++;

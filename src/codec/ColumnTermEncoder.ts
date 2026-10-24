@@ -1,7 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import { eu } from '../generated/proto/rdf_pb.mjs';
 import { JellyConformanceError } from '../errors';
-import { RDF_DIR_LANG_STRING, RDF_LANG_STRING, XSD_STRING } from '../options';
+import { RDF_DIR_LANG_STRING, RDF_LANG_STRING, XSD_STRING, type LookupPreset } from '../options';
 import { RdfVersion } from '../types';
 
 type Column = eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties;
@@ -12,7 +12,25 @@ const proto = eu.ostrzyciel.jelly.core.proto.v1;
 /** Shared term collection and column encoding for both Jelly formats. */
 export class ColumnTermEncoder {
   protected readonly tables = [new Map<string, number>(), new Map<string, number>()];
+  private readonly pendingKeys = new Set<string>();
   public constructor(protected readonly rdfVersion: RdfVersion) {}
+  /** Check only the incoming keys; never copy the accumulated batch tables. */
+  protected workingSetFits(names: readonly string[], datatypes: readonly string[], lookup: LookupPreset): boolean {
+    return this.tableFits(this.tables[0]!, names, lookup.maxNames) &&
+      this.tableFits(this.tables[1]!, datatypes, lookup.maxDatatypes);
+  }
+  private tableFits(table: ReadonlyMap<string, number>, values: readonly string[], capacity: number): boolean {
+    this.pendingKeys.clear();
+    // Even if every incoming key is new, there is enough room.
+    if (table.size + values.length <= capacity) return true;
+    let remaining = capacity - table.size;
+    for (const value of values) {
+      if (table.has(value) || this.pendingKeys.has(value)) continue;
+      if (remaining-- === 0) return false;
+      this.pendingKeys.add(value);
+    }
+    return true;
+  }
   protected keys(term: RDF.Term, names: string[], datatypes: string[], depth = 0): void {
     if (term.termType === 'NamedNode') names.push(term.value);
     else if (term.termType === 'Literal') {

@@ -61,9 +61,11 @@ export class SparqlWriter extends ColumnTermEncoder {
       if (!['NamedNode', 'BlankNode', 'Literal', 'Quad'].includes(term.termType)) fail(`Invalid SPARQL binding term ${term.termType}`);
       this.keys(term, names, datatypes);
     }
-    const fits = (): boolean => [names, datatypes].every((values, i) => new Set([...this.tables[i]!.keys(), ...values]).size <= (i === 0 ? this.lookup.maxNames : this.lookup.maxDatatypes));
-    if (this.rows.length >= this.frameSize || !fits()) this.flush();
-    if (!fits()) fail('A single solution does not fit in the configured lookup tables');
+    if (this.rows.length >= this.frameSize) this.flush();
+    if (!this.workingSetFits(names, datatypes, this.lookup)) {
+      if (this.rows.length) this.flush();
+      if (!this.workingSetFits(names, datatypes, this.lookup)) fail('A single solution does not fit in the configured lookup tables');
+    }
     for (const [values, table] of [[names, this.tables[0]!], [datatypes, this.tables[1]!]] as const) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
     this.rows.push(row as Map<string, RDF.Term>);
   }

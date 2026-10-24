@@ -11,15 +11,19 @@ type T = eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm;
 type I = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
 type L = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral;
 function fail(message: string): never { throw new JellyConformanceError(message); }
+const EMPTY_TERMS: readonly RDF.Term[] = [];
 
 /** Shared lookup and term-column decoding for Jelly-RDF and Jelly-SPARQL. */
 export class ColumnTermDecoder {
   protected readonly factory: RDF.DataFactory;
+  protected readonly defaultGraph: RDF.DefaultGraph;
   protected names!: LookupDecoder;
   protected prefixes!: LookupDecoder;
   protected datatypes!: LookupDecoder;
+  private readonly scopedBlankNodes = new Map<string, RDF.BlankNode>();
   public constructor(protected readonly options: ParserOptions = {}) {
     this.factory = options.factory ?? DataFactory;
+    this.defaultGraph = this.factory.defaultGraph();
     if (options.maxRowsPerBatch !== undefined && (!Number.isInteger(options.maxRowsPerBatch) || options.maxRowsPerBatch < 0)) fail('maxRowsPerBatch must be a nonnegative integer');
   }
   protected resetLookups(raw: { maxNameTableSize: number; maxPrefixTableSize: number; maxDatatypeTableSize: number }): void {
@@ -37,6 +41,24 @@ export class ColumnTermDecoder {
   }
   protected checkRowCount(n: number): void {
     if (n > 0x7ffffff || n > (this.options.maxRowsPerBatch ?? 1_048_576)) fail('Column row_count exceeds configured size limit');
+  }
+  protected resetBlankNodeScope(): void { this.scopedBlankNodes.clear(); }
+  protected scopeTerm(term: RDF.Term, scope: number): RDF.Term {
+    if (term.termType === 'Quad') return this.factory.quad(
+      this.scopeTerm(term.subject, scope) as RDF.Quad_Subject,
+      term.predicate as RDF.Quad_Predicate,
+      this.scopeTerm(term.object, scope) as RDF.Quad_Object,
+      this.defaultGraph,
+    );
+    if (term.termType !== 'BlankNode') return term;
+    let node = this.scopedBlankNodes.get(term.value);
+    if (!node) {
+      // Prefix every label, including the first scope. The canonical numeric
+      // scope and delimiter make this injective without retaining past labels.
+      node = this.factory.blankNode(`b${scope}_${term.value}`);
+      this.scopedBlankNodes.set(term.value, node);
+    }
+    return node;
   }
   protected iri(value: I, state: number[]): RDF.NamedNode {
     state[0] = value.prefixId || state[0]!;
@@ -82,33 +104,38 @@ export class ColumnTermDecoder {
     return this.factory.quad(s, p, o);
   }
 
-  protected column(c: C | null | undefined, n: number): Array<RDF.Term | undefined> {
+  protected column(c: C | null | undefined, n: number): ReadonlyArray<RDF.Term | undefined> {
     if (!c) return new Array(n);
     const { nameIds, prefixIds, lexValues, literalKinds, langtags, langtagDirections } = c;
     if (![0, 1, nameIds.length].includes(prefixIds.length)) fail('Invalid prefix_ids length');
     if (![0, 1, lexValues.length].includes(literalKinds.length)) fail('Invalid literal_kinds length');
     if (langtagDirections.length && langtagDirections.length !== langtags.length) fail('Invalid langtag_directions length');
     const state = [0, 0];
-    const iris = nameIds.map((name, j) => {
+    const iris = nameIds.length ? nameIds.map((name, j) => {
       state[1] = name || state[1]! + 1;
       state[0] = prefixIds.length === 1 ? prefixIds[0]! : prefixIds[j] || state[0]!;
       return this.resolve(state[0]!, state[1]!);
-    });
-    const literals = lexValues.map((lex, j) => {
+    }) : EMPTY_TERMS;
+    const literals = lexValues.length ? lexValues.map((lex, j) => {
       const kind = literalKinds.length === 1 ? literalKinds[0]! : literalKinds[j] ?? 0;
       if (kind === 0) return this.literal(lex);
       if (kind % 2) return this.literal(lex, undefined, 0, (kind + 1) / 2);
       const index = kind / 2 - 1;
       if (index >= langtags.length) fail('Invalid language tag index');
       return this.literal(lex, langtags[index]!, langtagDirections[index] ?? 0);
-    });
+    }) : EMPTY_TERMS;
     const tripleState = [0, 0];
-    const lists: RDF.Term[][] = [iris, literals, c.bnodes.map(v => this.factory.blankNode(v)), c.tripleTerms.map(t => this.triple(t as T, tripleState))];
+    const lists = [iris, literals,
+      c.bnodes.length ? c.bnodes.map(v => this.factory.blankNode(v)) : EMPTY_TERMS,
+      c.tripleTerms.length ? c.tripleTerms.map(t => this.triple(t as T, tripleState)) : EMPTY_TERMS];
     const total = lists.reduce((sum, list) => sum + list.length, 0);
-    const used = lists.filter(list => list.length);
-    const values: RDF.Term[] = [];
-    if (!c.kinds.length && used.length <= 1) { for (const value of used[0] ?? []) values.push(value); }
+    let populated = 0;
+    let only: readonly RDF.Term[] = EMPTY_TERMS;
+    for (const list of lists) if (list.length) { populated++; only = list; }
+    let values: readonly RDF.Term[];
+    if (!c.kinds.length && populated <= 1) values = only;
     else {
+      const mixed: RDF.Term[] = [];
       if (c.kinds.length !== Math.ceil(total / 4)) fail('Invalid kinds length');
       if (total % 4 && c.kinds[c.kinds.length - 1]! >>> (2 * (total % 4))) fail('Nonzero unused kinds bits');
       const indices = [0, 0, 0, 0];
@@ -117,8 +144,18 @@ export class ColumnTermDecoder {
         const value = lists[kind]![indices[kind]!] ;
         indices[kind]!++;
         if (!value) fail('Kinds references missing run value');
-        values.push(value);
+        mixed.push(value);
       }
+      values = mixed;
+    }
+    // No sequence layout: the run values already are the column. Padding is
+    // needed only for trailing unbound cells; never mutate the source lists.
+    if (!c.layouts.length) {
+      if (values.length > n) fail('Too many column values');
+      if (values.length === n) return values;
+      const padded: Array<RDF.Term | undefined> = new Array(n);
+      for (let i = 0; i < values.length; i++) padded[i] = values[i];
+      return padded;
     }
     const cells: Array<RDF.Term | undefined> = [];
     let i = 0;
