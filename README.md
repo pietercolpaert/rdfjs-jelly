@@ -174,31 +174,6 @@ using the writable side directly, consume the readable side concurrently: writes
 and closure can wait for reader demand. Cancelling the reader stops pending
 writes and propagates cancellation upstream when piping.
 
-## Browser playground
-
-Build the browser bundle, serve the repository, and open `/index.html`:
-
-```sh
-npm run build:browser
-python3 -m http.server 8000
-```
-
-The bundled `example/osm-dk-10k.jelly.gz` dataset is selected by default. The
-playground accepts URLs and uploaded files, and detects plain, gzip, and zstd
-input from its magic bytes rather than the filename. It steps through one Jelly
-RDF Message at a time, can fast-forward to the end, and retains a rolling
-history of 20 messages.
-
-The conversion mode parses an RDF 1.2 Message Stream Log with `rdf-parser-ts`,
-preserves empty message boundaries, writes Jelly protocol version 2, compresses
-the result as a standard zstd frame, and saves a `.jelly.zst` file. Conversion
-streams through the parser, Jelly encoder, and zstd WASM codec into a file chosen
-with the File System Access API. Browsers without that API cannot provide a
-bounded-memory download and should use the CLI. Browser zstd input is streamed
-when the browser exposes a native zstd `DecompressionStream`; otherwise the
-WASM fallback still requires a complete compressed input buffer. Gzip and
-uncompressed input remain streaming.
-
 ## Compression
 
 Transport compression is intentionally separate from Jelly framing. Node.js
@@ -220,13 +195,8 @@ Compressed parsing includes decompression; compression and network transfer time
 are outside the measured region. The size/speed tradeoff depends on the workload
 and codec settings.
 
-Browser `CompressionStream` and `DecompressionStream` do not currently expose
-zstd. The playground therefore uses `@hpcc-js/wasm-zstd` for incremental zstd
-output compression and buffered zstd input decompression, while retaining the
-native browser stream API for gzip. The WASM codec is confined to the playground
-bundle, which is a development page and is not part of the published package, so
-it affects neither the `dist/browser/index.mjs` parser bundle nor what consumers
-install.
+Browser users can wrap the parser with native `DecompressionStream` support or
+a separate compression library, depending on the compression format.
 
 ## Performance
 
@@ -400,6 +370,11 @@ npm run build
 npm run check
 npm run proto:generate
 ```
+
+`dist/` is generated locally and ignored by Git. `npm install` and `npm ci`
+build it through the `prepare` script; npm packages include the generated Node
+and browser bundles through the `files` allowlist. Run `npm run build` after
+source changes.
 
 The checked-in schema is Jelly-RDF `rdf.proto` 1.2.0. Static JavaScript codecs
 and TypeScript declarations are generated with protobuf.js. The generation

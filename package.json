@@ -71,7 +71,6 @@
     "rdf-parser-ts": "^0.3.2"
   },
   "devDependencies": {
-    "@hpcc-js/wasm-zstd": "^1.13.2",
     "@types/node": "^24.0.0",
     "esbuild": "^0.28.2",
     "protobufjs-cli": "^2.5.5",
