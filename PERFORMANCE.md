@@ -1,59 +1,18 @@
-# RiverBench performance comparison
+# Performance
 
-Measured 2026-10-24. This is a small, executable JavaScript comparison of
-Turtle RDF Message Logs using `n3.js-messages`, RiverBench Jelly 1.1 archives,
-and RiverBench Jelly 1.2 archives. It covers 6 datasets, 60,000 messages,
-and 2,103,143 statements.
+Measured 2026-10-24 with rdfjs-jelly 0.1.6. Across 6 RiverBench datasets (60,000 messages and 2,103,143 statements), Jelly 1.2 reads at **1.97 million statements/s**, compared with **2.25 million/s** for legacy Jelly row-layout archives (protocol tag 1) and **0.94 million/s** for source-preserving Turtle message logs.
 
-The size finding reproduces: the downloaded Jelly 1.2 streams use **26.8% fewer
-uncompressed bytes** than 1.1 by geometric mean. The read-throughput finding does
-**not** reproduce in this implementation: 1.2 achieves **0.88×** the 1.1 throughput
-in the retained-message benchmark. Against the source-preserving Turtle log,
-Jelly 1.1 achieves **2.56×** and Jelly 1.2 **2.26×** throughput.
-These are geometric means of per-dataset ratios, rather than a pooled throughput.
+Jelly 1.2 achieves **0.87×** the legacy read throughput and **2.10×** the Turtle throughput. Its downloaded encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip bytes**, and **10.7% fewer zstd bytes** than the legacy archives. All aggregate rates and ratios are geometric means across datasets; they are not pooled throughputs or averages across individual statements.
 
-The [implementation and packing follow-up](docs/column-optimization-2026-10-24.md) measures the
-reader improvements against the saved baseline and the optional packed writer.
-The tables here use the unchanged downloaded encodings and default writer framing.
+## Workload and method
 
-## Relationship to the upstream report
+The inputs are RiverBench development distributions: `stream_10K.tar.gz` (separate Turtle documents), `jelly_10K.jelly.gz` (legacy Jelly row layout), and `jelly_10K.2.jelly.gz` (Jelly 1.2). Here, 1.2 denotes the Jelly serialization version; the RDF content uses RDF 1.1. The legacy archives declare protocol tag 1 (Jelly 1.0); the column archives declare tag 3 (Jelly 1.2). Both contain 10,000 frames, one per source message. The local writer experiment below emits tag 2 (Jelly 1.1) for its row-layout output. Archive reader results therefore do not constitute a 1.1-versus-1.2 reader comparison.
 
-The [Jelly-RDF 1.1 vs 1.2 report](https://jelly-rdf.github.io/dev/performance/rdf-1-1-vs-1-2/)
-compares Jelly-JVM 3.7.3 and 4.0.0 on 13 datasets, using six runs per dataset.
-Within JVM 4.0.0, it reports a 1.79×–1.94× geometric-mean read-throughput gain
-for 1.2, and uncompressed size falling from 32.13 to 21.04 bytes/statement.
-Its 4.0 configurations use a frame size of 1,024. The [RDF benchmark](https://jelly-rdf.github.io/1.2.x/performance/rdf/) uses flat streams, 100,000 statements per dataset and a discard sink. Those JVM results are context,
-not measurements made here.
+Turtle documents are sorted by their zero-padded numeric filenames and assembled into a message log with `VERSION "1.2-messages"` and `MESSAGE` delimiters. The source text, repeated prefix declarations and whitespace are preserved; tar headers are excluded. A separate shared-prefix Turtle variant is written with N3's `writeMessages` and prefixes collected from the source. It changes grouping, whitespace and possibly statement order, so both Turtle representations are shown.
 
-This experiment keeps one JavaScript implementation revision fixed and reads
-the two **downloaded** archive encodings. Both archive types contain 10,000
-frames per dataset, one frame per source message. This differs materially from
-the upstream framing and execution environment. The RDF content is RDF 1.1
-throughout; “1.2” here denotes the Jelly serialization version, not RDF 1.2-only data.
+Every corresponding message is checked for equal statement counts and isomorphic RDF, allowing bijective blank-node renaming and statement reordering. Blank-node identities must remain separate across messages, and Jelly message counters must follow stream order. Writer outputs receive the same checks. Every timed read checks message and statement counts after the clock stops.
 
-## Inputs and semantic checks
-
-Each dataset uses its `dev` distributions `stream_10K.tar.gz`,
-`jelly_10K.jelly.gz`, and `jelly_10K.2.jelly.gz`. Dataset pages below describe
-the data and its license. All compressed-source URLs and SHA-256 hashes,
-prepared-input hashes, stream options, and individual samples are in the
-[primary results](perf/riverbench-comparison-optimized-2026-10-24.json). Writer outputs and the Turtle sensitivity
-experiment are in the [follow-up results](perf/riverbench-comparison-optimized-followup-2026-10-24.json).
-
-RiverBench's plain streaming package contains separate Turtle documents, not
-a preassembled RDF Message Log. The preparation script sorts their zero-padded
-numeric filenames, prepends `VERSION "1.2-messages"`, and places `MESSAGE`
-between documents. It preserves the Turtle document bytes, including repeated
-prefix declarations and whitespace, and adds no trailing empty message.
-No tar headers are fed into any RDF parser.
-
-The source log is a reproducible baseline, not an optimized Turtle serializer.
-A second, **N3-reserialized log with shared prefixes**, uses `writeMessages`
-with prefixes collected from the original text. This also changes whitespace,
-grouping, and potentially statement order. Its timings are reported separately
-to show sensitivity to Turtle representation.
-
-| Dataset (10K messages each) | Statements | Blank nodes | Messages with blank nodes | Max statements/message |
+| Dataset (10K messages each) | Statements | Blank nodes | Messages with blank nodes | Largest message |
 | --- | --- | --- | --- | --- |
 | [assist-iot-weather](https://riverbench.github.io/v/dev/datasets/assist-iot-weather/) | 1,150,000 | 0 | 0 | 115 |
 | [citypulse-traffic](https://riverbench.github.io/v/dev/datasets/citypulse-traffic/) | 360,000 | 50,000 | 10,000 | 36 |
@@ -62,86 +21,82 @@ to show sensitivity to Turtle representation.
 | [muziekweb](https://riverbench.github.io/v/dev/datasets/muziekweb/) | 51,721 | 0 | 0 | 11 |
 | [osm2rdf-denmark](https://riverbench.github.io/v/dev/datasets/osm2rdf-denmark/) | 300,656 | 1,500 | 146 | 8,899 |
 
-Before timing, every corresponding message must have equal statement counts
-and isomorphic RDF, allowing statement reordering and bijective blank-node
-renaming. Blank-node identifiers must remain unique across messages; both
-implementations must have the same per-stream blank-node and affected-message
-counts. Jelly message counters must follow stream order. Each timed read also
-checks total message and statement counts, after stopping the clock. These are
-graph-equivalence checks, not a claim of byte or statement-order equality.
-Writer outputs undergo the same per-message RDF and blank-node-scope checks.
+Retained reads use `Parser.parseMessages` for Jelly and N3's `MessageParser.parse` for Turtle, with the libraries' default RDF/JS factories. Complete message arrays remain live until each operation completes. Inputs are reused in-memory byte buffers; UTF-8 decoding is included for Turtle. Input copying and file I/O are excluded.
 
-## Read throughput
+Each retained read/write case runs in a fresh process with 2 warmups and 7 timed iterations. Explicit GC runs before each operation; any GC during the operation stays inside its timing. Medians are reported, without outlier removal. Workers run sequentially; read-case order rotates across datasets and streaming/writer format order alternates. Cases within a worker share a process. There is no CPU affinity, thermal control or confidence interval, so small differences are inconclusive. Uncompressed Jelly reading also has an independent process repetition, shown separately below; compressed reads, streaming and writing have no process repetitions.
 
-Rates are **million statements/second**, derived from median wall-clock time.
-Each entry reads an in-memory byte buffer into retained arrays of complete
-messages: `MessageParser.parse` for Turtle and `Parser.parseMessages` for Jelly,
-using each library's default RDF/JS data factory.
-UTF-8 decoding is included for Turtle. Input-buffer copying and file I/O are
-excluded. The uncompressed case reuses its input bytes; compressed cases must
-allocate decompressed bytes as part of decoding.
+All formats are recompressed with gzip level 6 and zstd level 3. Compression is outside read timing; decompression is inside it. These settings differ from the original downloads' gzip settings.
 
-| Dataset | Turtle source log | Turtle reserialized | Jelly 1.1 | Jelly 1.2 | 1.2 / 1.1 |
+## Retained-message read throughput
+
+All rates are **million statements/s**. These measurements include RDF term, quad and message materialization.
+
+| Dataset | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 | 1.2 / legacy |
 | --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.14 | 1.30 | 2.71 | 4.45 | 1.64× |
-| citypulse-traffic | 1.04 | 1.27 | 3.01 | 3.04 | 1.01× |
-| digital-agenda-indicators | 0.61 | 1.16 | 2.29 | 1.52 | 0.66× |
-| linked-spending | 1.10 | 1.26 | 2.65 | 1.95 | 0.74× |
-| muziekweb | 0.95 | 1.06 | 1.49 | 0.96 | 0.64× |
-| osm2rdf-denmark | 0.96 | 1.32 | 2.76 | 2.50 | 0.90× |
+| assist-iot-weather | 1.15 | 1.22 | 2.59 | 3.67 | 1.42× |
+| citypulse-traffic | 1.01 | 1.16 | 2.88 | 2.95 | 1.03× |
+| digital-agenda-indicators | 0.58 | 1.30 | 1.98 | 1.47 | 0.74× |
+| linked-spending | 1.03 | 1.26 | 2.57 | 1.95 | 0.76× |
+| muziekweb | 1.00 | 1.04 | 1.37 | 0.81 | 0.59× |
+| osm2rdf-denmark | 0.96 | 1.24 | 2.52 | 2.29 | 0.91× |
 
-Compression/decompression uses gzip level 6 and zstd level 3 for **all** formats,
-recompressed from the prepared uncompressed inputs. Compression happens outside
-the read clock; decompression happens inside it. These compressed-input cases
-do not use the original archive gzip settings. The following rates and ratios
-are geometric means across datasets; per-dataset compressed timings are in JSON.
-
-| Input encoding | Turtle source log | Turtle reserialized | Jelly 1.1 | Jelly 1.2 | 1.2 / 1.1 |
+| Input compression | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 | 1.2 / legacy |
 | --- | --- | --- | --- | --- | --- |
-| none | 0.95 | 1.23 | 2.42 | 2.14 | 0.88× |
-| gzip | 0.91 | 1.12 | 2.26 | 1.99 | 0.88× |
-| zstd | 0.93 | 1.15 | 2.31 | 2.07 | 0.89× |
+| none | 0.94 | 1.20 | 2.25 | 1.97 | 0.87× |
+| gzip | 0.86 | 1.09 | 2.07 | 1.90 | 0.92× |
+| zstd | 0.88 | 1.14 | 2.10 | 1.96 | 0.93× |
+
+### Independent read repetition
+
+Each uncompressed Jelly case was measured again in a fresh worker, with two warmups and seven timed iterations. This measures process-to-process variation for the same runtime bundle and input bytes. The main tables use the primary run; these repetitions are reported separately. Rates are million statements/s.
+
+| Dataset | Legacy primary | Legacy repetition | 1.2 primary | 1.2 repetition |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 2.59 | 2.82 | 3.67 | 4.42 |
+| citypulse-traffic | 2.88 | 2.95 | 2.95 | 2.90 |
+| digital-agenda-indicators | 1.98 | 2.41 | 1.47 | 1.54 |
+| linked-spending | 2.57 | 2.71 | 1.95 | 2.03 |
+| muziekweb | 1.37 | 1.47 | 0.81 | 0.88 |
+| osm2rdf-denmark | 2.52 | 2.75 | 2.29 | 2.51 |
+
+The Jelly 1.2 geometric mean is 1.97 million statements/s in the primary run and 2.11 million/s in the repetition. Scheduling, heap behavior and thermal state are not controlled; these measurements do not identify which source of variation dominates.
 
 ## Serialized size
 
-Sizes below are **bytes/statement**, including message framing. The Jelly columns
-are the unmodified RiverBench encodings after decompression. “Turtle reserialized”
-is the separate locally written shared-prefix log.
+Sizes are **bytes/statement**, including message framing. Jelly sizes in this section describe the downloaded RiverBench encodings. Source and shared-prefix Turtle are the two assembled message-log representations.
 
-| Dataset | Turtle source log | Turtle reserialized | Jelly 1.1 | Jelly 1.2 | 1.2 reduction vs 1.1 |
-| --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 93.97 | 75.33 | 19.53 | 9.33 | 52.3% |
-| citypulse-traffic | 110.55 | 91.16 | 33.15 | 25.03 | 24.5% |
-| digital-agenda-indicators | 137.89 | 57.80 | 23.14 | 16.27 | 29.7% |
-| linked-spending | 125.32 | 108.07 | 37.41 | 31.67 | 15.3% |
-| muziekweb | 110.90 | 91.07 | 44.20 | 40.22 | 9.0% |
-| osm2rdf-denmark | 81.02 | 65.00 | 32.59 | 25.69 | 21.2% |
+| Dataset | Turtle source raw | Turtle shared raw | Legacy tag 1 raw | Jelly 1.2 raw |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 93.97 | 75.33 | 19.53 | 9.33 |
+| citypulse-traffic | 110.55 | 91.16 | 33.15 | 25.03 |
+| digital-agenda-indicators | 137.89 | 57.80 | 23.14 | 16.27 |
+| linked-spending | 125.32 | 108.07 | 37.41 | 31.67 |
+| muziekweb | 110.90 | 91.07 | 44.20 | 40.22 |
+| osm2rdf-denmark | 81.02 | 65.00 | 32.59 | 25.69 |
 
-Compressed sizes use the same gzip/zstd settings as the read experiment.
-The Turtle columns here refer to the **source-preserving** log.
+| gzip: dataset | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 1.84 | 1.61 | 1.21 | 0.51 |
+| citypulse-traffic | 5.42 | 8.29 | 7.87 | 7.23 |
+| digital-agenda-indicators | 2.70 | 2.29 | 2.52 | 2.37 |
+| linked-spending | 7.52 | 8.59 | 7.99 | 7.80 |
+| muziekweb | 13.31 | 13.19 | 14.96 | 15.03 |
+| osm2rdf-denmark | 8.78 | 7.77 | 8.17 | 7.81 |
 
-| Dataset | Turtle gzip | 1.1 gzip | 1.2 gzip | Turtle zstd | 1.1 zstd | 1.2 zstd |
-| --- | --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.84 | 1.21 | 0.51 | 1.25 | 0.80 | 0.51 |
-| citypulse-traffic | 5.42 | 7.87 | 7.23 | 5.67 | 7.56 | 6.98 |
-| digital-agenda-indicators | 2.70 | 2.52 | 2.37 | 2.59 | 2.55 | 2.34 |
-| linked-spending | 7.52 | 7.99 | 7.80 | 5.97 | 7.13 | 6.99 |
-| muziekweb | 13.31 | 14.96 | 15.03 | 12.77 | 14.07 | 14.36 |
-| osm2rdf-denmark | 8.78 | 8.17 | 7.81 | 9.64 | 7.89 | 7.50 |
+| zstd: dataset | Turtle source | Turtle shared prefixes | Legacy tag 1 | Jelly 1.2 |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 1.25 | 1.28 | 0.80 | 0.51 |
+| citypulse-traffic | 5.67 | 8.09 | 7.56 | 6.98 |
+| digital-agenda-indicators | 2.59 | 2.41 | 2.55 | 2.34 |
+| linked-spending | 5.97 | 7.35 | 7.13 | 6.99 |
+| muziekweb | 12.77 | 12.92 | 14.07 | 14.36 |
+| osm2rdf-denmark | 9.64 | 7.98 | 7.89 | 7.50 |
 
-By geometric mean, 1.2 saves **16.4% with gzip** and
-**10.7% with zstd** relative to 1.1. Compression changes the ranking:
-Turtle is smaller than both Jelly versions on traffic, spending, and music in
-these compressed cases. On muziekweb, 1.2 is slightly larger than 1.1 after
-compression. The raw-size advantage does not imply a compressed-size win for
-every dataset. Shared-prefix Turtle sizes for all three codecs are in the
-follow-up JSON.
+Compressed size depends on the data and representation. Source Turtle is smaller than both Jelly versions on citypulse-traffic, linked-spending and muziekweb in these compressed cases. On muziekweb, compressed Jelly 1.2 is slightly larger than the legacy archives. Smaller raw output does not guarantee smaller compressed output.
 
-For download/storage planning, the **original** RiverBench archive sizes in MiB
-are below. The Turtle download includes tar headers and padding and is therefore
-a different artifact from the assembled compressed log above.
+Original download sizes in **MiB** are below. Turtle's tar.gz includes separate-document headers and padding; it is a different artifact from the assembled message log.
 
-| Dataset | Turtle tar.gz | Jelly 1.1 gzip | Jelly 1.2 gzip |
+| Dataset | Turtle tar.gz | Legacy tag 1 gzip | Jelly 1.2 gzip |
 | --- | --- | --- | --- |
 | assist-iot-weather | 2.06 | 1.22 | 0.54 |
 | citypulse-traffic | 1.89 | 2.73 | 2.53 |
@@ -150,135 +105,177 @@ a different artifact from the assembled compressed log above.
 | muziekweb | 0.84 | 0.74 | 0.75 |
 | osm2rdf-denmark | 2.68 | 2.35 | 2.25 |
 
-## File streaming
+## File streaming and memory
 
-This separate experiment reads the original Jelly gzip archives from disk and
-the assembled source Turtle log compressed with gzip level 6. It includes
-`createReadStream`, gunzip, parsing, and a discard sink. Each case has one warmup
-and three timed passes; the filesystem cache is warm. Turtle's stream emits
-message arrays, while Jelly's emits quads and also emits a message event used
-for counting. Their downstream stream overhead therefore differs.
+Streaming reads the original Jelly gzip downloads from disk, and the source Turtle message log compressed at gzip level 6. The clock includes file reads, gunzip, parsing and a discard sink. There is one warmup and 3 timed passes, with warm filesystem caches. Turtle emits message arrays; Jelly emits quads plus message events used for counting. Their stream/event overhead differs.
 
-| Dataset | Turtle M/s | Jelly 1.1 M/s | Jelly 1.2 M/s | Peak RSS MiB: Turtle / 1.1 / 1.2 |
+| Dataset | Turtle M/s | Legacy tag 1 M/s | Jelly 1.2 M/s | Peak RSS MiB: Turtle / legacy / 1.2 |
 | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.01 | 2.96 | 3.75 | 122 / 129 / 126 |
-| citypulse-traffic | 0.81 | 1.73 | 1.56 | 109 / 130 / 137 |
-| digital-agenda-indicators | 0.52 | 1.23 | 0.99 | 89 / 73 / 78 |
-| linked-spending | 0.95 | 1.33 | 1.25 | 92 / 100 / 100 |
-| muziekweb | 0.79 | 0.71 | 0.61 | 86 / 95 / 99 |
-| osm2rdf-denmark | 0.93 | 1.69 | 1.68 | 110 / 100 / 128 |
+| assist-iot-weather | 0.89 | 2.72 | 3.83 | 119 / 119 / 119 |
+| citypulse-traffic | 0.75 | 1.77 | 1.67 | 109 / 130 / 133 |
+| digital-agenda-indicators | 0.49 | 1.32 | 1.10 | 94 / 74 / 77 |
+| linked-spending | 0.98 | 1.29 | 1.22 | 88 / 101 / 103 |
+| muziekweb | 0.55 | 0.85 | 0.49 | 86 / 96 / 101 |
+| osm2rdf-denmark | 0.91 | 1.58 | 1.29 | 107 / 101 / 129 |
 
-The streaming measurements exercise file I/O, decompression, event delivery,
-and a discard sink, unlike the retained-message results above. Peak RSS
-is the operating system's **whole-process high-water mark**, including startup,
-inputs and warmups, not parser-only memory or cumulative allocated bytes.
-Retained-array cases have much higher memory requirements; their process RSS
-and post-parse heap samples are recorded separately in the primary JSON.
+Peak RSS is the operating system's whole-process high-water mark, including startup, imports, input buffers and warmups. It is not parser-only memory or cumulative allocation. Retaining complete RDF arrays is a different memory workload from consuming and discarding a stream. These measurements do not establish a memory bound for arbitrary blank-node-heavy messages, nested triple terms or slow consumers.
 
-## Local writer comparison
+## Writer throughput and output size
 
-This is a separate serialization experiment, **not a regeneration of the
-RiverBench archives**. All writers consume the same decoded source messages.
-Turtle uses `writeMessages` with shared prefixes; Jelly uses `Writer.addMessage`
-with protocol tag 2 (1.1) or 3 (1.2), triples, and `messageSize: 1024`.
-1.1 uses logical type GRAPHS; 1.2 uses stream type MESSAGES. The same option
-does not mean identical framing: 1.1 budgets rows and lookup entries, while
-1.2 budgets statements, and message completion also affects framing.
+All writers consume the same decoded source messages. Turtle uses shared prefixes. Jelly uses `Writer.addMessage`, TRIPLES, protocol tag 2 for 1.1 or tag 3 for 1.2, and `messageSize: 1024`. Jelly 1.1 uses logical type GRAPHS; 1.2 uses stream type MESSAGES. The 1.1 size budget includes lookup rows, while the 1.2 budget counts statements, so the same setting does not mean identical physical framing.
 
-The clock includes serialization and collecting output bytes, including UTF-8
-encoding of Turtle output, and excludes source parsing and compression. Rates
-are M statements/s. The two size columns describe **locally generated** Jelly,
-not the downloaded archives used for read timings.
+Timing includes serialization and collecting the returned output bytes, including UTF-8 encoding for Turtle. It excludes source parsing and compression. Rates are **million statements/s**.
 
-| Dataset | Turtle M/s | 1.1 M/s | 1.2 M/s | 1.2 / 1.1 | Written 1.1 B/stmt | Written 1.2 B/stmt |
+| Dataset | Turtle | Jelly 1.1 | Jelly 1.2 | 1.2 / 1.1 |
+| --- | --- | --- | --- | --- |
+| assist-iot-weather | 1.29 | 1.86 | 2.08 | 1.12× |
+| citypulse-traffic | 1.57 | 1.57 | 1.45 | 0.92× |
+| digital-agenda-indicators | 1.69 | 1.18 | 0.75 | 0.64× |
+| linked-spending | 1.56 | 1.24 | 1.01 | 0.82× |
+| muziekweb | 1.57 | 0.83 | 0.66 | 0.80× |
+| osm2rdf-denmark | 1.48 | 1.60 | 1.28 | 0.80× |
+
+| Raw written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
+| --- | --- | --- | --- |
+| assist-iot-weather | 75.33 | 19.53 | 44.42 |
+| citypulse-traffic | 91.16 | 34.78 | 67.80 |
+| digital-agenda-indicators | 57.80 | 23.13 | 141.62 |
+| linked-spending | 108.07 | 37.78 | 108.28 |
+| muziekweb | 91.07 | 44.25 | 101.01 |
+| osm2rdf-denmark | 65.00 | 33.80 | 77.25 |
+
+| gzip written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
+| --- | --- | --- | --- |
+| assist-iot-weather | 1.61 | 1.21 | 0.97 |
+| citypulse-traffic | 8.29 | 8.04 | 7.03 |
+| digital-agenda-indicators | 2.29 | 2.50 | 2.96 |
+| linked-spending | 8.59 | 8.12 | 9.38 |
+| muziekweb | 13.19 | 15.10 | 15.98 |
+| osm2rdf-denmark | 7.77 | 9.43 | 9.31 |
+
+| zstd written bytes/statement: dataset | Turtle shared prefixes | Jelly 1.1 | Jelly 1.2 |
+| --- | --- | --- | --- |
+| assist-iot-weather | 1.28 | 0.80 | 0.74 |
+| citypulse-traffic | 8.09 | 7.94 | 6.99 |
+| digital-agenda-indicators | 2.41 | 2.54 | 2.68 |
+| linked-spending | 7.35 | 7.30 | 7.67 |
+| muziekweb | 12.92 | 14.20 | 14.17 |
+| osm2rdf-denmark | 7.98 | 9.01 | 8.35 |
+
+With default framing, the current Jelly 1.2 writer uses batch-local name/datatype tables and full IRI names without prefix compression. Message packing retains bounded dictionaries across batches, as measured separately below. Its encoding is valid but can be substantially larger than the downloaded Jelly 1.2 streams. For example, weather is 44.42 raw bytes/statement locally versus 9.33 in the archive. The archive read/size results and local writer results describe different byte encodings.
+
+## Packed-message configuration
+
+With `packMessages: true` and `messageSize: 1024`, messages share column batches and bounded dictionaries remain available across batches. Read throughput on these locally encoded files is **3.14 million statements/s**; writer throughput is **1.82 million/s**, by geometric mean. These are measurements of a current writer configuration, separate from the unchanged archive encodings above.
+
+The following table shows uncompressed read/write throughput and locally written bytes/statement, including framing. gzip uses level 6 and zstd level 3. Compression is excluded from writer timing. Packed reading/writing were measured in separate sequential batches with two warmups and 7 timed iterations per case. They use the same retained-message API, GC policy and source RDF. Output checks cover every message, statement count, RDF equivalence and blank-node scope.
+
+| Dataset | Packed read M/s | Packed write M/s | Raw B/stmt | gzip B/stmt | zstd B/stmt | Frames |
 | --- | --- | --- | --- | --- | --- | --- |
-| assist-iot-weather | 1.34 | 1.79 | 2.10 | 1.17× | 19.53 | 44.42 |
-| citypulse-traffic | 1.60 | 1.62 | 1.52 | 0.94× | 34.78 | 67.80 |
-| digital-agenda-indicators | 1.73 | 1.19 | 0.80 | 0.67× | 23.13 | 141.62 |
-| linked-spending | 1.64 | 1.26 | 1.00 | 0.79× | 37.78 | 108.28 |
-| muziekweb | 1.55 | 0.82 | 0.68 | 0.82× | 44.25 | 101.01 |
-| osm2rdf-denmark | 1.49 | 1.65 | 1.28 | 0.78× | 33.80 | 77.25 |
+| assist-iot-weather | 4.00 | 2.59 | 20.43 | 1.51 | 1.19 | 1,124 |
+| citypulse-traffic | 3.44 | 2.19 | 36.34 | 7.96 | 7.74 | 352 |
+| digital-agenda-indicators | 2.65 | 1.69 | 21.28 | 2.51 | 2.07 | 81 |
+| linked-spending | 3.42 | 1.97 | 33.85 | 7.74 | 6.90 | 155 |
+| muziekweb | 2.05 | 1.10 | 39.11 | 13.97 | 13.53 | 51 |
+| osm2rdf-denmark | 3.77 | 1.76 | 33.62 | 8.02 | 7.77 | 294 |
 
-The local 1.2 writer's compression behavior differs substantially from
-RiverBench's producer. For example, its current [column encoder](src/codec/ColumnEncoder.ts)
-clears its name/datatype tables after each batch with default options. The optional
-`packMessages: true` mode shares batches and retains bounded dictionaries;
-its measurements are reported separately below. Default output sizes must not be
-used to characterize the Jelly 1.2 format's achievable compression. The archive
-read experiment and writer experiment answer different questions.
+| Packed input compression | Read million statements/s |
+| --- | --- |
+| none | 3.14 |
+| gzip | 2.74 |
+| zstd | 3.06 |
 
-## Environment and timing method
+Packed-file reading achieves 1.39× the downloaded legacy tag-1 archive throughput. The files differ in framing and dictionary contents, so this ratio combines encoding and parser effects. It is not a format-only comparison with the JVM.
+
+Packing buffers output until a batch fills or the writer ends. Message boundaries and blank-node scopes remain separate; metadata-bearing messages are isolated. Small batches may suit low-latency delivery, whereas larger shared batches amortize setup work. The current writer uses full IRI names without prefix compression in either configuration.
+
+```js
+const writer = new Writer({
+  version: 3,
+  physicalType: PhysicalStreamType.TRIPLES,
+  streamType: RdfStreamType.MESSAGES,
+  messageSize: 1024,
+  packMessages: true,
+});
+```
+
+## Comparison with the JVM measurements
+
+The [Jelly-RDF JVM benchmark](https://jelly-rdf.github.io/1.2.x/performance/rdf/) reports geometric means of about 19–20 million statements/s for Jelly writing and 28–31 million/s for reading across 13 datasets. Its [1.1/1.2 comparison](https://jelly-rdf.github.io/dev/performance/rdf-1-1-vs-1-2/) reports 1.79×–1.94× read throughput and 1.48×–1.54× write throughput for Jelly 1.2 relative to 1.1 within JVM 4.0.0. With default framing, JavaScript 1.2 writer throughput is 0.84× the 1.1 writer throughput. With message packing, it is 1.36×; that configuration is timed in a separate batch. The JavaScript archive reader comparison uses legacy tag 1 rather than 1.1, so it does not measure the same format-version ratio as the JVM report.
+
+These are different experiments. The JVM benchmark uses flat triple/quad streams, the first 100,000 statements of each dataset, three JVM forks with timed warmup/measurement periods, a discard sink for reading and a null output stream for writing. The version comparison uses 1,024-row frames. It runs GraalVM on an NVIDIA DGX Spark with CPU affinity. Optional validation, blank-node relabeling and pretty-printing are disabled where configurable. This JavaScript benchmark uses six message streams, up to 1.15 million statements per case, Node/V8 on an Intel laptop CPU, retained arrays, message-local blank-node scopes and collected writer bytes.
+
+### Possible explanations
+
+The following are hypotheses and observable implementation differences, not measured shares of the JavaScript/JVM gap:
+
+- **Allocation and retention.** RDF/JS results include JavaScript term and quad objects, arrays and message containers. Keeping complete results alive can increase heap pressure and garbage collection. The JVM's discard sink has different object lifetimes; an exact allocation comparison needs matching APIs and output retention. [V8's GC documentation](https://github.com/v8/v8/blob/main/docs/heap/garbage-collection.md) describes how object lifetimes affect collection.
+- **Wire decoding and object layout.** The JavaScript column reader consumes packed ID/layout arrays, resolves terms and materializes statement columns. Ordinary column-only frames use reusable wire-decoder storage; options, metadata, namespaces and other complex frames use the generated protobuf decoder. The row-layout reader has a different direct wire path. Their setup, lookup and materialization costs can differ even when one encoding has fewer bytes. The measurements do not isolate those costs.
+- **Frame and message overhead.** Small per-message frames repeat decode/setup work. Message construction and blank-node scoping add work beyond flat-stream decoding. Workloads with many short messages can spend a larger fraction of time on these fixed costs.
+- **JIT and runtime behavior.** V8 and GraalVM differ in inlining, specialization, escape analysis, object representation and GC. JavaScript's dynamic objects and factory calls may interact differently with these mechanisms than the JVM implementation's data structures. [GraalVM's compiler documentation](https://www.graalvm.org/latest/reference-manual/java/compiler/) describes inlining and partial escape analysis that can remove some allocations. These measurements do not isolate a language-level cost or show that V8 cannot achieve similar relative gains.
+- **Writing and dictionary policy.** Lookup probes, dictionary policy, full IRI strings, protobuf assembly and collecting byte buffers all contribute to JavaScript serialization work. The JVM's writer and null-output API exercise different compression choices and allocation lifetimes.
+- **Hardware and benchmark setup.** CPU architecture, frequency, memory behavior, affinity, data selection and warmup duration affect absolute rates. Ratios against text parsers also depend on which text libraries and configurations are compared.
+
+A controlled explanation would require identical input bytes, factory semantics, validation, scope handling, frame sizes and output retention, with separate wire-decoding, RDF-materialization and allocation measurements. Neither a smaller file nor a difference between two end-to-end medians isolates one of those costs.
+
+## Environment and scope
 
 - Node v25.9.0, V8 14.1.146.11-node.25; linux 6.8.0-146-generic.
 - CPU: 12th Gen Intel(R) Core(TM) i7-1265U; 12 logical CPUs; 30.8 GiB RAM.
-- Packages: `n3@2.13.12`, `n3.js-messages@0.2.0`, `rdf-isomorphic@2.0.1`, `protobufjs@8.8.1`, `rdfjs-jelly@0.1.6`.
+- Packages at measurement: `n3@2.13.12`, `n3.js-messages@0.2.0`, `rdf-isomorphic@2.0.1`, `protobufjs@8.8.1`, `rdfjs-jelly@0.1.6`.
 - Compression libraries: zlib 1.3.1-e00f703, zstd 1.5.7.
-- Source base revision (with local implementation changes): `5eec1e4d2a051133b6531163f4c64a14ab5be3a0`.
 - Measured ESM bundle SHA-256: `d551cc756e85a2d61c8e89d4ffa65b09771eda14ada0781e2544446dcf4c10f0`.
-- Retained reads and writes: two warmups, 7 timed iterations,
-  one fresh child process per dataset/format/codec case, explicit GC before
-  each operation. GC that occurs during an operation remains inside its clock.
-- Workers run sequentially. Primary read-case order rotates across datasets;
-  streaming and writer format order alternates. Samples within one case share
-  a worker. The primary and sensitivity experiments are separate batches.
-- Medians are used; no outliers are removed. All samples and min/max values are
-  retained. No confidence intervals, process-level repetitions, CPU affinity,
-  or thermal controls were used. Treat small differences as inconclusive.
 
-These results support a size improvement in the available 1.2 archives and a
-performance gap worth investigating in the JavaScript implementation. They do
-not reproduce the JVM reader speedup or isolate its causes. Small per-message
-frames, object materialization, lookup handling, and implementation differences
-are plausible contributors; attributing the slowdown requires profiling and
-controlled experiments. This sample excludes named-graph datasets, RDF-star,
-RDF 1.2-only terms, network transfer, browser execution, and slow consumers.
+The recorded bundle matches the current runtime build. All six datasets contain triples; they do not measure named-graph, RDF-star, RDF 1.2 term, SPARQL result, browser, network or slow-consumer throughput. The measurements characterize these dataset/library/API combinations, not universal format rankings.
 
-## Validation for this recorded run
+## Validation
 
 | Check | Result |
 | --- | --- |
-| npm run check | Passed: types, lint, generated protobuf, Node/browser builds, 4 performance harness tests, 578 unit tests with coverage, package checks |
+| npm run check | Passed: types, lint, protobuf reproducibility, Node/browser builds and declarations, 578 unit tests with coverage, 4 performance harness tests, package checks |
 | node --test perf/message-workload.test.mjs | 5 tests passed |
-| npm run test:interop -- /tmp/jelly-v1.2.0 | 32 RDF and 25 SPARQL writer fixtures verified by upstream Python decoders |
-| Original archive checksum comparison | 18/18 matched |
+| npm run test:interop | 32 RDF and 25 SPARQL writer fixtures verified by independent upstream Python decoders |
+| npm run test:browser | Passed with installed Chromium: packaged ESM and global browser bundles, RDF/SPARQL and Web Streams round trips |
+| Current-parser RiverBench semantic checks | All 6 datasets passed: 60,000 messages, 2,103,143 statements, RDF equivalence and blank-node scopes |
+| Original archive checksums | 18/18 matched |
+| Writer output repeatability | 72/72 hashes identical across runs: 54 default writer/codec outputs and 18 packed writer/codec outputs |
 
-All six primary inputs and all 18 local writer outputs passed the per-message
-RDF equivalence checks. All 18 downloaded archive hashes also match the recorded
-sources. Both runtime and declaration builds pass in this run.
+## Input provenance and reproduction
 
-## Reproduce
+The RiverBench dataset links above describe the data and licensing. For each dataset, download the three filenames listed under Workload and method from `https://github.com/RiverBench/dataset-DATASET/releases/download/dev/`. Development distributions can change; the original gzip/tar.gz SHA-256 values are recorded here so input identity can be checked without another report.
 
-Use Node with zstd support (this run used v25.9.0), Python 3, curl, and enough
-memory for retained RDF arrays. Downloaded and generated datasets stay outside
-the repository.
+| Dataset | Distribution | Download SHA-256 |
+| --- | --- | --- |
+| assist-iot-weather | `stream_10K.tar.gz` | `bd6c455b210fea9938acac269bce267ebde6d7c30ee78e341ea07d5389d4cab0` |
+| assist-iot-weather | `jelly_10K.jelly.gz` | `9020ed3c43821f2d12faeb90f8308018a925a8770109de7b07a777976905837b` |
+| assist-iot-weather | `jelly_10K.2.jelly.gz` | `91016bca4594445edb97ad67ec8e76a5f3c2213487671a676e67ec8ad7da8c41` |
+| citypulse-traffic | `stream_10K.tar.gz` | `e896d851cb796c1334fc1155b38212a6ea9efe736d8c30a9c9d2a271afb4b9b1` |
+| citypulse-traffic | `jelly_10K.jelly.gz` | `56cd04abf1d0c89f257a50863913329480f518524867d8e041fdff8ebd1d532a` |
+| citypulse-traffic | `jelly_10K.2.jelly.gz` | `58f8f1fc65714f2977a05024c548b0c0d7dcb241e3861a4869c091c5a5a9b331` |
+| digital-agenda-indicators | `stream_10K.tar.gz` | `c0e610ee1a33a13d820d0cf24a5fbddcb8b26878d5bc8f827caec1d9e3b1c3a9` |
+| digital-agenda-indicators | `jelly_10K.jelly.gz` | `0fcc449efaaf580136d0d08230126604c4540236bf6ffe971876d7076f1fc1a1` |
+| digital-agenda-indicators | `jelly_10K.2.jelly.gz` | `4ebfe110d4e2c752f38d054ca755e1920f4ad7e1bdae57abcd6de90c291523f1` |
+| linked-spending | `stream_10K.tar.gz` | `b47ba5dd8a6b31f0d411866a2e1e610d2485f5bf2ff3c8fd9375381538a8c8e6` |
+| linked-spending | `jelly_10K.jelly.gz` | `222c07007adf1c3be787221aa4fc54ee7824540e33783a80f5831914184db25c` |
+| linked-spending | `jelly_10K.2.jelly.gz` | `e86018db2e3eb6431173ca7dd4d847fb2843bae1e45f98473b93f582e9ada3ec` |
+| muziekweb | `stream_10K.tar.gz` | `fca1a4e575125328dcfa2643bcb9ed8fefa2e6060aef85714e23686c06c5e842` |
+| muziekweb | `jelly_10K.jelly.gz` | `1789897eae3744f701ceaea1a88ab9e855575da7a6fa533971f56432cadff084` |
+| muziekweb | `jelly_10K.2.jelly.gz` | `63ffb2dc28682bb5ae8393abfd11e907f48def4e18df2b85d536e850e9dbbb85` |
+| osm2rdf-denmark | `stream_10K.tar.gz` | `dee12d55164466676951797c1bbb959ab4c5992371b5fa49b646844f9962b370` |
+| osm2rdf-denmark | `jelly_10K.jelly.gz` | `d9dd6288758327848074af45f56d5aa0783b7a3d0fdc07d0c901015da67ed20e` |
+| osm2rdf-denmark | `jelly_10K.2.jelly.gz` | `4a2b4d2f2456c49facc2e4cd75dae454c6433c79e529e60e4f76b52985beaf27` |
+
+The message-comparison harness requires Node with zstd support, Python 3, curl and the locked development dependencies. Build and verify the package, prepare the inputs, then run the current implementation's readers, streaming parsers, writers and packed-message cases sequentially:
 
 ```sh
 npm ci --ignore-scripts
-npm run build
-
-node perf/riverbench-compare.mjs download /tmp/rdfjs-jelly-performance/data
-# Confirm that RiverBench dev still contains the exact inputs measured here.
-node perf/riverbench-compare.mjs check /tmp/rdfjs-jelly-performance/data \
-  perf/riverbench-comparison-optimized-2026-10-24.json
-node perf/riverbench-compare.mjs prepare /tmp/rdfjs-jelly-performance/data
-node perf/riverbench-compare.mjs run /tmp/rdfjs-jelly-performance/data \
-  /tmp/riverbench-read-results.json 7
-node perf/riverbench-compare.mjs followup /tmp/rdfjs-jelly-performance/data \
-  /tmp/riverbench-followup-results.json 7
-node perf/riverbench-report.mjs /tmp/riverbench-read-results.json \
-  /tmp/riverbench-followup-results.json /tmp/PERFORMANCE.md
+npm run check
+node perf/riverbench-compare.mjs download /tmp/rdfjs-jelly-data
+node perf/riverbench-compare.mjs prepare /tmp/rdfjs-jelly-data
+node perf/riverbench-recheck.mjs /tmp/rdfjs-jelly-data /tmp/jelly-results 7
+node perf/riverbench-report.mjs /tmp/jelly-results-reads.json \
+  /tmp/jelly-results-writers.json PERFORMANCE.md \
+  /tmp/jelly-results-packing.json /tmp/jelly-results-packed-reads.json
 ```
 
-The `dev` distributions can change. The `check` command fails when any downloaded
-archive differs from the saved SHA-256. Recover the recorded input bytes for an
-exact historical rerun; omitting that check produces a new experiment whose
-new hashes must be reported. Existing downloads are reused, and partial downloads
-are renamed only after curl succeeds.
-
-For a smoke run, append `assist-iot-weather` to `download` and `prepare`, and
-append `3 assist-iot-weather` after the output filename in `run` and `followup`.
-The historical `check` command expects every dataset present in its saved report.
-
-The runtime and declaration builds use the installed TypeScript configuration.
-Run `npm run check` to validate types, lint, generated protobuf code, builds,
-regressions, coverage and package entrypoints.
+Preparation checks RDF equivalence and message scopes. The recheck command verifies all six datasets again with the current parser, rechecks input hashes, measures all configurations and validates writer output outside timing. Use the checksum table above to verify downloaded bytes before preparing an exact rerun. Downloads and prepared datasets stay outside the repository. For a single-dataset smoke read/write run, append `assist-iot-weather` to download/prepare and use `run` and `followup` with `3 assist-iot-weather` after the output filename. A smoke run is a new measurement with fewer iterations, not the six-dataset result above.

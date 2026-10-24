@@ -83,9 +83,9 @@ messageWriter.addMessage([]);
 
 For version 3, `messageSize` limits statements per batch; a message may span
 batches. Lookup capacity can also end a batch early. The writer uses packed
-full-IRI name entries and repeat runs; prefix compression and lookup reuse
-between batches are future optimizations. A statement that cannot fit an empty
-batch raises an error. The name table must hold at least 128 entries.
+full-IRI name entries and repeat runs. With `packMessages: true`, bounded lookup
+tables remain available across batches; default framing uses batch-local tables.
+A statement that cannot fit an empty batch raises an error. The name table must hold at least 128 entries.
 
 The 1.2 layout supports `TRIPLES` and `QUADS`. Use `QUADS` for named graphs;
 `GRAPHS`, `addGraph()`, and `logicalType` belong to the older layout. Use
@@ -190,9 +190,8 @@ reading; affected results retain `complete: false` and an `error` string.
 in effect after concatenating another FLAT stream with a successful trailer.
 
 `frameSize` limits writer rows per frame (default 250). The lookup working set
-can also end a frame early. As with the RDF 1.2 writer, columns use packed full-IRI
-name entries and repeat runs; prefix compression and lookup reuse across frames
-are future optimizations. Parser limits include `maxMessageSize`,
+can also end a frame early. Columns use packed full-IRI name entries and repeat
+runs, with separate name/datatype dictionaries for each frame. Parser limits include `maxMessageSize`,
 `maxLookupTableSize`, `maxRowsPerBatch` (default 1,048,576), and
 `maxCellsPerBatch` (default 1,048,576 across all variables). Files use delimited
 frames by default; use `delimited: false` only for a single bare transport frame.
@@ -273,7 +272,7 @@ const quads = createReadStream('data.jelly.zst')
   .pipe(new StreamParser());
 ```
 
-The benchmarks below use Node's default gzip, zstd, and Brotli settings.
+The RiverBench measurements below use gzip level 6 and zstd level 3.
 Compressed parsing includes decompression; compression and network transfer time
 are outside the measured region. The size/speed tradeoff depends on the workload
 and codec settings.
@@ -283,194 +282,101 @@ a separate compression library, depending on the compression format.
 
 ## Performance
 
-See [PERFORMANCE.md](PERFORMANCE.md) for a reproducible six-dataset RiverBench
-comparison of `n3.js-messages` Turtle Message Logs, Jelly 1.1, and Jelly 1.2,
-including reading, writing, compressed size, and streaming.
-The [column optimization follow-up](docs/column-optimization-2026-10-24.md)
-compares the saved reader baseline with the current implementation and measures
-optional message packing separately.
+Across six RiverBench datasets containing 60,000 messages and 2.10 million
+statements, the current Jelly 1.2 reader achieves **1.97 million statements/s**
+on downloaded archives. Locally packed message streams read at **3.14 million/s**.
+These are geometric means of per-dataset rates, measured on 2026-10-24 with
+Node v25.9.0 / V8 14.1 on an Intel Core i7-1265U with 30.8 GiB RAM.
 
-For Jelly 1.2 archive writing, `packMessages: true` lets messages share batches
-and reuses bounded lookup tables between batches:
+| Retained-message parsing | Million statements/s |
+| --- | ---: |
+| Turtle source logs, N3 message parser | 0.94 |
+| Legacy Jelly archives, row layout, tag 1 (1.0) | 2.25 |
+| Jelly 1.2 archives, column layout, tag 3 | 1.97 |
+| Jelly 1.2 archives + gzip, including decompression | 1.90 |
+| Jelly 1.2 archives + zstd, including decompression | 1.96 |
+| Locally packed Jelly 1.2 messages | 3.14 |
+
+Downloaded Jelly 1.2 reads **2.10×** as fast as source Turtle logs and
+**0.87×** as fast as the legacy archives. Packed-file reading reaches
+**1.39×** the legacy archive throughput, but changes framing and dictionary
+contents as well as the parser's input. This is not a format-only comparison.
+
+The downloaded 1.2 encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip
+bytes**, and **10.7% fewer zstd bytes** than the legacy archives by geometric
+mean. Compressed Turtle is smaller on several datasets; the ranking depends on
+data, representation and codec settings.
+
+| Writing the same source messages | Million statements/s |
+| --- | ---: |
+| Turtle with shared prefixes | 1.52 |
+| Jelly 1.1, tag 2 | 1.34 |
+| Jelly 1.2, default message framing | 1.12 |
+| Jelly 1.2, packed messages | 1.82 |
+
+Writer timing includes collecting serialized bytes and excludes compression.
+Default framing completes a batch at each message boundary. Packing lets small
+messages share batches and retains bounded dictionaries across batches:
 
 ```js
 const writer = new Writer({
   version: 3,
+  physicalType: PhysicalStreamType.TRIPLES,
   streamType: RdfStreamType.MESSAGES,
   messageSize: 1024,
   packMessages: true,
 });
 ```
 
-This buffers output until a batch fills or the writer ends. Message boundaries
-and blank-node scopes remain separate, and messages carrying metadata are
-isolated. Default message framing remains unchanged.
+Packing buffers output until a batch fills or the writer ends, while keeping
+message boundaries and blank-node scopes separate. Metadata-bearing messages
+are isolated. Packed weather output uses **20.43 raw bytes/statement**, versus
+**44.42** with default framing and **9.33** in the downloaded archive. The local
+writer uses full IRI names without prefix compression, so its output sizes differ
+from RiverBench's encodings. Packed reads and writes were measured in separate
+sequential batches using the same source RDF and timing policy.
 
-The [RiverBench Jelly 1.2 audit](docs/riverbench-performance-audit-2026-10-24.md)
-and [implementation follow-up](docs/riverbench-performance-followup-2026-10-24.md)
-include full-dataset streaming, writer timings, and allocation/GC measurements for
-Jelly-RDF and Jelly-SPARQL. The follow-up replaces whole-table writer capacity
-checks and reduces reader temporary allocations.
+Gzip file streaming into a discard sink delivers **0.49–3.83 million statements/s**
+for Jelly 1.2, with **77–133 MiB** whole-process peak RSS across these datasets.
+RSS includes startup, input buffers and warmups; it is not parser-only memory.
 
-These are local microbenchmarks, not universal rankings. Recorded on 2026-09-12
-with Node.js 25.9.0 on Linux, using an Intel Core i7-1265U and 30 GiB RAM,
-against `rdf-parser-ts` 0.3.2 and `protobufjs` 8.8.0. Parsing timings include
-constructing the result RDF/JS objects and decompressing where the case is
-compressed; compression itself happens before the timed section. Before timing,
-the harness validates every statement in order. Message validation checks every
-message counter and permits a bijective blank-node renaming within each message,
-so a parser cannot pass by splitting or merging identities.
+Retained reads keep complete RDF/JS message arrays in memory. Each case runs in
+a fresh process with two warmups and seven timed iterations; explicit GC precedes
+each operation and medians are reported. Inputs are reused byte buffers. File I/O
+is excluded, UTF-8 decoding is included for Turtle, and compressed reads include
+decompression. gzip uses level 6 and zstd level 3. Every output message is checked
+for RDF equivalence and blank-node scope outside timing. The six datasets contain
+triples; these results do not measure browser, named-graph, RDF 1.2 term, SPARQL
+result, network or slow-consumer performance.
 
-### Message-based parsing, compared with rdf-parser-ts
+An independent repetition of the uncompressed Jelly reads, using new worker
+processes, gives 2.11 million statements/s for Jelly 1.2. The main tables
+use the primary run; the repetition and per-dataset rates in PERFORMANCE.md
+show the observed process-to-process variation.
 
-Medians of 13 measured runs after one warm-up run, with explicit garbage
-collection before each run. [Recorded samples and validation summaries](perf/compare-message-formats.json)
-include all 12 cases.
+### Comparison with the JVM
 
-The bundled `example/osm-dk-10k.jelly.gz` OpenStreetMap extract declares a
-subject-graph stream and contains 10,000 source frames. The benchmark preserves
-those original message boundaries: 300,656 statements in messages of 4–8,899
-statements. Each source graph is written as a dataset containing its default
-graph; Jelly uses QUADS with logical type DATASETS. Both text formats receive
-the same messages, in the same order.
+The [JVM benchmark](https://jelly-rdf.github.io/1.2.x/performance/rdf/) reports
+about 19–20 million statements/s for writing and 28–31 million/s for reading.
+It uses flat streams, 100,000 statements per dataset, a discard sink for reads,
+a null output stream for writes, GraalVM and different hardware. Optional
+validation and blank-node relabeling are disabled where configurable. Our
+message benchmark retains RDF objects and applies message-local scopes. The
+archive reader comparison is also against Jelly 1.0; the JVM version comparison
+uses 1.1 and 1.2. These are different workloads and APIs.
 
-All 1,500 source blank nodes are confined to one source message each. The
-workload and each parser's output are checked for that property. Consequently,
-message-local scoping preserves the same 1,500 distinct blank-node identities,
-up to renaming, without changing production decoder behaviour.
+Possible contributors include RDF/JS object and array allocation, garbage
+collection under retained output, packed-column decoding and term materialization,
+factory-call costs, and fixed overhead per small frame or message. The JavaScript
+row and column decoders use different paths. V8 and GraalVM can specialize calls,
+represent objects and eliminate temporary allocations differently. These are
+possible explanations, not measured causes of the gap: the timings do not
+separate runtime effects from implementation, API, workload or hardware effects,
+and do not establish an inherent JavaScript speed limit.
 
-This replaces the previous benchmark's arbitrary groups of 250 statements,
-which split blank-node connections. The results below are from the corrected
-workload. `rdfjs-jelly` reads Jelly; `rdf-parser-ts` reads the N-Quads and TriG
-serializations of the RDF Message Stream Log. The comparison measures these
-format/implementation combinations, rather than an intrinsic ranking of formats.
-
-```
-Parsing speed - thousand statements per second (higher is better)
-
-Jelly             ████████████████████████████████████████████   2158
-Jelly + gzip      ████████████████████████████████████████       1952
-Jelly + zstd      ███████████████████████████████████████████    2124
-Jelly + Brotli    ███████████████████████████████████████████    2102
-N-Quads           ████████████████████                            978
-N-Quads + gzip    ███████████████████                             914
-N-Quads + zstd    ███████████████████                             924
-N-Quads + Brotli  ██████████████████                              899
-TriG              ██████                                          308
-TriG + gzip       ██████                                          281
-TriG + zstd       ██████                                          306
-TriG + Brotli     ██████                                          315
-```
-
-```
-Encoded size - megabytes (lower is better)
-
-N-Quads           ████████████████████████████████████████████   47.34
-TriG              ██████████████████████████                     27.89
-Jelly             █████████                                      10.14
-N-Quads + zstd    ███                                             3.49
-N-Quads + gzip    ███                                             3.30
-Jelly + gzip      ███                                             2.84
-Jelly + zstd      ███                                             2.71
-TriG + zstd       ██                                              2.53
-TriG + gzip       ██                                              2.44
-N-Quads + Brotli  ██                                              2.03
-Jelly + Brotli    ██                                              1.75
-TriG + Brotli     █                                               1.48
-```
-
-| Format | Size | Median | Throughput | Relative latency |
-| --- | ---: | ---: | ---: | ---: |
-| Jelly | 10.14 MB | 139.3 ms | 2.16 M statements/s | 1.00× |
-| Jelly + gzip | 2.84 MB | 154.0 ms | 1.95 M statements/s | 1.11× |
-| Jelly + zstd | 2.71 MB | 141.6 ms | 2.12 M statements/s | 1.02× |
-| Jelly + Brotli | 1.75 MB | 143.0 ms | 2.10 M statements/s | 1.03× |
-| N-Quads | 47.34 MB | 307.3 ms | 0.98 M statements/s | 2.21× |
-| N-Quads + gzip | 3.30 MB | 328.9 ms | 0.91 M statements/s | 2.36× |
-| N-Quads + zstd | 3.49 MB | 325.2 ms | 0.92 M statements/s | 2.33× |
-| N-Quads + Brotli | 2.03 MB | 334.5 ms | 0.90 M statements/s | 2.40× |
-| TriG | 27.89 MB | 975.8 ms | 0.31 M statements/s | 7.00× |
-| TriG + gzip | 2.44 MB | 1070.2 ms | 0.28 M statements/s | 7.68× |
-| TriG + zstd | 2.53 MB | 981.4 ms | 0.31 M statements/s | 7.04× |
-| TriG + Brotli | 1.48 MB | 954.2 ms | 0.32 M statements/s | 6.85× |
-
-Caveats worth knowing before reusing these numbers. This dataset is entirely in
-the default graph. Its statement payloads use N-Triples/Turtle-compatible
-syntax, but the complete logs also contain message delimiters. A dataset with
-named graphs would exercise different paths in both text formats. Each case runs
-in its own process to avoid retaining other formats' large intermediate strings.
-Cases run sequentially; small timing differences can reflect runtime variation.
-Every case is handed a freshly allocated input buffer inside the timed region,
-since decompression inherently produces one and reusing a long-lived buffer would
-credit the uncompressed cases with allocation work a real reader still performs.
-
-### Interpreting the comparison
-
-Jelly can omit repeated terms and resolve references through lookup tables while
-parsing. Transport compression reduces transmitted bytes, but the receiver
-still decodes the underlying format after decompression. These mechanisms help
-explain the measurements; they do not isolate the cost of string decoding,
-object construction, garbage collection, or decompression itself.
-
-Length prefixes locate Jelly frame boundaries. They locate RDF Message
-boundaries here because this benchmark explicitly writes one frame per source
-message. That mapping is a workload choice, not a general property of Jelly.
-
-These synchronous benchmarks do not measure network streaming, slow-consumer
-backpressure, or browser performance. The retained flat-mode profile's GC
-percentage is not a cost breakdown for the message benchmark, and subtracting
-two end-to-end medians does not isolate decompression time.
-
-### Flat parsing, compared with rdf-parser-ts
-
-The earlier flat-mode snapshot uses a contrasting workload: 100,000 generated triples with unique subjects and
-literals and one repeated predicate, parsed flat rather than in message mode.
-Unique subjects reduce reuse, although the constant predicate and shared IRI
-prefixes still benefit from Jelly compression.
-
-| Parser | Format | Input size | Median | Throughput |
-| --- | --- | ---: | ---: | ---: |
-| rdfjs-jelly | Jelly | 2,579,568 B | 41.4 ms | 2.42 M statements/s |
-| rdf-parser-ts | N-Triples | 6,377,780 B | 40.5 ms | 2.47 M statements/s |
-| rdfjs-jelly | Jelly + gzip | 496,581 B | 43.9 ms | 2.28 M statements/s |
-| rdf-parser-ts | N-Triples + gzip | 490,694 B | 41.4 ms | 2.41 M statements/s |
-| rdfjs-jelly | Jelly + zstd | 93,175 B | 43.6 ms | 2.29 M statements/s |
-| rdf-parser-ts | N-Triples + zstd | 41,638 B | 41.2 ms | 2.43 M statements/s |
-| rdfjs-jelly | Jelly + Brotli | 128,277 B | 44.3 ms | 2.26 M statements/s |
-| rdf-parser-ts | N-Triples + Brotli | 117,438 B | 41.2 ms | 2.43 M statements/s |
-
-Parsing is within about 2–8% across the four transport variants here, with
-`rdf-parser-ts` marginally ahead, while uncompressed Jelly is 60% smaller. This
-shows a smaller gap than the message workload. Note also how well this workload
-compresses — zstd takes N-Triples to 41,638 B — which is a property of the synthetic data, not of either format.
-
-Writing remains the weaker side: Jelly writes this workload in 76.9 ms
-(1.30 M statements/s) against 40.9 ms for N-Triples, because it maintains lookup
-tables and builds protobuf frames rather than concatenating text.
-
-### What makes it fast
-
-Parsing decodes common triple, quad, IRI, literal, and lookup-entry payloads
-straight from protobuf bytes into the RDF/JS factory, with schema-specific static
-protobuf.js code and monomorphic call sites, avoiding intermediate protobuf
-objects and frame/row object graphs. `Parser.parse()` writes quads directly to
-its result array rather than building `Message` arrays, and Node inputs are
-normalised to zero-copy `Buffer` views. Datatype terms are cached by their
-bounded lookup IDs; a general string-keyed NamedNode cache was measured and
-rejected, because repeated-term omission already covers the common reuse case.
-
-Writing uses indexed O(1) LRU lookup links, shares one map probe between lookup
-insertion and reference selection, reuses scratch row storage, and serialises
-frames directly from Jelly rows without building a second protobuf object graph.
-
-### Reproduce
-
-```sh
-npm run perf:compare:messages -- 13  # message-based Jelly vs N-Quads vs TriG
-npm run perf:compare:rdf-parser      # flat Jelly vs N-Triples
-npm run perf:profile -- 100000 7
-npm run perf:profile:writer -- 100000 7
-```
+[PERFORMANCE.md](PERFORMANCE.md) includes per-dataset read/write rates for both
+message configurations, raw and compressed sizes, streaming memory figures,
+input checksums, reproduction commands and the complete measurement method.
 
 ## Development
 
@@ -548,8 +454,8 @@ pre-commit hook. Hook installation is never part of dependency installation.
 
 The checked-in schemas are Jelly-RDF `rdf.proto` 1.2.0 and Jelly-SPARQL
 `sparql.proto` 1.0.0 from the same upstream release. Static JavaScript codecs
-and TypeScript declarations are generated with protobuf.js. The generation
-step replaces generic oneof setter calls with cheap discriminator markers;
+and TypeScript declarations are generated with protobuf.js. The generated
+decoders record the last oneof field using discriminator markers;
 `src/generated/rdf_pb.ts` consumes those markers while preserving protobuf's
 last-one-wins semantics.
 
