@@ -87,24 +87,24 @@
   },
   "dependencies": {
     "@rdfjs/types": "^2.0.1",
-    "protobufjs": "^8.6.5",
-    "rdf-parser-ts": "^0.3.2"
+    "protobufjs": "^8.8.1",
+    "rdf-parser-ts": "^0.4.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
-    "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "^4.1.12",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
-    "protobufjs-cli": "^2.5.5",
+    "protobufjs-cli": "^2.7.1",
     "publint": "^0.3.25",
-    "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^4.1.12"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=24.0.0"
