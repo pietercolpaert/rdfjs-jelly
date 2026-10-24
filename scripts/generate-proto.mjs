@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { delimiter, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 const bin = join(root, 'node_modules', '.bin');
 const executable = join(bin, process.platform === 'win32' ? 'pbjs.cmd' : 'pbjs');
-const outputDirectory = join(root, 'src', 'generated', 'proto');
+const outputDirectory = process.argv[2] ? resolve(process.argv[2]) : join(root, 'src', 'generated', 'proto');
 const output = join(outputDirectory, 'rdf_pb.mjs');
 const declarations = join(outputDirectory, 'rdf_pb.d.ts');
 const moduleDeclarations = join(outputDirectory, 'rdf_pb.d.mts');

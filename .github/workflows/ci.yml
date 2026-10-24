@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  quality:
+    name: Type checks, lint, coverage, and package validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +21,86 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: warn
+
+  consumers:
+    name: Package consumers (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: 24.0.0
+          - os: ubuntu-latest
+            node: 26
+          - os: windows-latest
+            node: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:package
+
+  browser:
+    name: Published browser bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium --only-shell
+      - run: npm run test:browser
+
+  conformance:
+    name: Jelly RDF and SPARQL conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:conformance
+      - uses: actions/checkout@v4
+        with:
+          repository: Jelly-RDF/jelly-protobuf
+          ref: v1.2.0
+          path: .conformance-upstream
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm run test:interop -- .conformance-upstream
+
+  performance:
+    name: Performance regression warnings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run perf:regression
+        env:
+          PERF_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD^' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: performance-regression
+          path: coverage/performance-regression.json

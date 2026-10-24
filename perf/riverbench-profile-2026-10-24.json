@@ -1,0 +1,598 @@
+{
+  "rounds": 20,
+  "statements": 100050,
+  "results": [
+    {
+      "name": "parse",
+      "rounds": 20,
+      "durationMs": 793.161,
+      "totalSamples": 701,
+      "top": [
+        {
+          "function": "(garbage collector)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 46.3623395149786,
+          "inclusivePercent": 46.3623395149786
+        },
+        {
+          "function": "append",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 510,
+          "selfPercent": 9.4151212553495,
+          "inclusivePercent": 13.55206847360913
+        },
+        {
+          "function": "column",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 373,
+          "selfPercent": 7.845934379457916,
+          "inclusivePercent": 13.837375178316691
+        },
+        {
+          "function": "_Message",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 51,
+          "selfPercent": 6.419400855920114,
+          "inclusivePercent": 6.419400855920114
+        },
+        {
+          "function": "decodeProtoPayloadTo",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 4628,
+          "selfPercent": 5.563480741797433,
+          "inclusivePercent": 52.78174037089871
+        },
+        {
+          "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 1952,
+          "selfPercent": 2.5677603423680457,
+          "inclusivePercent": 6.704707560627675
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 512,
+          "selfPercent": 2.5677603423680457,
+          "inclusivePercent": 2.5677603423680457
+        },
+        {
+          "function": "resolve",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 337,
+          "selfPercent": 2.4251069900142657,
+          "inclusivePercent": 4.56490727532097
+        },
+        {
+          "function": "read_uint32s",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+          "line": 422,
+          "selfPercent": 1.8544935805991443,
+          "inclusivePercent": 2.1398002853067046
+        },
+        {
+          "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.decode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 1621,
+          "selfPercent": 1.7118402282453637,
+          "inclusivePercent": 9.12981455064194
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 505,
+          "selfPercent": 1.7118402282453637,
+          "inclusivePercent": 15.549215406562054
+        },
+        {
+          "function": "utf8_read_strict",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+          "line": 98,
+          "selfPercent": 1.4265335235378032,
+          "inclusivePercent": 1.4265335235378032
+        },
+        {
+          "function": "at",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 280,
+          "selfPercent": 0.9985734664764622,
+          "inclusivePercent": 0.9985734664764622
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 380,
+          "selfPercent": 0.8559201141226819,
+          "inclusivePercent": 5.420827389443652
+        },
+        {
+          "function": "namedNode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 202,
+          "selfPercent": 0.7132667617689016,
+          "inclusivePercent": 1.1412268188302426
+        },
+        {
+          "function": "decode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 452,
+          "selfPercent": 0.7132667617689016,
+          "inclusivePercent": 36.80456490727532
+        },
+        {
+          "function": "decodePayloadMessages",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 4521,
+          "selfPercent": 0.5706134094151213,
+          "inclusivePercent": 47.21825962910128
+        },
+        {
+          "function": "quad",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 221,
+          "selfPercent": 0.5706134094151213,
+          "inclusivePercent": 0.9985734664764622
+        },
+        {
+          "function": "scoped",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 536,
+          "selfPercent": 0.5706134094151213,
+          "inclusivePercent": 0.5706134094151213
+        },
+        {
+          "function": "decodeProtoRdfStreamFrameReader",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 4478,
+          "selfPercent": 0.42796005706134094,
+          "inclusivePercent": 9.843081312410842
+        }
+      ]
+    },
+    {
+      "name": "write-messages",
+      "rounds": 20,
+      "durationMs": 4220.23,
+      "totalSamples": 3835,
+      "top": [
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5627,
+          "selfPercent": 71.21251629726206,
+          "inclusivePercent": 71.21251629726206
+        },
+        {
+          "function": "addQuad",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5593,
+          "selfPercent": 7.561929595827902,
+          "inclusivePercent": 80.78226857887874
+        },
+        {
+          "function": "addMessage",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5606,
+          "selfPercent": 4.69361147327249,
+          "inclusivePercent": 96.53194263363754
+        },
+        {
+          "function": "column",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5502,
+          "selfPercent": 3.441981747066493,
+          "inclusivePercent": 4.015645371577575
+        },
+        {
+          "function": "(garbage collector)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 2.503259452411995,
+          "inclusivePercent": 2.503259452411995
+        },
+        {
+          "function": "flush",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5631,
+          "selfPercent": 1.6166883963494132,
+          "inclusivePercent": 11.05606258148631
+        },
+        {
+          "function": "(anonymous)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 1.4602346805736637,
+          "inclusivePercent": 1.4602346805736637
+        },
+        {
+          "function": "keys",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5470,
+          "selfPercent": 1.0430247718383312,
+          "inclusivePercent": 1.0430247718383312
+        },
+        {
+          "function": "fits",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5627,
+          "selfPercent": 0.7822685788787485,
+          "inclusivePercent": 71.9947848761408
+        },
+        {
+          "function": "concatBytes",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5157,
+          "selfPercent": 0.5475880052151239,
+          "inclusivePercent": 0.5475880052151239
+        },
+        {
+          "function": "sameTerm",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 130,
+          "selfPercent": 0.49543676662320735,
+          "inclusivePercent": 0.49543676662320735
+        },
+        {
+          "function": "createUnsafeBuffer",
+          "file": "node:internal/buffer",
+          "line": 1097,
+          "selfPercent": 0.4432855280312908,
+          "inclusivePercent": 0.469361147327249
+        },
+        {
+          "function": "utf8_write",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+          "line": 139,
+          "selfPercent": 0.3650586701434159,
+          "inclusivePercent": 0.3650586701434159
+        },
+        {
+          "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.encode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 1552,
+          "selfPercent": 0.31290743155149936,
+          "inclusivePercent": 4.276401564537158
+        },
+        {
+          "function": "createUnsafeBuffer",
+          "file": "node:internal/buffer",
+          "line": 1097,
+          "selfPercent": 0.28683181225554105,
+          "inclusivePercent": 0.31290743155149936
+        },
+        {
+          "function": "encodeRdfStreamFrames",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 4430,
+          "selfPercent": 0.28683181225554105,
+          "inclusivePercent": 5.1368970013037805
+        },
+        {
+          "function": "write_string_buffer",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/writer_buffer.js",
+          "line": 67,
+          "selfPercent": 0.2346805736636245,
+          "inclusivePercent": 2.8683181225554106
+        },
+        {
+          "function": "fit",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5626,
+          "selfPercent": 0.18252933507170796,
+          "inclusivePercent": 72.17731421121252
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5637,
+          "selfPercent": 0.15645371577574968,
+          "inclusivePercent": 0.15645371577574968
+        },
+        {
+          "function": "write-messages",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/perf/riverbench-profile.mjs",
+          "line": 14,
+          "selfPercent": 0.15645371577574968,
+          "inclusivePercent": 97.34028683181225
+        }
+      ]
+    },
+    {
+      "name": "write-flat-4000",
+      "rounds": 5,
+      "durationMs": 7660.815,
+      "totalSamples": 7041,
+      "top": [
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5627,
+          "selfPercent": 91.49268569805426,
+          "inclusivePercent": 91.49268569805426
+        },
+        {
+          "function": "addQuad",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6038,
+          "selfPercent": 3.3375940917483313,
+          "inclusivePercent": 97.8128106803011
+        },
+        {
+          "function": "(garbage collector)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 1.9173412867490414,
+          "inclusivePercent": 1.9173412867490414
+        },
+        {
+          "function": "addQuad",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5593,
+          "selfPercent": 1.1788098281494106,
+          "inclusivePercent": 94.36159636415282
+        },
+        {
+          "function": "column",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5502,
+          "selfPercent": 0.5112910097997444,
+          "inclusivePercent": 0.5823036500497089
+        },
+        {
+          "function": "flush",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5631,
+          "selfPercent": 0.2982530890498509,
+          "inclusivePercent": 1.249822468399375
+        },
+        {
+          "function": "fits",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5627,
+          "selfPercent": 0.2698480329498651,
+          "inclusivePercent": 91.76253373100411
+        },
+        {
+          "function": "addQuads",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6052,
+          "selfPercent": 0.14202528049992896,
+          "inclusivePercent": 97.95483596080102
+        },
+        {
+          "function": "keys",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5470,
+          "selfPercent": 0.14202528049992896,
+          "inclusivePercent": 0.14202528049992896
+        },
+        {
+          "function": "isMessageQuad",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 63,
+          "selfPercent": 0.08521516829995739,
+          "inclusivePercent": 0.08521516829995739
+        },
+        {
+          "function": "(program)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 0.07101264024996448,
+          "inclusivePercent": 0.07101264024996448
+        },
+        {
+          "function": "writeVarint32",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/writer.js",
+          "line": 134,
+          "selfPercent": 0.04260758414997869,
+          "inclusivePercent": 0.04260758414997869
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5637,
+          "selfPercent": 0.04260758414997869,
+          "inclusivePercent": 0.04260758414997869
+        },
+        {
+          "function": "(anonymous)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 0.04260758414997869,
+          "inclusivePercent": 0.04260758414997869
+        },
+        {
+          "function": "sameTerm",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 130,
+          "selfPercent": 0.04260758414997869,
+          "inclusivePercent": 0.04260758414997869
+        },
+        {
+          "function": "fit",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5626,
+          "selfPercent": 0.0284050560999858,
+          "inclusivePercent": 91.79093878710411
+        },
+        {
+          "function": "utf8_write",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+          "line": 139,
+          "selfPercent": 0.0284050560999858,
+          "inclusivePercent": 0.0284050560999858
+        },
+        {
+          "function": "requireMode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6158,
+          "selfPercent": 0.0284050560999858,
+          "inclusivePercent": 0.0284050560999858
+        },
+        {
+          "function": "post",
+          "file": "node:inspector",
+          "line": 115,
+          "selfPercent": 0.0142025280499929,
+          "inclusivePercent": 0.0284050560999858
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/perf/riverbench-profile.mjs",
+          "line": 0,
+          "selfPercent": 0.0142025280499929,
+          "inclusivePercent": 97.997443544951
+        }
+      ]
+    },
+    {
+      "name": "sparql-write-250",
+      "rounds": 20,
+      "durationMs": 7297.176,
+      "totalSamples": 6694,
+      "top": [
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6410,
+          "selfPercent": 74.46967433522558,
+          "inclusivePercent": 74.46967433522558
+        },
+        {
+          "function": "addBinding",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6396,
+          "selfPercent": 11.24887959366597,
+          "inclusivePercent": 93.54645951598445
+        },
+        {
+          "function": "sparql-write-250",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/perf/riverbench-profile.mjs",
+          "line": 22,
+          "selfPercent": 3.7645652823423963,
+          "inclusivePercent": 97.47535106065132
+        },
+        {
+          "function": "(garbage collector)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 2.40513893038542,
+          "inclusivePercent": 2.40513893038542
+        },
+        {
+          "function": "column",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5502,
+          "selfPercent": 1.971915147893636,
+          "inclusivePercent": 2.315506423662982
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6504,
+          "selfPercent": 1.3146100985957574,
+          "inclusivePercent": 1.3146100985957574
+        },
+        {
+          "function": "keys",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5470,
+          "selfPercent": 0.7917538093815356,
+          "inclusivePercent": 0.7917538093815356
+        },
+        {
+          "function": "(anonymous)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 0.5975500448162534,
+          "inclusivePercent": 0.5975500448162534
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6504,
+          "selfPercent": 0.5079175380938153,
+          "inclusivePercent": 4.138034060352554
+        },
+        {
+          "function": "fits",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6410,
+          "selfPercent": 0.2987750224081267,
+          "inclusivePercent": 74.7684493576337
+        },
+        {
+          "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.sparql.sparql.SparqlResultsFrame.SparqlResultsFrame.encode",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 3864,
+          "selfPercent": 0.2539587690469077,
+          "inclusivePercent": 2.24081266806095
+        },
+        {
+          "function": "utf8_write",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+          "line": 139,
+          "selfPercent": 0.23902001792650132,
+          "inclusivePercent": 0.23902001792650132
+        },
+        {
+          "function": "sameTerm",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 130,
+          "selfPercent": 0.23902001792650132,
+          "inclusivePercent": 0.23902001792650132
+        },
+        {
+          "function": "createUnsafeBuffer",
+          "file": "node:internal/buffer",
+          "line": 1097,
+          "selfPercent": 0.224081266806095,
+          "inclusivePercent": 0.224081266806095
+        },
+        {
+          "function": "flush",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 6486,
+          "selfPercent": 0.224081266806095,
+          "inclusivePercent": 6.737376755303257
+        },
+        {
+          "function": "concatBytes",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5157,
+          "selfPercent": 0.134448760083657,
+          "inclusivePercent": 0.134448760083657
+        },
+        {
+          "function": "(anonymous)",
+          "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+          "line": 5547,
+          "selfPercent": 0.089632506722438,
+          "inclusivePercent": 0.089632506722438
+        },
+        {
+          "function": "(program)",
+          "file": "",
+          "line": 0,
+          "selfPercent": 0.089632506722438,
+          "inclusivePercent": 0.089632506722438
+        },
+        {
+          "function": "utf8Write",
+          "file": "node:internal/buffer",
+          "line": 982,
+          "selfPercent": 0.089632506722438,
+          "inclusivePercent": 0.6871825515386913
+        },
+        {
+          "function": "createUnsafeBuffer",
+          "file": "node:internal/buffer",
+          "line": 1097,
+          "selfPercent": 0.07469375560203168,
+          "inclusivePercent": 0.07469375560203168
+        }
+      ]
+    }
+  ]
+}

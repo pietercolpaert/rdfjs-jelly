@@ -27,7 +27,7 @@ import type {
   RdfTerm,
   RdfTriple,
 } from '../generated/rdf_pb';
-import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, RDF_LANG_STRING, XSD_STRING } from '../options';
+import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, XSD_STRING } from '../options';
 import { DataFactory } from '../rdfjs/adapter';
 import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type StreamOptions } from '../types';
 import { LookupDecoder } from './LookupDecoder';

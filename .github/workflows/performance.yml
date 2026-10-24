@@ -1,0 +1,34 @@
+name: Allocation, GC, and RiverBench reports
+
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: mkdir -p coverage
+      - run: npm run perf:quality
+        env:
+          PERF_OUTPUT: coverage/allocations-gc.json
+      - name: Download Jelly 1.2 RiverBench data
+        run: curl --fail --location --retry 3 --output "$RUNNER_TEMP/riverbench.jelly.gz" https://w3id.org/riverbench/datasets/assist-iot-weather/dev/files/jelly_full.2.jelly.gz
+      - name: Profile full streaming parse
+        run: node --expose-gc perf/riverbench.mjs "$RUNNER_TEMP/riverbench.jelly.gz" coverage/riverbench.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allocation-gc-riverbench
+          path: coverage/*.json

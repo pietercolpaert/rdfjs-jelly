@@ -163,9 +163,9 @@ export class Encoder {
   private encodeIri(iri: string, rows: RdfStreamRow[]): RdfIri {
     const hashIndex = iri.lastIndexOf('#');
     const separatorIndex = hashIndex >= 0 ? hashIndex : iri.lastIndexOf('/');
-    let prefix = separatorIndex >= 0 ? iri.slice(0, separatorIndex + 1) : '';
+    const prefix = separatorIndex >= 0 ? iri.slice(0, separatorIndex + 1) : '';
     let name = separatorIndex >= 0 ? iri.slice(separatorIndex + 1) : iri;
-    if (this.lookup.maxPrefixes === 0) { prefix = ''; name = iri; }
+    if (this.lookup.maxPrefixes === 0) { name = iri; }
     else {
       const id = this.prefixes.ensureId(prefix);
       if (id >= 0) rows.push({ case: 'prefix', value: { id, value: prefix } });

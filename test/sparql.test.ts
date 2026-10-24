@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { SparqlStreamParser, SparqlStreamWriter, JellySparqlResultError, RdfVersion, SparqlStreamType } from '../src';
 import { SparqlStreamParser as WebParser, SparqlStreamWriter as WebWriter } from '../src/browser';
-import { encodeSparqlFrame, sparqlProto } from '../src/sparql/framing';
+import { encodeSparqlFrame } from '../src/sparql/framing';
 import { readFileSync } from 'node:fs';
 import type * as RDF from '@rdfjs/types';
 import { DataFactory } from '../src';

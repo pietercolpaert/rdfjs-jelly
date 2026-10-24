@@ -10,7 +10,7 @@ import {
   Writer,
 } from '../src';
 
-const { namedNode, blankNode, literal, defaultGraph, quad } = DataFactory;
+const { namedNode, blankNode, literal, quad } = DataFactory;
 
 function end(writer: Writer): Promise<Uint8Array> {
   return new Promise((resolve, reject) => writer.end((error, output) => {

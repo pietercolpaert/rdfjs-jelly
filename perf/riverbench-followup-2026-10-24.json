@@ -1,0 +1,4803 @@
+{
+  "date": "2026-10-24T11:23:13.339Z",
+  "node": "v25.9.0",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-1265U",
+  "modules": {
+    "baseline": {
+      "file": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+      "sha256": "d875bcaa77d2b3ddeecd46aeb86a3d0cf093ebdc6c9c9b1b50f66d6b2460099b"
+    },
+    "after": {
+      "file": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+      "sha256": "c4b3fbef1c97002cfa18934dd360173d8731fd6280f80cdedb0aaad857bf6fa4"
+    }
+  },
+  "timings": [
+    {
+      "case": "parse:1.2",
+      "baseline": {
+        "case": "parse:1.2",
+        "sourceProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 932713,
+        "inputOrOutputSha256": "d6d1c31d3ecad11ce15b040e08c3df01e77c6196a958ed6b858adae5cc0f93b9",
+        "medianMs": 46.31223899999998,
+        "minMs": 38.04387699999995,
+        "maxMs": 56.46921899999995,
+        "statementsPerSecond": 2160336.06148906,
+        "samples": [
+          {
+            "ms": 56.46921899999995,
+            "before": {
+              "rss": 353722368,
+              "heapTotal": 261984256,
+              "heapUsed": 125085288,
+              "external": 5242985,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 356511744
+            },
+            "after": {
+              "rss": 356028416,
+              "heapTotal": 263516160,
+              "heapUsed": 174140656,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 356511744
+            }
+          },
+          {
+            "ms": 44.035120000000006,
+            "before": {
+              "rss": 355061760,
+              "heapTotal": 260411392,
+              "heapUsed": 124903216,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 356511744
+            },
+            "after": {
+              "rss": 357289984,
+              "heapTotal": 261943296,
+              "heapUsed": 175287696,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357289984
+            }
+          },
+          {
+            "ms": 47.507289000000014,
+            "before": {
+              "rss": 355831808,
+              "heapTotal": 260411392,
+              "heapUsed": 124954736,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357289984
+            },
+            "after": {
+              "rss": 356642816,
+              "heapTotal": 261943296,
+              "heapUsed": 170026320,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357535744
+            }
+          },
+          {
+            "ms": 51.55923000000007,
+            "before": {
+              "rss": 355160064,
+              "heapTotal": 260411392,
+              "heapUsed": 124922760,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357535744
+            },
+            "after": {
+              "rss": 356835328,
+              "heapTotal": 261943296,
+              "heapUsed": 174527352,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357535744
+            }
+          },
+          {
+            "ms": 38.04387699999995,
+            "before": {
+              "rss": 355303424,
+              "heapTotal": 260411392,
+              "heapUsed": 124923000,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 357535744
+            },
+            "after": {
+              "rss": 356425728,
+              "heapTotal": 261943296,
+              "heapUsed": 173938024,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 358969344
+            }
+          },
+          {
+            "ms": 46.31223899999998,
+            "before": {
+              "rss": 354897920,
+              "heapTotal": 260411392,
+              "heapUsed": 124962192,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 358969344
+            },
+            "after": {
+              "rss": 356560896,
+              "heapTotal": 261943296,
+              "heapUsed": 174602376,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 358969344
+            }
+          },
+          {
+            "ms": 42.176372000000015,
+            "before": {
+              "rss": 355028992,
+              "heapTotal": 260411392,
+              "heapUsed": 124935752,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 358969344
+            },
+            "after": {
+              "rss": 357281792,
+              "heapTotal": 261943296,
+              "heapUsed": 175032152,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 358969344
+            }
+          }
+        ]
+      },
+      "after": {
+        "case": "parse:1.2",
+        "sourceProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 932713,
+        "inputOrOutputSha256": "d6d1c31d3ecad11ce15b040e08c3df01e77c6196a958ed6b858adae5cc0f93b9",
+        "medianMs": 31.55485699999997,
+        "minMs": 25.640394000000015,
+        "maxMs": 49.16850599999998,
+        "statementsPerSecond": 3170668.7816712367,
+        "samples": [
+          {
+            "ms": 31.715102,
+            "before": {
+              "rss": 363405312,
+              "heapTotal": 270635008,
+              "heapUsed": 123753120,
+              "external": 5242985,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            },
+            "after": {
+              "rss": 365895680,
+              "heapTotal": 273035264,
+              "heapUsed": 179062648,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            }
+          },
+          {
+            "ms": 27.82612499999999,
+            "before": {
+              "rss": 363376640,
+              "heapTotal": 269848576,
+              "heapUsed": 123555016,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            },
+            "after": {
+              "rss": 365735936,
+              "heapTotal": 272248832,
+              "heapUsed": 178790000,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            }
+          },
+          {
+            "ms": 35.56496199999998,
+            "before": {
+              "rss": 363147264,
+              "heapTotal": 269324288,
+              "heapUsed": 123588848,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            },
+            "after": {
+              "rss": 365506560,
+              "heapTotal": 271724544,
+              "heapUsed": 178532552,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            }
+          },
+          {
+            "ms": 25.640394000000015,
+            "before": {
+              "rss": 363126784,
+              "heapTotal": 269324288,
+              "heapUsed": 123556120,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            },
+            "after": {
+              "rss": 365617152,
+              "heapTotal": 271724544,
+              "heapUsed": 178683424,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            }
+          },
+          {
+            "ms": 31.52158499999996,
+            "before": {
+              "rss": 363241472,
+              "heapTotal": 269324288,
+              "heapUsed": 123569040,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366264320
+            },
+            "after": {
+              "rss": 365543424,
+              "heapTotal": 271986688,
+              "heapUsed": 178295688,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366649344
+            }
+          },
+          {
+            "ms": 49.16850599999998,
+            "before": {
+              "rss": 363184128,
+              "heapTotal": 269586432,
+              "heapUsed": 123605440,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366649344
+            },
+            "after": {
+              "rss": 365543424,
+              "heapTotal": 271986688,
+              "heapUsed": 178966608,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366649344
+            }
+          },
+          {
+            "ms": 31.55485699999997,
+            "before": {
+              "rss": 363151360,
+              "heapTotal": 269586432,
+              "heapUsed": 123590368,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366649344
+            },
+            "after": {
+              "rss": 365510656,
+              "heapTotal": 271986688,
+              "heapUsed": 178847576,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 366649344
+            }
+          }
+        ]
+      },
+      "speedup": 1.4676738671324043
+    },
+    {
+      "case": "messages:1.2",
+      "after": {
+        "case": "messages:1.2",
+        "sourceProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 932713,
+        "inputOrOutputSha256": "d6d1c31d3ecad11ce15b040e08c3df01e77c6196a958ed6b858adae5cc0f93b9",
+        "medianMs": 38.72248499999995,
+        "minMs": 24.445142000000033,
+        "maxMs": 50.16014299999995,
+        "statementsPerSecond": 2583770.127356241,
+        "samples": [
+          {
+            "ms": 24.445142000000033,
+            "before": {
+              "rss": 335609856,
+              "heapTotal": 240488448,
+              "heapUsed": 120468976,
+              "external": 5242985,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 335994880
+            },
+            "after": {
+              "rss": 335396864,
+              "heapTotal": 259624960,
+              "heapUsed": 176499344,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 38.72248499999995,
+            "before": {
+              "rss": 335396864,
+              "heapTotal": 248614912,
+              "heapUsed": 119928024,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 335921152,
+              "heapTotal": 248877056,
+              "heapUsed": 181238320,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 50.16014299999995,
+            "before": {
+              "rss": 335921152,
+              "heapTotal": 248877056,
+              "heapUsed": 119940224,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 335921152,
+              "heapTotal": 253857792,
+              "heapUsed": 180887456,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 33.709955000000036,
+            "before": {
+              "rss": 335921152,
+              "heapTotal": 253857792,
+              "heapUsed": 119915064,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 335921152,
+              "heapTotal": 253857792,
+              "heapUsed": 181061480,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 27.38642200000004,
+            "before": {
+              "rss": 335921152,
+              "heapTotal": 253857792,
+              "heapUsed": 119921800,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 337694720,
+              "heapTotal": 253857792,
+              "heapUsed": 180923960,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 40.392799999999966,
+            "before": {
+              "rss": 335630336,
+              "heapTotal": 253857792,
+              "heapUsed": 120003648,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 335630336,
+              "heapTotal": 253857792,
+              "heapUsed": 180009288,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          },
+          {
+            "ms": 40.953160000000025,
+            "before": {
+              "rss": 335630336,
+              "heapTotal": 253857792,
+              "heapUsed": 119945232,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            },
+            "after": {
+              "rss": 336023552,
+              "heapTotal": 254119936,
+              "heapUsed": 181218240,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 337707008
+            }
+          }
+        ]
+      },
+      "baseline": {
+        "case": "messages:1.2",
+        "sourceProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 932713,
+        "inputOrOutputSha256": "d6d1c31d3ecad11ce15b040e08c3df01e77c6196a958ed6b858adae5cc0f93b9",
+        "medianMs": 54.61520800000005,
+        "minMs": 39.972673999999984,
+        "maxMs": 66.22517099999993,
+        "statementsPerSecond": 1831907.3324777945,
+        "samples": [
+          {
+            "ms": 64.90887700000002,
+            "before": {
+              "rss": 359813120,
+              "heapTotal": 262246400,
+              "heapUsed": 125205512,
+              "external": 5242985,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 359813120
+            },
+            "after": {
+              "rss": 360337408,
+              "heapTotal": 262246400,
+              "heapUsed": 170757184,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 360337408
+            }
+          },
+          {
+            "ms": 61.635865999999965,
+            "before": {
+              "rss": 360337408,
+              "heapTotal": 260411392,
+              "heapUsed": 125008200,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 360337408
+            },
+            "after": {
+              "rss": 360468480,
+              "heapTotal": 260411392,
+              "heapUsed": 170171152,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 360468480
+            }
+          },
+          {
+            "ms": 54.61520800000005,
+            "before": {
+              "rss": 360730624,
+              "heapTotal": 260411392,
+              "heapUsed": 125039688,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 360730624
+            },
+            "after": {
+              "rss": 360914944,
+              "heapTotal": 260411392,
+              "heapUsed": 166474080,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 361910272
+            }
+          },
+          {
+            "ms": 66.22517099999993,
+            "before": {
+              "rss": 360914944,
+              "heapTotal": 260411392,
+              "heapUsed": 125021408,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 361910272
+            },
+            "after": {
+              "rss": 360914944,
+              "heapTotal": 260411392,
+              "heapUsed": 167244144,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 361910272
+            }
+          },
+          {
+            "ms": 45.50382000000002,
+            "before": {
+              "rss": 360914944,
+              "heapTotal": 260411392,
+              "heapUsed": 125023624,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 361910272
+            },
+            "after": {
+              "rss": 360919040,
+              "heapTotal": 260411392,
+              "heapUsed": 169106704,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 363274240
+            }
+          },
+          {
+            "ms": 50.126172999999994,
+            "before": {
+              "rss": 360919040,
+              "heapTotal": 260411392,
+              "heapUsed": 125072056,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 363274240
+            },
+            "after": {
+              "rss": 361050112,
+              "heapTotal": 260411392,
+              "heapUsed": 170790920,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 363274240
+            }
+          },
+          {
+            "ms": 39.972673999999984,
+            "before": {
+              "rss": 361050112,
+              "heapTotal": 260411392,
+              "heapUsed": 125042904,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 363274240
+            },
+            "after": {
+              "rss": 361705472,
+              "heapTotal": 260411392,
+              "heapUsed": 171622544,
+              "external": 5243025,
+              "arrayBuffers": 2918058,
+              "maxRssBytes": 363274240
+            }
+          }
+        ]
+      },
+      "speedup": 1.4104262161893826
+    },
+    {
+      "case": "write-messages:1.2:250",
+      "baseline": {
+        "case": "write-messages:1.2:250",
+        "outputProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 4443918,
+        "inputOrOutputSha256": "31e4ab98478049675a634beca452bf183d3887633d42c933f7a34908748fe366",
+        "gzipBytes": 96077,
+        "medianMs": 226.94103900000005,
+        "minMs": 221.15357300000005,
+        "maxMs": 240.95062499999995,
+        "statementsPerSecond": 440863.4085790009,
+        "samples": [
+          {
+            "ms": 240.95062499999995,
+            "before": {
+              "rss": 340795392,
+              "heapTotal": 252284928,
+              "heapUsed": 115234064,
+              "external": 28046519,
+              "arrayBuffers": 20002135,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 339996672,
+              "heapTotal": 252284928,
+              "heapUsed": 130140432,
+              "external": 18845115,
+              "arrayBuffers": 16520148,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 223.27343999999994,
+            "before": {
+              "rss": 339783680,
+              "heapTotal": 251760640,
+              "heapUsed": 114894736,
+              "external": 18845115,
+              "arrayBuffers": 11152066,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 340832256,
+              "heapTotal": 251760640,
+              "heapUsed": 125890320,
+              "external": 18779579,
+              "arrayBuffers": 16454612,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 226.94103900000005,
+            "before": {
+              "rss": 340516864,
+              "heapTotal": 251236352,
+              "heapUsed": 114910896,
+              "external": 18779579,
+              "arrayBuffers": 11106092,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 341696512,
+              "heapTotal": 251236352,
+              "heapUsed": 125675040,
+              "external": 18779579,
+              "arrayBuffers": 16454612,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 230.64520500000003,
+            "before": {
+              "rss": 341696512,
+              "heapTotal": 251236352,
+              "heapUsed": 114901624,
+              "external": 18779579,
+              "arrayBuffers": 16061255,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 341827584,
+              "heapTotal": 251236352,
+              "heapUsed": 125397792,
+              "external": 18767291,
+              "arrayBuffers": 16442324,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 234.33944100000008,
+            "before": {
+              "rss": 341827584,
+              "heapTotal": 251236352,
+              "heapUsed": 114900064,
+              "external": 18767291,
+              "arrayBuffers": 11100983,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 341958656,
+              "heapTotal": 251236352,
+              "heapUsed": 125593552,
+              "external": 18779579,
+              "arrayBuffers": 16454612,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 221.26663400000007,
+            "before": {
+              "rss": 341958656,
+              "heapTotal": 251236352,
+              "heapUsed": 114913104,
+              "external": 18779579,
+              "arrayBuffers": 10784287,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 342089728,
+              "heapTotal": 251236352,
+              "heapUsed": 124793440,
+              "external": 18767291,
+              "arrayBuffers": 16442324,
+              "maxRssBytes": 344227840
+            }
+          },
+          {
+            "ms": 221.15357300000005,
+            "before": {
+              "rss": 342089728,
+              "heapTotal": 251236352,
+              "heapUsed": 114963744,
+              "external": 18767291,
+              "arrayBuffers": 15868838,
+              "maxRssBytes": 344227840
+            },
+            "after": {
+              "rss": 342089728,
+              "heapTotal": 251236352,
+              "heapUsed": 124691872,
+              "external": 18767291,
+              "arrayBuffers": 16442324,
+              "maxRssBytes": 344227840
+            }
+          }
+        ]
+      },
+      "after": {
+        "case": "write-messages:1.2:250",
+        "outputProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 4443918,
+        "inputOrOutputSha256": "31e4ab98478049675a634beca452bf183d3887633d42c933f7a34908748fe366",
+        "gzipBytes": 96077,
+        "medianMs": 59.419674999999984,
+        "minMs": 56.826405999999906,
+        "maxMs": 65.55132600000002,
+        "statementsPerSecond": 1683785.7157582908,
+        "samples": [
+          {
+            "ms": 64.18732499999999,
+            "before": {
+              "rss": 365756416,
+              "heapTotal": 259362816,
+              "heapUsed": 112651712,
+              "external": 26925709,
+              "arrayBuffers": 23859707,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 362012672,
+              "heapTotal": 259362816,
+              "heapUsed": 178001632,
+              "external": 27975099,
+              "arrayBuffers": 25650132,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 56.826405999999906,
+            "before": {
+              "rss": 362012672,
+              "heapTotal": 258052096,
+              "heapUsed": 112305640,
+              "external": 27975099,
+              "arrayBuffers": 24223692,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 364109824,
+              "heapTotal": 258052096,
+              "heapUsed": 173365080,
+              "external": 27352507,
+              "arrayBuffers": 25027540,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 58.54689999999994,
+            "before": {
+              "rss": 363864064,
+              "heapTotal": 257789952,
+              "heapUsed": 112329304,
+              "external": 27352507,
+              "arrayBuffers": 24515432,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 364126208,
+              "heapTotal": 257789952,
+              "heapUsed": 171964128,
+              "external": 27155899,
+              "arrayBuffers": 24830932,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 60.815878,
+            "before": {
+              "rss": 364126208,
+              "heapTotal": 257789952,
+              "heapUsed": 112321984,
+              "external": 27155899,
+              "arrayBuffers": 24487430,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 364781568,
+              "heapTotal": 257789952,
+              "heapUsed": 173095808,
+              "external": 27319739,
+              "arrayBuffers": 24994772,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 65.55132600000002,
+            "before": {
+              "rss": 364781568,
+              "heapTotal": 257789952,
+              "heapUsed": 112330448,
+              "external": 27319739,
+              "arrayBuffers": 24835109,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 365305856,
+              "heapTotal": 257789952,
+              "heapUsed": 171920400,
+              "external": 27135419,
+              "arrayBuffers": 24810452,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 59.419674999999984,
+            "before": {
+              "rss": 365305856,
+              "heapTotal": 257789952,
+              "heapUsed": 112320792,
+              "external": 27135419,
+              "arrayBuffers": 24698926,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 365568000,
+              "heapTotal": 257789952,
+              "heapUsed": 171837992,
+              "external": 27123131,
+              "arrayBuffers": 24798164,
+              "maxRssBytes": 365981696
+            }
+          },
+          {
+            "ms": 57.30577700000015,
+            "before": {
+              "rss": 365568000,
+              "heapTotal": 257789952,
+              "heapUsed": 112376216,
+              "external": 27123131,
+              "arrayBuffers": 24375054,
+              "maxRssBytes": 365981696
+            },
+            "after": {
+              "rss": 365568000,
+              "heapTotal": 257789952,
+              "heapUsed": 169047568,
+              "external": 26729915,
+              "arrayBuffers": 24404948,
+              "maxRssBytes": 365981696
+            }
+          }
+        ]
+      },
+      "speedup": 3.819291152299303
+    },
+    {
+      "case": "write-flat:1.2:4000",
+      "after": {
+        "case": "write-flat:1.2:4000",
+        "outputProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 2118944,
+        "inputOrOutputSha256": "3238b2ce3c40588dcd3999aab1034991c71d994b5e1e079c0b5e4cb1876c8c0d",
+        "gzipBytes": 172720,
+        "medianMs": 54.03056199999992,
+        "minMs": 51.225419999999986,
+        "maxMs": 56.70388700000001,
+        "statementsPerSecond": 1851729.767312066,
+        "samples": [
+          {
+            "ms": 55.363485000000026,
+            "before": {
+              "rss": 329183232,
+              "heapTotal": 250187776,
+              "heapUsed": 104869192,
+              "external": 16893702,
+              "arrayBuffers": 6815437,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327323648,
+              "heapTotal": 250187776,
+              "heapUsed": 165588784,
+              "external": 15321825,
+              "arrayBuffers": 12996858,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 53.30405099999996,
+            "before": {
+              "rss": 327184384,
+              "heapTotal": 249663488,
+              "heapUsed": 104653768,
+              "external": 15321825,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327446528,
+              "heapTotal": 249663488,
+              "heapUsed": 159039416,
+              "external": 14780417,
+              "arrayBuffers": 12455450,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 53.82029200000011,
+            "before": {
+              "rss": 327446528,
+              "heapTotal": 249663488,
+              "heapUsed": 104658096,
+              "external": 14780417,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327577600,
+              "heapTotal": 249663488,
+              "heapUsed": 161050968,
+              "external": 15054585,
+              "arrayBuffers": 12729618,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 56.70388700000001,
+            "before": {
+              "rss": 327577600,
+              "heapTotal": 249663488,
+              "heapUsed": 104672832,
+              "external": 15054585,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327708672,
+              "heapTotal": 249663488,
+              "heapUsed": 158527704,
+              "external": 14780417,
+              "arrayBuffers": 12455450,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 54.68945000000008,
+            "before": {
+              "rss": 327708672,
+              "heapTotal": 249663488,
+              "heapUsed": 104661624,
+              "external": 14780417,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327839744,
+              "heapTotal": 249925632,
+              "heapUsed": 159047976,
+              "external": 14780417,
+              "arrayBuffers": 12455450,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 51.225419999999986,
+            "before": {
+              "rss": 327839744,
+              "heapTotal": 249663488,
+              "heapUsed": 104670520,
+              "external": 14780417,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327839744,
+              "heapTotal": 249663488,
+              "heapUsed": 156987312,
+              "external": 14780417,
+              "arrayBuffers": 12455450,
+              "maxRssBytes": 332890112
+            }
+          },
+          {
+            "ms": 54.03056199999992,
+            "before": {
+              "rss": 327839744,
+              "heapTotal": 249663488,
+              "heapUsed": 104696488,
+              "external": 14780417,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 332890112
+            },
+            "after": {
+              "rss": 327970816,
+              "heapTotal": 249663488,
+              "heapUsed": 160884472,
+              "external": 15054585,
+              "arrayBuffers": 12729618,
+              "maxRssBytes": 332890112
+            }
+          }
+        ]
+      },
+      "baseline": {
+        "case": "write-flat:1.2:4000",
+        "outputProtocol": 3,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 2118944,
+        "inputOrOutputSha256": "3238b2ce3c40588dcd3999aab1034991c71d994b5e1e079c0b5e4cb1876c8c0d",
+        "gzipBytes": 172720,
+        "medianMs": 1595.6269709999997,
+        "minMs": 1568.217412,
+        "maxMs": 1916.7230359999994,
+        "statementsPerSecond": 62702.62524911909,
+        "samples": [
+          {
+            "ms": 1916.7230359999994,
+            "before": {
+              "rss": 324882432,
+              "heapTotal": 247042048,
+              "heapUsed": 105073920,
+              "external": 15402378,
+              "arrayBuffers": 6241478,
+              "maxRssBytes": 329498624
+            },
+            "after": {
+              "rss": 329732096,
+              "heapTotal": 247304192,
+              "heapUsed": 117712984,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 329732096
+            }
+          },
+          {
+            "ms": 1740.4870370000008,
+            "before": {
+              "rss": 329732096,
+              "heapTotal": 247304192,
+              "heapUsed": 104817656,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 329732096
+            },
+            "after": {
+              "rss": 330256384,
+              "heapTotal": 247304192,
+              "heapUsed": 115753696,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 330256384
+            }
+          },
+          {
+            "ms": 1595.6269709999997,
+            "before": {
+              "rss": 330256384,
+              "heapTotal": 247304192,
+              "heapUsed": 104825064,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 330256384
+            },
+            "after": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 115987192,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 331173888
+            }
+          },
+          {
+            "ms": 1568.217412,
+            "before": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 104837016,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 331173888
+            },
+            "after": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 115547280,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 331173888
+            }
+          },
+          {
+            "ms": 1654.300416,
+            "before": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 104827696,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 331173888
+            },
+            "after": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 115539552,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 331173888
+            }
+          },
+          {
+            "ms": 1588.4079469999997,
+            "before": {
+              "rss": 331173888,
+              "heapTotal": 247304192,
+              "heapUsed": 104834544,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 331173888
+            },
+            "after": {
+              "rss": 331698176,
+              "heapTotal": 247304192,
+              "heapUsed": 115789224,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 331698176
+            }
+          },
+          {
+            "ms": 1569.1649740000012,
+            "before": {
+              "rss": 331698176,
+              "heapTotal": 247304192,
+              "heapUsed": 104864392,
+              "external": 11053457,
+              "arrayBuffers": 4104289,
+              "maxRssBytes": 331698176
+            },
+            "after": {
+              "rss": 331698176,
+              "heapTotal": 247304192,
+              "heapUsed": 115571552,
+              "external": 11053457,
+              "arrayBuffers": 8728490,
+              "maxRssBytes": 331698176
+            }
+          }
+        ]
+      },
+      "speedup": 29.531933630451633
+    },
+    {
+      "case": "sparql-parse:1.0:250",
+      "baseline": {
+        "case": "sparql-parse:1.0:250",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 3333978,
+        "inputOrOutputSha256": "06bd8e1623857f7eb47ed551a7dcfe717ed8f87edabc7f15525f980031165d05",
+        "medianMs": 46.404007999999976,
+        "minMs": 39.567257000000154,
+        "maxMs": 52.73399900000004,
+        "statementsPerSecond": 2156063.7606992926,
+        "samples": [
+          {
+            "ms": 48.891801999999984,
+            "before": {
+              "rss": 348995584,
+              "heapTotal": 232886272,
+              "heapUsed": 91774512,
+              "external": 8576963,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 350048256,
+              "heapTotal": 233803776,
+              "heapUsed": 141294808,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 40.33163000000002,
+            "before": {
+              "rss": 348897280,
+              "heapTotal": 227643392,
+              "heapUsed": 91523608,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 349876224,
+              "heapTotal": 228560896,
+              "heapUsed": 138387688,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 52.73399900000004,
+            "before": {
+              "rss": 348958720,
+              "heapTotal": 227119104,
+              "heapUsed": 91523448,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 349876224,
+              "heapTotal": 228036608,
+              "heapUsed": 140758224,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 46.404007999999976,
+            "before": {
+              "rss": 348958720,
+              "heapTotal": 227119104,
+              "heapUsed": 91509400,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 349876224,
+              "heapTotal": 228036608,
+              "heapUsed": 140826376,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 39.567257000000154,
+            "before": {
+              "rss": 348958720,
+              "heapTotal": 227381248,
+              "heapUsed": 91525864,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 350060544,
+              "heapTotal": 228298752,
+              "heapUsed": 138848328,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 52.41390999999999,
+            "before": {
+              "rss": 349143040,
+              "heapTotal": 227381248,
+              "heapUsed": 91539376,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 350150656,
+              "heapTotal": 228298752,
+              "heapUsed": 140461160,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          },
+          {
+            "ms": 44.462827999999945,
+            "before": {
+              "rss": 349143040,
+              "heapTotal": 227381248,
+              "heapUsed": 91539024,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            },
+            "after": {
+              "rss": 350150656,
+              "heapTotal": 228298752,
+              "heapUsed": 140517352,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 352059392
+            }
+          }
+        ]
+      },
+      "after": {
+        "case": "sparql-parse:1.0:250",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 3333978,
+        "inputOrOutputSha256": "06bd8e1623857f7eb47ed551a7dcfe717ed8f87edabc7f15525f980031165d05",
+        "medianMs": 44.709388000000104,
+        "minMs": 43.51884600000005,
+        "maxMs": 58.0989340000001,
+        "statementsPerSecond": 2237785.048634523,
+        "samples": [
+          {
+            "ms": 58.0989340000001,
+            "before": {
+              "rss": 391819264,
+              "heapTotal": 205361152,
+              "heapUsed": 87537968,
+              "external": 8576963,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 391471104,
+              "heapTotal": 236163072,
+              "heapUsed": 131464792,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 46.09383500000001,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87296728,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130677032,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 44.89486499999998,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87264920,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130618976,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 44.709388000000104,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87260496,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130554272,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 43.560281999999916,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87273032,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130233528,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 43.51884600000005,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87276360,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130338832,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          },
+          {
+            "ms": 43.677376000000095,
+            "before": {
+              "rss": 389787648,
+              "heapTotal": 232099840,
+              "heapUsed": 87295288,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            },
+            "after": {
+              "rss": 390705152,
+              "heapTotal": 233017344,
+              "heapUsed": 130329776,
+              "external": 8577003,
+              "arrayBuffers": 6252036,
+              "maxRssBytes": 396435456
+            }
+          }
+        ]
+      },
+      "speedup": 1.0379030014904223
+    },
+    {
+      "case": "sparql-write:1.0:250",
+      "after": {
+        "case": "sparql-write:1.0:250",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 3333978,
+        "inputOrOutputSha256": "06bd8e1623857f7eb47ed551a7dcfe717ed8f87edabc7f15525f980031165d05",
+        "gzipBytes": 210570,
+        "medianMs": 84.64918200000011,
+        "minMs": 82.63552700000002,
+        "maxMs": 91.58879999999999,
+        "statementsPerSecond": 1181936.9973356607,
+        "samples": [
+          {
+            "ms": 91.58879999999999,
+            "before": {
+              "rss": 356601856,
+              "heapTotal": 241012736,
+              "heapUsed": 89407712,
+              "external": 23470277,
+              "arrayBuffers": 20166364,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 353742848,
+              "heapTotal": 241012736,
+              "heapUsed": 148298656,
+              "external": 19264529,
+              "arrayBuffers": 16939562,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 89.57027600000004,
+            "before": {
+              "rss": 353742848,
+              "heapTotal": 234196992,
+              "heapUsed": 89066648,
+              "external": 19264529,
+              "arrayBuffers": 16094900,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 354398208,
+              "heapTotal": 234196992,
+              "heapUsed": 143118864,
+              "external": 18937457,
+              "arrayBuffers": 16612490,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 82.63552700000002,
+            "before": {
+              "rss": 354398208,
+              "heapTotal": 234196992,
+              "heapUsed": 89062696,
+              "external": 18937457,
+              "arrayBuffers": 14495165,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 354791424,
+              "heapTotal": 234196992,
+              "heapUsed": 141255840,
+              "external": 18837281,
+              "arrayBuffers": 16512314,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 85.624057,
+            "before": {
+              "rss": 354791424,
+              "heapTotal": 234196992,
+              "heapUsed": 89087208,
+              "external": 18837281,
+              "arrayBuffers": 14796291,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 355315712,
+              "heapTotal": 234196992,
+              "heapUsed": 142175664,
+              "external": 18902817,
+              "arrayBuffers": 16577850,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 84.64121,
+            "before": {
+              "rss": 355315712,
+              "heapTotal": 234196992,
+              "heapUsed": 89081584,
+              "external": 18902817,
+              "arrayBuffers": 14490843,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 355315712,
+              "heapTotal": 234196992,
+              "heapUsed": 142075016,
+              "external": 18902817,
+              "arrayBuffers": 16577850,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 84.64918200000011,
+            "before": {
+              "rss": 355315712,
+              "heapTotal": 234196992,
+              "heapUsed": 89110496,
+              "external": 18902817,
+              "arrayBuffers": 15929866,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 355446784,
+              "heapTotal": 234196992,
+              "heapUsed": 137966920,
+              "external": 18591345,
+              "arrayBuffers": 16266378,
+              "maxRssBytes": 358387712
+            }
+          },
+          {
+            "ms": 84.50366699999995,
+            "before": {
+              "rss": 355446784,
+              "heapTotal": 234196992,
+              "heapUsed": 89116288,
+              "external": 18591345,
+              "arrayBuffers": 16212623,
+              "maxRssBytes": 358387712
+            },
+            "after": {
+              "rss": 355446784,
+              "heapTotal": 234196992,
+              "heapUsed": 137639392,
+              "external": 18554481,
+              "arrayBuffers": 16229514,
+              "maxRssBytes": 358387712
+            }
+          }
+        ]
+      },
+      "baseline": {
+        "case": "sparql-write:1.0:250",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 3333978,
+        "inputOrOutputSha256": "06bd8e1623857f7eb47ed551a7dcfe717ed8f87edabc7f15525f980031165d05",
+        "gzipBytes": 210570,
+        "medianMs": 403.5568989999997,
+        "minMs": 402.69229499999983,
+        "maxMs": 484.8752920000002,
+        "statementsPerSecond": 247920.43017458136,
+        "samples": [
+          {
+            "ms": 403.500986,
+            "before": {
+              "rss": 310587392,
+              "heapTotal": 230789120,
+              "heapUsed": 91802032,
+              "external": 22157647,
+              "arrayBuffers": 16029993,
+              "maxRssBytes": 313417728
+            },
+            "after": {
+              "rss": 312176640,
+              "heapTotal": 231051264,
+              "heapUsed": 106379184,
+              "external": 15346769,
+              "arrayBuffers": 13021802,
+              "maxRssBytes": 313417728
+            }
+          },
+          {
+            "ms": 484.8752920000002,
+            "before": {
+              "rss": 312438784,
+              "heapTotal": 227905536,
+              "heapUsed": 91519008,
+              "external": 15346769,
+              "arrayBuffers": 12946471,
+              "maxRssBytes": 313417728
+            },
+            "after": {
+              "rss": 314011648,
+              "heapTotal": 227905536,
+              "heapUsed": 99301376,
+              "external": 15312417,
+              "arrayBuffers": 12987450,
+              "maxRssBytes": 314011648
+            }
+          },
+          {
+            "ms": 403.5568989999997,
+            "before": {
+              "rss": 314011648,
+              "heapTotal": 227381248,
+              "heapUsed": 91513320,
+              "external": 15312417,
+              "arrayBuffers": 8891736,
+              "maxRssBytes": 314011648
+            },
+            "after": {
+              "rss": 315453440,
+              "heapTotal": 227381248,
+              "heapUsed": 99343048,
+              "external": 15312417,
+              "arrayBuffers": 12987450,
+              "maxRssBytes": 315453440
+            }
+          },
+          {
+            "ms": 403.30061499999965,
+            "before": {
+              "rss": 315453440,
+              "heapTotal": 227119104,
+              "heapUsed": 91535848,
+              "external": 15312417,
+              "arrayBuffers": 8541598,
+              "maxRssBytes": 315453440
+            },
+            "after": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 100656672,
+              "external": 15333473,
+              "arrayBuffers": 13008506,
+              "maxRssBytes": 315977728
+            }
+          },
+          {
+            "ms": 404.32191799999964,
+            "before": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 91527984,
+              "external": 15333473,
+              "arrayBuffers": 9383192,
+              "maxRssBytes": 315977728
+            },
+            "after": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 100685816,
+              "external": 15333473,
+              "arrayBuffers": 13008506,
+              "maxRssBytes": 315977728
+            }
+          },
+          {
+            "ms": 417.73072900000034,
+            "before": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 91559288,
+              "external": 15333473,
+              "arrayBuffers": 7909235,
+              "maxRssBytes": 315977728
+            },
+            "after": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 100653120,
+              "external": 15333473,
+              "arrayBuffers": 13008506,
+              "maxRssBytes": 315977728
+            }
+          },
+          {
+            "ms": 402.69229499999983,
+            "before": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 91564968,
+              "external": 15333473,
+              "arrayBuffers": 7925539,
+              "maxRssBytes": 315977728
+            },
+            "after": {
+              "rss": 315977728,
+              "heapTotal": 227381248,
+              "heapUsed": 100574776,
+              "external": 15333473,
+              "arrayBuffers": 13008506,
+              "maxRssBytes": 315977728
+            }
+          }
+        ]
+      },
+      "speedup": 4.767404592285359
+    },
+    {
+      "case": "sparql-write:1.0:4000",
+      "baseline": {
+        "case": "sparql-write:1.0:4000",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 2118848,
+        "inputOrOutputSha256": "4e515b073b476c042747219d08a264c473a74a221b17e9ac2637969de6ef8672",
+        "gzipBytes": 172611,
+        "medianMs": 1718.4920509999993,
+        "minMs": 1701.0786939999998,
+        "maxMs": 1847.6992520000003,
+        "statementsPerSecond": 58219.64666160684,
+        "samples": [
+          {
+            "ms": 1813.6667719999996,
+            "before": {
+              "rss": 367042560,
+              "heapTotal": 252547072,
+              "heapUsed": 85558632,
+              "external": 16323397,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 372260864
+            },
+            "after": {
+              "rss": 371367936,
+              "heapTotal": 252547072,
+              "heapUsed": 135483488,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 372260864
+            }
+          },
+          {
+            "ms": 1718.4920509999993,
+            "before": {
+              "rss": 371171328,
+              "heapTotal": 243109888,
+              "heapUsed": 85297920,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 372260864
+            },
+            "after": {
+              "rss": 372088832,
+              "heapTotal": 243109888,
+              "heapUsed": 134256288,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 372260864
+            }
+          },
+          {
+            "ms": 1847.6992520000003,
+            "before": {
+              "rss": 372088832,
+              "heapTotal": 241274880,
+              "heapUsed": 85303840,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 372260864
+            },
+            "after": {
+              "rss": 372088832,
+              "heapTotal": 241537024,
+              "heapUsed": 134403192,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 372260864
+            }
+          },
+          {
+            "ms": 1713.726192,
+            "before": {
+              "rss": 372088832,
+              "heapTotal": 241537024,
+              "heapUsed": 85314192,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 372260864
+            },
+            "after": {
+              "rss": 373268480,
+              "heapTotal": 241537024,
+              "heapUsed": 134475032,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 373268480
+            }
+          },
+          {
+            "ms": 1748.6548619999994,
+            "before": {
+              "rss": 373268480,
+              "heapTotal": 241537024,
+              "heapUsed": 85310760,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 373268480
+            },
+            "after": {
+              "rss": 373530624,
+              "heapTotal": 241537024,
+              "heapUsed": 134204192,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 373530624
+            }
+          },
+          {
+            "ms": 1708.9094399999994,
+            "before": {
+              "rss": 373530624,
+              "heapTotal": 241537024,
+              "heapUsed": 85312992,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 373530624
+            },
+            "after": {
+              "rss": 373530624,
+              "heapTotal": 241537024,
+              "heapUsed": 134171248,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 373530624
+            }
+          },
+          {
+            "ms": 1701.0786939999998,
+            "before": {
+              "rss": 373530624,
+              "heapTotal": 241537024,
+              "heapUsed": 85342168,
+              "external": 11982859,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 373530624
+            },
+            "after": {
+              "rss": 373661696,
+              "heapTotal": 241537024,
+              "heapUsed": 134134952,
+              "external": 11982859,
+              "arrayBuffers": 9657892,
+              "maxRssBytes": 373661696
+            }
+          }
+        ]
+      },
+      "after": {
+        "case": "sparql-write:1.0:4000",
+        "outputProtocol": 1,
+        "statements": 100050,
+        "messages": 870,
+        "inputOrOutputBytes": 2118848,
+        "inputOrOutputSha256": "4e515b073b476c042747219d08a264c473a74a221b17e9ac2637969de6ef8672",
+        "gzipBytes": 172611,
+        "medianMs": 87.25503400000002,
+        "minMs": 86.96473500000002,
+        "maxMs": 103.52413000000001,
+        "statementsPerSecond": 1146638.714277505,
+        "samples": [
+          {
+            "ms": 103.52413000000001,
+            "before": {
+              "rss": 333656064,
+              "heapTotal": 233672704,
+              "heapUsed": 85336888,
+              "external": 19338161,
+              "arrayBuffers": 10389279,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 335491072,
+              "heapTotal": 233672704,
+              "heapUsed": 143129000,
+              "external": 14332547,
+              "arrayBuffers": 12007580,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 87.16549799999996,
+            "before": {
+              "rss": 335491072,
+              "heapTotal": 223711232,
+              "heapUsed": 85138128,
+              "external": 14332547,
+              "arrayBuffers": 8294829,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336277504,
+              "heapTotal": 223711232,
+              "heapUsed": 139818624,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 87.31820200000004,
+            "before": {
+              "rss": 336011264,
+              "heapTotal": 223449088,
+              "heapUsed": 85141600,
+              "external": 14064427,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336666624,
+              "heapTotal": 223449088,
+              "heapUsed": 140093040,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 87.25137899999993,
+            "before": {
+              "rss": 336666624,
+              "heapTotal": 223449088,
+              "heapUsed": 85160440,
+              "external": 14064427,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336797696,
+              "heapTotal": 223449088,
+              "heapUsed": 140093608,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 87.25503400000002,
+            "before": {
+              "rss": 336797696,
+              "heapTotal": 223449088,
+              "heapUsed": 85153248,
+              "external": 14064427,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336797696,
+              "heapTotal": 223449088,
+              "heapUsed": 139655568,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 88.12823200000003,
+            "before": {
+              "rss": 336797696,
+              "heapTotal": 223449088,
+              "heapUsed": 85152160,
+              "external": 14064427,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336928768,
+              "heapTotal": 223449088,
+              "heapUsed": 139151160,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          },
+          {
+            "ms": 86.96473500000002,
+            "before": {
+              "rss": 336928768,
+              "heapTotal": 223449088,
+              "heapUsed": 85182648,
+              "external": 14064427,
+              "arrayBuffers": 5036906,
+              "maxRssBytes": 337403904
+            },
+            "after": {
+              "rss": 336928768,
+              "heapTotal": 223449088,
+              "heapUsed": 140109984,
+              "external": 14064427,
+              "arrayBuffers": 11739460,
+              "maxRssBytes": 337403904
+            }
+          }
+        ]
+      },
+      "speedup": 19.695047634730148
+    },
+    {
+      "case": "full",
+      "after": {
+        "case": "full stream 1.2",
+        "sourceProtocol": 3,
+        "medianMs": 16600.736236,
+        "minMs": 16538.662627,
+        "maxMs": 16662.809845,
+        "statementsPerSecond": 4858035.743325089,
+        "samples": [
+          {
+            "ms": 16662.809845,
+            "rows": 80646970,
+            "messages": 701278,
+            "bytes": 0,
+            "before": {
+              "rss": 57409536,
+              "heapTotal": 9801728,
+              "heapUsed": 6805256,
+              "external": 2665403,
+              "arrayBuffers": 30943,
+              "maxRssBytes": 57409536
+            },
+            "after": {
+              "rss": 200851456,
+              "heapTotal": 130387968,
+              "heapUsed": 19614472,
+              "external": 3193439,
+              "arrayBuffers": 870997,
+              "maxRssBytes": 200851456
+            }
+          },
+          {
+            "ms": 16538.662627,
+            "rows": 80646970,
+            "messages": 701278,
+            "bytes": 0,
+            "before": {
+              "rss": 200982528,
+              "heapTotal": 123834368,
+              "heapUsed": 7977000,
+              "external": 3222996,
+              "arrayBuffers": 80103,
+              "maxRssBytes": 200982528
+            },
+            "after": {
+              "rss": 201605120,
+              "heapTotal": 128815104,
+              "heapUsed": 44842536,
+              "external": 3108308,
+              "arrayBuffers": 756309,
+              "maxRssBytes": 203563008
+            }
+          }
+        ]
+      },
+      "baseline": {
+        "case": "full stream 1.2",
+        "sourceProtocol": 3,
+        "medianMs": 19766.483830999998,
+        "minMs": 19756.422243999998,
+        "maxMs": 19776.545418,
+        "statementsPerSecond": 4079985.6307028392,
+        "samples": [
+          {
+            "ms": 19776.545418,
+            "rows": 80646970,
+            "messages": 701278,
+            "bytes": 0,
+            "before": {
+              "rss": 57143296,
+              "heapTotal": 9801728,
+              "heapUsed": 6803056,
+              "external": 2664039,
+              "arrayBuffers": 30943,
+              "maxRssBytes": 57278464
+            },
+            "after": {
+              "rss": 203038720,
+              "heapTotal": 133271552,
+              "heapUsed": 53871672,
+              "external": 3308127,
+              "arrayBuffers": 985685,
+              "maxRssBytes": 203038720
+            }
+          },
+          {
+            "ms": 19756.422243999998,
+            "rows": 80646970,
+            "messages": 701278,
+            "bytes": 0,
+            "before": {
+              "rss": 203038720,
+              "heapTotal": 123834368,
+              "heapUsed": 7981408,
+              "external": 3337684,
+              "arrayBuffers": 363093,
+              "maxRssBytes": 203038720
+            },
+            "after": {
+              "rss": 203644928,
+              "heapTotal": 131698688,
+              "heapUsed": 18950320,
+              "external": 3878356,
+              "arrayBuffers": 952917,
+              "maxRssBytes": 205328384
+            }
+          }
+        ]
+      },
+      "speedup": 1.1906992286363074
+    }
+  ],
+  "allocations": [
+    {
+      "case": "parse",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "parse",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 400.94538900000003,
+        "estimatedAllocatedBytes": 844290480,
+        "estimatedBytesPerRound": 84429048,
+        "gc": {
+          "count": 16,
+          "durationMs": 116.21853792667389,
+          "kinds": {
+            "minor": {
+              "count": 14,
+              "durationMs": 107.4559879899025
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.3989299535751343
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 8.363619983196259
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 234677152
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 155976576
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 74661040
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 72570904
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 53696664
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 42086960
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 26040176
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 24512584
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 22164496
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 17810696
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 15562544
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 14625632
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 7063664
+          },
+          {
+            "function": "decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 452,
+            "estimatedBytes": 6426000
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6095976
+          },
+          {
+            "function": "RdfColumn",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1854,
+            "estimatedBytes": 5516960
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 4459896
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4218184
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3474480
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 3081712
+          },
+          {
+            "function": "decodeProtoPayloadTo",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 4628,
+            "estimatedBytes": 2794240
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1621,
+            "estimatedBytes": 2427824
+          },
+          {
+            "function": "applyLookups",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 323,
+            "estimatedBytes": 2360144
+          },
+          {
+            "function": "decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 452,
+            "estimatedBytes": 2163944
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1770000
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "parse",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 271.135489,
+        "estimatedAllocatedBytes": 532520432,
+        "estimatedBytesPerRound": 53252043.2,
+        "gc": {
+          "count": 9,
+          "durationMs": 78.49178093671799,
+          "kinds": {
+            "minor": {
+              "count": 9,
+              "durationMs": 78.49178093671799
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 206475816
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 96599312
+          },
+          {
+            "function": "append",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 564,
+            "estimatedBytes": 72325944
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 27511904
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 402,
+            "estimatedBytes": 26024968
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 25574824
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 13842736
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7341384
+          },
+          {
+            "function": "RdfColumn",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1900,
+            "estimatedBytes": 6895776
+          },
+          {
+            "function": "decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 492,
+            "estimatedBytes": 5441912
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3950784
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 3738360
+          },
+          {
+            "function": "applyLookups",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 327,
+            "estimatedBytes": 3081224
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2359872
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1667,
+            "estimatedBytes": 2297080
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2294480
+          },
+          {
+            "function": "quad",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 221,
+            "estimatedBytes": 2163888
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1901120
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 1573248
+          },
+          {
+            "function": "RdfColumnBatch",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1573,
+            "estimatedBytes": 1507872
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 1181040
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 1179920
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1055720
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1053296
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1051264
+          }
+        ]
+      }
+    },
+    {
+      "case": "messages",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "messages",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 340.49637999999993,
+        "estimatedAllocatedBytes": 755087104,
+        "estimatedBytesPerRound": 75508710.4,
+        "gc": {
+          "count": 14,
+          "durationMs": 94.18608283996582,
+          "kinds": {
+            "minor": {
+              "count": 14,
+              "durationMs": 94.18608283996582
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 240202840
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 160238728
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 80464296
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 35887432
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 25438968
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 21312088
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 18619672
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 18476760
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 18018176
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 15624664
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 13051736
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 11728752
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6554808
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 6324008
+          },
+          {
+            "function": "RdfColumn",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1854,
+            "estimatedBytes": 6107712
+          },
+          {
+            "function": "decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 452,
+            "estimatedBytes": 5770120
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4064592
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 3868864
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 380,
+            "estimatedBytes": 3408824
+          },
+          {
+            "function": "applyLookups",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 323,
+            "estimatedBytes": 3277944
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 3082464
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 2639448
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2438448
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 1979224
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1901120
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "messages",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 230.71665099999998,
+        "estimatedAllocatedBytes": 563646216,
+        "estimatedBytesPerRound": 56364621.6,
+        "gc": {
+          "count": 9,
+          "durationMs": 35.531388998031616,
+          "kinds": {
+            "minor": {
+              "count": 9,
+              "durationMs": 35.531388998031616
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 87803920
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 71386096
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 41023552
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 35318840
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 402,
+            "estimatedBytes": 31400400
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 29315784
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 27812584
+          },
+          {
+            "function": "append",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 564,
+            "estimatedBytes": 26032104
+          },
+          {
+            "function": "append",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 564,
+            "estimatedBytes": 25573104
+          },
+          {
+            "function": "append",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 564,
+            "estimatedBytes": 21966624
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 10819000
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 10229480
+          },
+          {
+            "function": "_Message",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 51,
+            "estimatedBytes": 9109216
+          },
+          {
+            "function": "_Message",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 51,
+            "estimatedBytes": 8708032
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7054152
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6794192
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 6786512
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 6296192
+          },
+          {
+            "function": "_Message",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 51,
+            "estimatedBytes": 6133632
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 5837200
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 5508256
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4808936
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4745120
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3954760
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3474048
+          }
+        ]
+      }
+    },
+    {
+      "case": "discard",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "discard",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 247.11051199999997,
+        "estimatedAllocatedBytes": 766225920,
+        "estimatedBytesPerRound": 76622592,
+        "gc": {
+          "count": 23,
+          "durationMs": 13.49006712436676,
+          "kinds": {
+            "minor": {
+              "count": 23,
+              "durationMs": 13.49006712436676
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 262723184
+          },
+          {
+            "function": "append",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 510,
+            "estimatedBytes": 206394752
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 98254864
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 27015304
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 380,
+            "estimatedBytes": 22878424
+          },
+          {
+            "function": "_Message",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 51,
+            "estimatedBytes": 22301440
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 20778208
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 16593208
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 8920080
+          },
+          {
+            "function": "RdfColumn",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1854,
+            "estimatedBytes": 8857504
+          },
+          {
+            "function": "decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 452,
+            "estimatedBytes": 8393000
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7472472
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3957464
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3357600
+          },
+          {
+            "function": "applyLookups",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 323,
+            "estimatedBytes": 3146784
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2884480
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2818928
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1621,
+            "estimatedBytes": 2493416
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2425432
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2165384
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2163232
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 204,
+            "estimatedBytes": 1967024
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1704440
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1507800
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1442064
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "discard",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 188.78883299999998,
+        "estimatedAllocatedBytes": 560493728,
+        "estimatedBytesPerRound": 56049372.8,
+        "gc": {
+          "count": 16,
+          "durationMs": 8.086610853672028,
+          "kinds": {
+            "minor": {
+              "count": 16,
+              "durationMs": 8.086610853672028
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 203124816
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 100812128
+          },
+          {
+            "function": "append",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 564,
+            "estimatedBytes": 69375168
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 402,
+            "estimatedBytes": 30091360
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 25247456
+          },
+          {
+            "function": "_Message",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 51,
+            "estimatedBytes": 25138792
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 18928208
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 15281304
+          },
+          {
+            "function": "RdfColumn",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1900,
+            "estimatedBytes": 8997088
+          },
+          {
+            "function": "decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 492,
+            "estimatedBytes": 7211944
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6751440
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 5181288
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4281368
+          },
+          {
+            "function": "applyLookups",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 327,
+            "estimatedBytes": 3343464
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2753360
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2228760
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumnBatch.RdfColumnBatch.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1667,
+            "estimatedBytes": 2165392
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 1966560
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1902736
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 1705896
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 1704344
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1640232
+          },
+          {
+            "function": "RdfColumnBatch",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1573,
+            "estimatedBytes": 1573440
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1376680
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1376520
+          }
+        ]
+      }
+    },
+    {
+      "case": "sparql-parse",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "sparql-parse",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 452.17642,
+        "estimatedAllocatedBytes": 784559448,
+        "estimatedBytesPerRound": 78455944.8,
+        "gc": {
+          "count": 17,
+          "durationMs": 172.30455613136292,
+          "kinds": {
+            "minor": {
+              "count": 15,
+              "durationMs": 162.64188516139984
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.4186129570007324
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 9.244058012962341
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 178567560
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 138527024
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 373,
+            "estimatedBytes": 101601024
+          },
+          {
+            "function": "decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6185,
+            "estimatedBytes": 76488440
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 54790680
+          },
+          {
+            "function": "read_string_verify",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 745,
+            "estimatedBytes": 32710464
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 24444056
+          },
+          {
+            "function": "decode",
+            "file": "node:internal/encoding",
+            "line": 482,
+            "estimatedBytes": 19872976
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 17566872
+          },
+          {
+            "function": "subarray",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 17315272
+          },
+          {
+            "function": "read_string_verify",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 745,
+            "estimatedBytes": 16256784
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 380,
+            "estimatedBytes": 9964520
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfLookupEntryPacked.RdfLookupEntryPacked.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1050,
+            "estimatedBytes": 8500096
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 8263752
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 1952,
+            "estimatedBytes": 7757312
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6751440
+          },
+          {
+            "function": "literal",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 345,
+            "estimatedBytes": 6296368
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 5572280
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4523360
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 3802016
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2949856
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2884280
+          },
+          {
+            "function": "subarray",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2820272
+          },
+          {
+            "function": "accept",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6323,
+            "estimatedBytes": 2757528
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2753016
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "sparql-parse",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 416.767604,
+        "estimatedAllocatedBytes": 725466336,
+        "estimatedBytesPerRound": 72546633.6,
+        "gc": {
+          "count": 15,
+          "durationMs": 151.54916512966156,
+          "kinds": {
+            "minor": {
+              "count": 13,
+              "durationMs": 141.7719510793686
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.5914850234985352
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 9.185729026794434
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 189062256
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 93627272
+          },
+          {
+            "function": "decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 6245,
+            "estimatedBytes": 78272016
+          },
+          {
+            "function": "read_uint32s",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 422,
+            "estimatedBytes": 56098568
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 395,
+            "estimatedBytes": 46729152
+          },
+          {
+            "function": "read_string_verify",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 745,
+            "estimatedBytes": 37954624
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 402,
+            "estimatedBytes": 27730216
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 24955112
+          },
+          {
+            "function": "decode",
+            "file": "node:internal/encoding",
+            "line": 482,
+            "estimatedBytes": 18036576
+          },
+          {
+            "function": "subarray",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 16856112
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 16651224
+          },
+          {
+            "function": "read_string_verify",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/reader.js",
+            "line": 745,
+            "estimatedBytes": 15929040
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 10821568
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfLookupEntryPacked.RdfLookupEntryPacked.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1096,
+            "estimatedBytes": 9226072
+          },
+          {
+            "function": "$root.eu.eu2.ostrzyciel.ostrzyciel.jelly.jelly.core.core.proto.proto3.v1.v1.RdfColumn.RdfColumn.decode",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 1998,
+            "estimatedBytes": 6836640
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6296072
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6096200
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6062856
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 5571936
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 204,
+            "estimatedBytes": 3671800
+          },
+          {
+            "function": "literal",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 367,
+            "estimatedBytes": 3541688
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3408920
+          },
+          {
+            "function": "fromCharCode",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2753200
+          },
+          {
+            "function": "utf8_read_strict",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/util/utf8.js",
+            "line": 98,
+            "estimatedBytes": 2490960
+          },
+          {
+            "function": "decode",
+            "file": "node:internal/encoding",
+            "line": 482,
+            "estimatedBytes": 2426664
+          }
+        ]
+      }
+    },
+    {
+      "case": "write-messages",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "write-messages",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 2710.040092,
+        "estimatedAllocatedBytes": 8042044368,
+        "estimatedBytesPerRound": 804204436.8,
+        "gc": {
+          "count": 182,
+          "durationMs": 70.42412269115448,
+          "kinds": {
+            "minor": {
+              "count": 180,
+              "durationMs": 64.44432365894318
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.19802600145339966
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 5.781773030757904
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "addQuad",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5593,
+            "estimatedBytes": 3225090920
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3184178144
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 903914032
+          },
+          {
+            "function": "keys",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5470,
+            "estimatedBytes": 177869712
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 83481800
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5502,
+            "estimatedBytes": 71550656
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 64566080
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5627,
+            "estimatedBytes": 48870376
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 48567600
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 39202480
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 25470056
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 23362200
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 22772424
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 20377528
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 17503440
+          },
+          {
+            "function": "flush",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5631,
+            "estimatedBytes": 16875776
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5627,
+            "estimatedBytes": 15917952
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 8793216
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7677936
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 7608024
+          },
+          {
+            "function": "subarray",
+            "file": "node:buffer",
+            "line": 1242,
+            "estimatedBytes": 4787952
+          },
+          {
+            "function": "fit",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5626,
+            "estimatedBytes": 2098152
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1901232
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1574592
+          },
+          {
+            "function": "allocate",
+            "file": "node:buffer",
+            "line": 467,
+            "estimatedBytes": 1508520
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "write-messages",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 552.52688,
+        "estimatedAllocatedBytes": 1055693392,
+        "estimatedBytesPerRound": 105569339.2,
+        "gc": {
+          "count": 31,
+          "durationMs": 14.638525009155273,
+          "kinds": {
+            "minor": {
+              "count": 29,
+              "durationMs": 11.657728016376495
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.217585027217865
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 2.763211965560913
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "addQuad",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5655,
+            "estimatedBytes": 509671208
+          },
+          {
+            "function": "keys",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5532,
+            "estimatedBytes": 186726088
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5564,
+            "estimatedBytes": 75425960
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 60971872
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 48773016
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 39464720
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 24416008
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 20519040
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 19195320
+          },
+          {
+            "function": "flush",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5693,
+            "estimatedBytes": 16806072
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 8859240
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 7673600
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 7412400
+          },
+          {
+            "function": "subarray",
+            "file": "node:buffer",
+            "line": 1242,
+            "estimatedBytes": 5771792
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2950224
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 2230320
+          },
+          {
+            "function": "fork",
+            "file": "/home/pieter/Projects/rdfjs-jelly/node_modules/protobufjs/src/writer.js",
+            "line": 618,
+            "estimatedBytes": 1967840
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1902816
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 1574024
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1245560
+          },
+          {
+            "function": "wrappedFn",
+            "file": "node:internal/errors",
+            "line": 541,
+            "estimatedBytes": 1114448
+          },
+          {
+            "function": "encodeFrameWire",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 4465,
+            "estimatedBytes": 1048960
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 918536
+          },
+          {
+            "function": "keys",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 721120
+          },
+          {
+            "function": "subarray",
+            "file": "node:buffer",
+            "line": 1242,
+            "estimatedBytes": 655928
+          }
+        ]
+      }
+    },
+    {
+      "case": "write-flat-4000",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "write-flat-4000",
+        "rounds": 3,
+        "statementsPerRound": 100050,
+        "elapsedMs": 5549.438129999999,
+        "estimatedAllocatedBytes": 18466291488,
+        "estimatedBytesPerRound": 6155430496,
+        "gc": {
+          "count": 279,
+          "durationMs": 90.49903213977814,
+          "kinds": {
+            "minor": {
+              "count": 279,
+              "durationMs": 90.49903213977814
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 12019016824
+          },
+          {
+            "function": "addQuad",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5593,
+            "estimatedBytes": 4596655456
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 770916376
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5627,
+            "estimatedBytes": 268303632
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 252523840
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 166171840
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 114685520
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5627,
+            "estimatedBytes": 60322928
+          },
+          {
+            "function": "keys",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5470,
+            "estimatedBytes": 52291536
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5627,
+            "estimatedBytes": 43400528
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5502,
+            "estimatedBytes": 25106408
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 18883568
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 17063056
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 12062320
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 11406760
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7330216
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6115056
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4593880
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4555992
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3018712
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2556680
+          },
+          {
+            "function": "addQuad",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5593,
+            "estimatedBytes": 1638992
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1376784
+          },
+          {
+            "function": "fit",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5626,
+            "estimatedBytes": 1311320
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1311216
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "write-flat-4000",
+        "rounds": 3,
+        "statementsPerRound": 100050,
+        "elapsedMs": 237.54003699999998,
+        "estimatedAllocatedBytes": 316925280,
+        "estimatedBytesPerRound": 105641760,
+        "gc": {
+          "count": 4,
+          "durationMs": 33.85909700393677,
+          "kinds": {
+            "minor": {
+              "count": 4,
+              "durationMs": 33.85909700393677
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "addQuad",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5655,
+            "estimatedBytes": 153734952
+          },
+          {
+            "function": "keys",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5532,
+            "estimatedBytes": 55702576
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5564,
+            "estimatedBytes": 21856936
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 18419616
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 17175680
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 13242320
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7043520
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 6535808
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 5969280
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4193504
+          },
+          {
+            "function": "addQuad",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5655,
+            "estimatedBytes": 2556800
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2228920
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 1574280
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 1443120
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 1245648
+          },
+          {
+            "function": "keys",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5532,
+            "estimatedBytes": 787360
+          },
+          {
+            "function": "flush",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5693,
+            "estimatedBytes": 678560
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 590064
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 487976
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5564,
+            "estimatedBytes": 327800
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 221120
+          },
+          {
+            "function": "Uint8Array",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 196768
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 96048
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 86136
+          },
+          {
+            "function": "flush",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5693,
+            "estimatedBytes": 70512
+          }
+        ]
+      }
+    },
+    {
+      "case": "sparql-write-250",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "sparql-write-250",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 4651.869852,
+        "estimatedAllocatedBytes": 13998413648,
+        "estimatedBytesPerRound": 1399841364.8,
+        "gc": {
+          "count": 386,
+          "durationMs": 116.08341091871262,
+          "kinds": {
+            "minor": {
+              "count": 386,
+              "durationMs": 116.08341091871262
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 7282319000
+          },
+          {
+            "function": "addBinding",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6396,
+            "estimatedBytes": 4510250336
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 916644080
+          },
+          {
+            "function": "entries",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 257228448
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 210631280
+          },
+          {
+            "function": "keys",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5470,
+            "estimatedBytes": 174720696
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 143057880
+          },
+          {
+            "function": "column",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 5502,
+            "estimatedBytes": 80708912
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6410,
+            "estimatedBytes": 58876208
+          },
+          {
+            "function": "add",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 48397200
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 47882072
+          },
+          {
+            "function": "writeSparql",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/perf/riverbench-allocations.mjs",
+            "line": 25,
+            "estimatedBytes": 47137712
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 40775840
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 29104920
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 28664376
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 24820096
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6410,
+            "estimatedBytes": 20374840
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 18243576
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 16654768
+          },
+          {
+            "function": "flush",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6486,
+            "estimatedBytes": 6904616
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 5709520
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 3937288
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2884656
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 2623464
+          },
+          {
+            "function": "fits",
+            "file": "file:///tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+            "line": 6410,
+            "estimatedBytes": 2032384
+          }
+        ]
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "sparql-write-250",
+        "rounds": 10,
+        "statementsPerRound": 100050,
+        "elapsedMs": 1075.920581,
+        "estimatedAllocatedBytes": 1638642240,
+        "estimatedBytesPerRound": 163864224,
+        "gc": {
+          "count": 25,
+          "durationMs": 146.2908478975296,
+          "kinds": {
+            "minor": {
+              "count": 23,
+              "durationMs": 141.69277888536453
+            },
+            "other": {
+              "count": 1,
+              "durationMs": 0.5157290101051331
+            },
+            "major": {
+              "count": 1,
+              "durationMs": 4.0823400020599365
+            }
+          }
+        },
+        "sites": [
+          {
+            "function": "addBinding",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 6445,
+            "estimatedBytes": 609218496
+          },
+          {
+            "function": "entries",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 263259320
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 220342496
+          },
+          {
+            "function": "keys",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5532,
+            "estimatedBytes": 184298664
+          },
+          {
+            "function": "column",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5564,
+            "estimatedBytes": 77513552
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 50643864
+          },
+          {
+            "function": "writeSparql",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/perf/riverbench-allocations.mjs",
+            "line": 25,
+            "estimatedBytes": 47137664
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 39858040
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 28325112
+          },
+          {
+            "function": "set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 27731960
+          },
+          {
+            "function": "map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 25883552
+          },
+          {
+            "function": "next",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 23408728
+          },
+          {
+            "function": "flush",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 6537,
+            "estimatedBytes": 9070640
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 7018800
+          },
+          {
+            "function": "Set",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 4003312
+          },
+          {
+            "function": "values",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 2884656
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 2820288
+          },
+          {
+            "function": "tableFits",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 5521,
+            "estimatedBytes": 1639920
+          },
+          {
+            "function": "subarray",
+            "file": "node:buffer",
+            "line": 1242,
+            "estimatedBytes": 1377376
+          },
+          {
+            "function": "(anonymous)",
+            "file": "file:///home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+            "line": 6555,
+            "estimatedBytes": 983376
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 853024
+          },
+          {
+            "function": "push",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 853024
+          },
+          {
+            "function": "Map",
+            "file": "",
+            "line": 0,
+            "estimatedBytes": 721624
+          },
+          {
+            "function": "subarray",
+            "file": "node:buffer",
+            "line": 1242,
+            "estimatedBytes": 655928
+          },
+          {
+            "function": "allocUnsafe",
+            "file": "node:buffer",
+            "line": 450,
+            "estimatedBytes": 590312
+          }
+        ]
+      }
+    }
+  ],
+  "retention": [
+    {
+      "case": "retention-rdf",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "retention-rdf",
+        "scopes": 50000,
+        "samples": [
+          {
+            "scopes": 1000,
+            "heapUsed": 40855504,
+            "rss": 184176640
+          },
+          {
+            "scopes": 50000,
+            "heapUsed": 43694712,
+            "rss": 264028160
+          }
+        ],
+        "heapGrowthBytes": 2839208
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "retention-rdf",
+        "scopes": 50000,
+        "samples": [
+          {
+            "scopes": 1000,
+            "heapUsed": 40648448,
+            "rss": 413306880
+          },
+          {
+            "scopes": 50000,
+            "heapUsed": 40622872,
+            "rss": 413466624
+          }
+        ],
+        "heapGrowthBytes": -25576
+      }
+    },
+    {
+      "case": "retention-sparql",
+      "baseline": {
+        "node": "v25.9.0",
+        "moduleUrl": "/tmp/rdfjs-jelly-riverbench/baseline/index.mjs",
+        "mode": "retention-sparql",
+        "scopes": 50000,
+        "samples": [
+          {
+            "scopes": 1000,
+            "heapUsed": 40802392,
+            "rss": 179994624
+          },
+          {
+            "scopes": 50000,
+            "heapUsed": 44963520,
+            "rss": 259850240
+          }
+        ],
+        "heapGrowthBytes": 4161128
+      },
+      "after": {
+        "node": "v25.9.0",
+        "moduleUrl": "/home/pieter/Projects/rdfjs-jelly/dist/index.mjs",
+        "mode": "retention-sparql",
+        "scopes": 50000,
+        "samples": [
+          {
+            "scopes": 1000,
+            "heapUsed": 40744224,
+            "rss": 230285312
+          },
+          {
+            "scopes": 50000,
+            "heapUsed": 40707872,
+            "rss": 259072000
+          }
+        ],
+        "heapGrowthBytes": -36352
+      }
+    }
+  ],
+  "baselineRevision": "00a53bba0d35d5975fa7aa253b534693257aa6f7",
+  "methodology": {
+    "timings": "Fresh sequential worker processes; alternate before/after order across cases; 2 warmups then 7 timed sample operations with GC before each. Full streaming: 2 passes per variant. Counts and writer byte SHA256 compared.",
+    "allocations": "Separate V8 HeapProfiler sampling runs at 65536 bytes, including objects collected by minor and major GC. Estimates include profiling overhead and are not exact allocation counts or peak heap. 10 operations per case; 3 for 4000-triple RDF writes.",
+    "gc": "PerformanceObserver GC entries whose start time falls within the instrumented operation loop; startup/forced pre-loop GC excluded. Durations are observed GC events, not equivalent to CPU profiler percentages.",
+    "retention": "Keep parser and all encoded frame buffers reachable; discard outputs; compare post-forced-GC heap after 1000 and 50000 message/result scopes. Small negative deltas are GC noise, not a memory reduction guarantee.",
+    "sample": "Same 870 complete messages / 100050 triples as the original audit. SPARQL uses s/p/o SELECT bindings synthesized from these triples.",
+    "limitations": "One regular dataset; sample timing noise; only two full repetitions; no browser throughput benchmark. Prefix compression/lookup reuse are unchanged."
+  },
+  "validation": {
+    "check": "565 tests, TypeScript and Node/browser build passed",
+    "upstreamIndependentDecode": {
+      "rdfWriterPositiveCases": 27,
+      "sparqlWriterPositiveCases": 25
+    },
+    "writerByteEquality": "SHA256 unchanged before/after for every measured RDF/SPARQL writer case"
+  }
+}

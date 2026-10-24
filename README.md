@@ -453,17 +453,70 @@ npm run perf:profile:writer -- 100000 7
 
 ```sh
 npm install
-npm run lint
-npm test
+npm run typecheck       # TypeScript checks
+npm run lint            # ESLint, including promise handling checks
+npm test                # Fast source tests
+npm run test:coverage   # Coverage with enforced thresholds
 npm run build
-npm run check
-npm run proto:generate
+npm run lint:package    # publint and Are the Types Wrong
+npm run test:package    # Installed tarball, imports, declarations, and CLI
+npm run check           # Complete local release gate
+npm run proto:generate  # Regenerate checked-in protobuf codecs
+npm run proto:check     # Check reproducibility without overwriting codecs
 ```
 
 `dist/` is generated locally and ignored by Git. `npm install` and `npm ci`
 build it through the `prepare` script; npm packages include the generated Node
 and browser bundles through the `files` allowlist. Run `npm run build` after
 source changes.
+
+`npm run check` is also enforced by `prepublishOnly`. It requires development
+dependencies and may fetch production dependencies while testing an isolated
+consumer installation. The root export supports CJS and ESM with separate
+matching declarations; `rdfjs-jelly/browser` is ESM-only (use dynamic import
+from CJS). The legacy `browser` field remains for older bundlers.
+
+Coverage excludes generated protobuf code and starts at the measured baseline:
+79.34% statements, 74.89% branches, 83.10% functions, and 84.89% lines. Raise
+these thresholds as tests improve. CI uploads LCOV and JSON coverage reports.
+ESLint uses the maintained typescript-eslint recommended rules plus typed
+promise checks, without imposing a new formatting style on the codec code.
+
+CI checks the minimum supported Node 24.0.0, current Node 24 and Node 26, and a
+Windows consumer installation. For actual browser bundle tests, install
+Chromium with `npx playwright install chromium --only-shell`, then run
+`npm run test:browser`. CI installs the required system libraries as well.
+Both the ESM and global browser bundles must round-trip RDF and SPARQL data,
+including RDF Web Streams.
+
+The conformance job also checks writer output using the independent Python
+reference decoders from Jelly's pinned v1.2.0 test suite. To run locally with
+Python 3.10 or newer and a checkout of that release:
+
+```sh
+npm run build
+npm run test:interop -- /path/to/jelly-protobuf-v1.2.0
+```
+
+`npm run perf:regression` compares synthetic RDF/SPARQL reads and writes against
+`PERF_BASE_REF` (default `HEAD`), building both with the same installed tools.
+It includes message boundaries and small lookup tables, takes the median of
+five samples, and warns when elapsed time increases by more than 20%.
+Correctness or build failures still fail the job. CI compares PRs against their
+base branch and main commits against their parent. This check requires Git
+and tar and runs separately from the release gate to avoid noisy timing failures.
+
+`npm run perf:quality` reports sampled allocations, GC time, and retained heap
+deltas for the same synthetic cases. Set `PERF_OUTPUT` to save JSON. Allocation
+counts are sampling estimates and retained heap deltas are diagnostic, not
+memory bounds. The weekly/manual performance workflow uploads these reports
+and a full streaming RiverBench Jelly 1.2 parse report, recording the downloaded
+file's checksum because the upstream `dev` dataset can change.
+
+Renovate configuration requests weekly dependency updates and lockfile
+maintenance; enable the Renovate GitHub App for this repository to activate it.
+Local hooks are optional: `npm run hooks:install` enables a fast typecheck/lint
+pre-commit hook. Hook installation is never part of dependency installation.
 
 The checked-in schemas are Jelly-RDF `rdf.proto` 1.2.0 and Jelly-SPARQL
 `sparql.proto` 1.0.0 from the same upstream release. Static JavaScript codecs
