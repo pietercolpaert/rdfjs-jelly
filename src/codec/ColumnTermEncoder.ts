@@ -66,6 +66,7 @@ export class ColumnTermEncoder {
   protected column(terms: RDF.Term[]): Column {
     const c = new proto.RdfColumn();
     const kinds: number[] = [];
+    let kindMask = 0;
     let skip = 0;
     for (let i = 0; i < terms.length;) {
       const term = terms[i]!;
@@ -95,12 +96,13 @@ export class ColumnTermEncoder {
       }
       i = end;
     }
-    if (new Set(kinds).size > 1) {
+    for (const kind of kinds) kindMask |= 1 << kind;
+    if (kindMask & (kindMask - 1)) {
       c.kinds = new Uint8Array(Math.ceil(kinds.length / 4));
       kinds.forEach((kind, i) => { c.kinds[i >> 2]! |= kind << (2 * (i & 3)); });
     }
     if (c.literalKinds.every(v => v === 0)) c.literalKinds = [];
-    else if (new Set(c.literalKinds).size === 1) c.literalKinds = [c.literalKinds[0]!];
+    else if (c.literalKinds.every(v => v === c.literalKinds[0])) c.literalKinds = [c.literalKinds[0]!];
     if (c.langtagDirections.every(v => v === 0)) c.langtagDirections = [];
     return c;
   }

@@ -168,7 +168,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfIri.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -257,7 +257,7 @@ export const eu = $root.eu = (() => {
                             RdfIri.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfIri;
@@ -273,7 +273,7 @@ export const eu = $root.eu = (() => {
                          * @property {number} RDF_VERSION_1_2=3 RDF_VERSION_1_2 value
                          */
                         v1.RdfVersion = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
+                            const valuesById = $Object.create(null), values = $Object.create(valuesById);
                             values[valuesById[0] = "RDF_VERSION_UNSPECIFIED"] = 0;
                             values[valuesById[1] = "RDF_VERSION_1_1"] = 1;
                             values[valuesById[2] = "RDF_VERSION_1_2_BASIC"] = 2;
@@ -290,7 +290,7 @@ export const eu = $root.eu = (() => {
                          * @property {number} RDF_BASE_DIRECTION_RTL=2 RDF_BASE_DIRECTION_RTL value
                          */
                         v1.RdfBaseDirection = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
+                            const valuesById = $Object.create(null), values = $Object.create(valuesById);
                             values[valuesById[0] = "RDF_BASE_DIRECTION_UNSPECIFIED"] = 0;
                             values[valuesById[1] = "RDF_BASE_DIRECTION_LTR"] = 1;
                             values[valuesById[2] = "RDF_BASE_DIRECTION_RTL"] = 2;
@@ -448,7 +448,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfLiteral.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -551,7 +551,7 @@ export const eu = $root.eu = (() => {
                             RdfLiteral.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfLiteral;
@@ -758,7 +758,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfTripleTerm.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -802,7 +802,7 @@ export const eu = $root.eu = (() => {
                                     case 1: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sIri);
+                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.sIri);
                                             message.$subject = "sIri";
                                             continue;
                                         }
@@ -816,13 +816,13 @@ export const eu = $root.eu = (() => {
                                     case 5: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pIri);
+                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.pIri);
                                             continue;
                                         }
                                     case 9: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oIri);
+                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.oIri);
                                             message.$object = "oIri";
                                             continue;
                                         }
@@ -836,14 +836,14 @@ export const eu = $root.eu = (() => {
                                     case 11: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oLiteral);
+                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.oLiteral);
                                             message.$object = "oLiteral";
                                             continue;
                                         }
                                     case 12: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oTripleTerm);
+                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.size(), $undefined, _depth + 1, message.oTripleTerm);
                                             message.$object = "oTripleTerm";
                                             continue;
                                         }
@@ -877,7 +877,7 @@ export const eu = $root.eu = (() => {
                             RdfTripleTerm.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfTripleTerm;
@@ -991,7 +991,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfLookupEntryPacked.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -1079,7 +1079,7 @@ export const eu = $root.eu = (() => {
                             RdfLookupEntryPacked.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfLookupEntryPacked;
@@ -1290,7 +1290,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfStreamOptions.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -1460,7 +1460,7 @@ export const eu = $root.eu = (() => {
                             RdfStreamOptions.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfStreamOptions;
@@ -1476,7 +1476,7 @@ export const eu = $root.eu = (() => {
                          * @property {number} PHYSICAL_STREAM_TYPE_GRAPHS=3 PHYSICAL_STREAM_TYPE_GRAPHS value
                          */
                         v1.PhysicalStreamType = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
+                            const valuesById = $Object.create(null), values = $Object.create(valuesById);
                             values[valuesById[0] = "PHYSICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
                             values[valuesById[1] = "PHYSICAL_STREAM_TYPE_TRIPLES"] = 1;
                             values[valuesById[2] = "PHYSICAL_STREAM_TYPE_QUADS"] = 2;
@@ -1492,7 +1492,7 @@ export const eu = $root.eu = (() => {
                          * @property {number} RDF_STREAM_TYPE_MESSAGES=1 RDF_STREAM_TYPE_MESSAGES value
                          */
                         v1.RdfStreamType = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
+                            const valuesById = $Object.create(null), values = $Object.create(valuesById);
                             values[valuesById[0] = "RDF_STREAM_TYPE_FLAT"] = 0;
                             values[valuesById[1] = "RDF_STREAM_TYPE_MESSAGES"] = 1;
                             return values;
@@ -1624,7 +1624,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfStreamFrame.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -1670,13 +1670,13 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.rows && message.rows.length))
                                                 message.rows = [];
-                                            message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.rows.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     case 2: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.columns = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.decode(reader, reader.uint32(), $undefined, _depth + 1, message.columns);
+                                            message.columns = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.decode(reader, reader.size(), $undefined, _depth + 1, message.columns);
                                             continue;
                                         }
                                     case 15: {
@@ -1684,7 +1684,7 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (message.metadata === $util.emptyObject)
                                                 message.metadata = {};
-                                            let end2 = reader.uint32() + reader.pos;
+                                            let end2 = reader.size() + reader.pos;
                                             if (end2 > reader.len)
                                                 throw $RangeError("index out of range");
                                             reader.len = end2;
@@ -1745,7 +1745,7 @@ export const eu = $root.eu = (() => {
                             RdfStreamFrame.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfStreamFrame;
@@ -1966,7 +1966,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfColumnBatch.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -2021,7 +2021,7 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.names && message.names.length))
                                                 message.names = [];
-                                            message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     case 3: {
@@ -2029,7 +2029,7 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.prefixes && message.prefixes.length))
                                                 message.prefixes = [];
-                                            message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     case 4: {
@@ -2037,7 +2037,7 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.datatypes && message.datatypes.length))
                                                 message.datatypes = [];
-                                            message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     case 5: {
@@ -2045,31 +2045,31 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.namespaces && message.namespaces.length))
                                                 message.namespaces = [];
-                                            message.namespaces.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.namespaces.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     case 6: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.subjects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.subjects);
+                                            message.subjects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.size(), $undefined, _depth + 1, message.subjects);
                                             continue;
                                         }
                                     case 7: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.predicates = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.predicates);
+                                            message.predicates = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.size(), $undefined, _depth + 1, message.predicates);
                                             continue;
                                         }
                                     case 8: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.objects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.objects);
+                                            message.objects = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.size(), $undefined, _depth + 1, message.objects);
                                             continue;
                                         }
                                     case 9: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.graphs = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1, message.graphs);
+                                            message.graphs = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.size(), $undefined, _depth + 1, message.graphs);
                                             continue;
                                         }
                                     case 15: {
@@ -2116,7 +2116,7 @@ export const eu = $root.eu = (() => {
                             RdfColumnBatch.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfColumnBatch;
@@ -2228,7 +2228,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfNamespaceDeclaration.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -2281,7 +2281,7 @@ export const eu = $root.eu = (() => {
                                     case 2: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.value);
+                                            message.value = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.value);
                                             continue;
                                         }
                                     }
@@ -2314,7 +2314,7 @@ export const eu = $root.eu = (() => {
                             RdfNamespaceDeclaration.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfNamespaceDeclaration;
@@ -2539,7 +2539,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfColumn.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -2688,7 +2688,7 @@ export const eu = $root.eu = (() => {
                                                 break;
                                             if (!(message.tripleTerms && message.tripleTerms.length))
                                                 message.tripleTerms = [];
-                                            message.tripleTerms.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                            message.tripleTerms.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.decode(reader, reader.size(), $undefined, _depth + 1));
                                             continue;
                                         }
                                     }
@@ -2721,7 +2721,7 @@ export const eu = $root.eu = (() => {
                             RdfColumn.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfColumn;
@@ -2811,7 +2811,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfDefaultGraph.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -2879,7 +2879,7 @@ export const eu = $root.eu = (() => {
                             RdfDefaultGraph.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfDefaultGraph;
@@ -3160,7 +3160,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfTriple.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -3204,7 +3204,7 @@ export const eu = $root.eu = (() => {
                                     case 1: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sIri);
+                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.sIri);
                                             message.$subject = "sIri";
                                             continue;
                                         }
@@ -3218,21 +3218,21 @@ export const eu = $root.eu = (() => {
                                     case 3: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sLiteral);
+                                            message.sLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.sLiteral);
                                             message.$subject = "sLiteral";
                                             continue;
                                         }
                                     case 4: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sTripleTerm);
+                                            message.sTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.sTripleTerm);
                                             message.$subject = "sTripleTerm";
                                             continue;
                                         }
                                     case 5: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pIri);
+                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.pIri);
                                             message.$predicate = "pIri";
                                             continue;
                                         }
@@ -3246,21 +3246,21 @@ export const eu = $root.eu = (() => {
                                     case 7: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pLiteral);
+                                            message.pLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.pLiteral);
                                             message.$predicate = "pLiteral";
                                             continue;
                                         }
                                     case 8: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pTripleTerm);
+                                            message.pTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.pTripleTerm);
                                             message.$predicate = "pTripleTerm";
                                             continue;
                                         }
                                     case 9: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oIri);
+                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.oIri);
                                             message.$object = "oIri";
                                             continue;
                                         }
@@ -3274,14 +3274,14 @@ export const eu = $root.eu = (() => {
                                     case 11: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oLiteral);
+                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.oLiteral);
                                             message.$object = "oLiteral";
                                             continue;
                                         }
                                     case 12: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oTripleTerm);
+                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.oTripleTerm);
                                             message.$object = "oTripleTerm";
                                             continue;
                                         }
@@ -3315,7 +3315,7 @@ export const eu = $root.eu = (() => {
                             RdfTriple.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfTriple;
@@ -3658,7 +3658,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfQuad.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -3702,7 +3702,7 @@ export const eu = $root.eu = (() => {
                                     case 1: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sIri);
+                                            message.sIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.sIri);
                                             message.$subject = "sIri";
                                             continue;
                                         }
@@ -3716,21 +3716,21 @@ export const eu = $root.eu = (() => {
                                     case 3: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sLiteral);
+                                            message.sLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.sLiteral);
                                             message.$subject = "sLiteral";
                                             continue;
                                         }
                                     case 4: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.sTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.sTripleTerm);
+                                            message.sTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.sTripleTerm);
                                             message.$subject = "sTripleTerm";
                                             continue;
                                         }
                                     case 5: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pIri);
+                                            message.pIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.pIri);
                                             message.$predicate = "pIri";
                                             continue;
                                         }
@@ -3744,21 +3744,21 @@ export const eu = $root.eu = (() => {
                                     case 7: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pLiteral);
+                                            message.pLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.pLiteral);
                                             message.$predicate = "pLiteral";
                                             continue;
                                         }
                                     case 8: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.pTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.pTripleTerm);
+                                            message.pTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.pTripleTerm);
                                             message.$predicate = "pTripleTerm";
                                             continue;
                                         }
                                     case 9: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oIri);
+                                            message.oIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.oIri);
                                             message.$object = "oIri";
                                             continue;
                                         }
@@ -3772,21 +3772,21 @@ export const eu = $root.eu = (() => {
                                     case 11: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oLiteral);
+                                            message.oLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.oLiteral);
                                             message.$object = "oLiteral";
                                             continue;
                                         }
                                     case 12: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.oTripleTerm);
+                                            message.oTripleTerm = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.oTripleTerm);
                                             message.$object = "oTripleTerm";
                                             continue;
                                         }
                                     case 13: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gIri);
+                                            message.gIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.gIri);
                                             message.$graph = "gIri";
                                             continue;
                                         }
@@ -3800,14 +3800,14 @@ export const eu = $root.eu = (() => {
                                     case 15: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gDefaultGraph = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gDefaultGraph);
+                                            message.gDefaultGraph = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph.decode(reader, reader.size(), $undefined, _depth + 1, message.gDefaultGraph);
                                             message.$graph = "gDefaultGraph";
                                             continue;
                                         }
                                     case 16: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gLiteral);
+                                            message.gLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.gLiteral);
                                             message.$graph = "gLiteral";
                                             continue;
                                         }
@@ -3841,7 +3841,7 @@ export const eu = $root.eu = (() => {
                             RdfQuad.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfQuad;
@@ -3998,7 +3998,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfGraphStart.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -4042,7 +4042,7 @@ export const eu = $root.eu = (() => {
                                     case 1: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gIri);
+                                            message.gIri = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfIri.decode(reader, reader.size(), $undefined, _depth + 1, message.gIri);
                                             message.$graph = "gIri";
                                             continue;
                                         }
@@ -4056,14 +4056,14 @@ export const eu = $root.eu = (() => {
                                     case 3: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gDefaultGraph = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gDefaultGraph);
+                                            message.gDefaultGraph = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDefaultGraph.decode(reader, reader.size(), $undefined, _depth + 1, message.gDefaultGraph);
                                             message.$graph = "gDefaultGraph";
                                             continue;
                                         }
                                     case 4: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.gLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.uint32(), $undefined, _depth + 1, message.gLiteral);
+                                            message.gLiteral = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.decode(reader, reader.size(), $undefined, _depth + 1, message.gLiteral);
                                             message.$graph = "gLiteral";
                                             continue;
                                         }
@@ -4097,7 +4097,7 @@ export const eu = $root.eu = (() => {
                             RdfGraphStart.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfGraphStart;
@@ -4187,7 +4187,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfGraphEnd.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -4255,7 +4255,7 @@ export const eu = $root.eu = (() => {
                             RdfGraphEnd.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfGraphEnd;
@@ -4367,7 +4367,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfNameEntry.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -4456,7 +4456,7 @@ export const eu = $root.eu = (() => {
                             RdfNameEntry.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfNameEntry;
@@ -4568,7 +4568,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfPrefixEntry.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -4657,7 +4657,7 @@ export const eu = $root.eu = (() => {
                             RdfPrefixEntry.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfPrefixEntry;
@@ -4769,7 +4769,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfDatatypeEntry.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -4858,7 +4858,7 @@ export const eu = $root.eu = (() => {
                             RdfDatatypeEntry.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfDatatypeEntry;
@@ -4878,7 +4878,7 @@ export const eu = $root.eu = (() => {
                          * @property {number} LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS=114 LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS value
                          */
                         v1.LogicalStreamType = (function() {
-                            const valuesById = {}, values = $Object.create(valuesById);
+                            const valuesById = $Object.create(null), values = $Object.create(valuesById);
                             values[valuesById[0] = "LOGICAL_STREAM_TYPE_UNSPECIFIED"] = 0;
                             values[valuesById[1] = "LOGICAL_STREAM_TYPE_FLAT_TRIPLES"] = 1;
                             values[valuesById[2] = "LOGICAL_STREAM_TYPE_FLAT_QUADS"] = 2;
@@ -5101,7 +5101,7 @@ export const eu = $root.eu = (() => {
                              * @returns {$protobuf.Writer} Writer
                              */
                             RdfStreamRow.encodeDelimited = function(message, writer) {
-                                return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                             };
 
                             /**
@@ -5145,63 +5145,63 @@ export const eu = $root.eu = (() => {
                                     case 1: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                                            message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                                             message.$row = "options";
                                             continue;
                                         }
                                     case 2: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.triple = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.uint32(), $undefined, _depth + 1, message.triple);
+                                            message.triple = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfTriple.decode(reader, reader.size(), $undefined, _depth + 1, message.triple);
                                             message.$row = "triple";
                                             continue;
                                         }
                                     case 3: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.quad = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad.decode(reader, reader.uint32(), $undefined, _depth + 1, message.quad);
+                                            message.quad = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfQuad.decode(reader, reader.size(), $undefined, _depth + 1, message.quad);
                                             message.$row = "quad";
                                             continue;
                                         }
                                     case 4: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.graphStart = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart.decode(reader, reader.uint32(), $undefined, _depth + 1, message.graphStart);
+                                            message.graphStart = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphStart.decode(reader, reader.size(), $undefined, _depth + 1, message.graphStart);
                                             message.$row = "graphStart";
                                             continue;
                                         }
                                     case 5: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.graphEnd = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd.decode(reader, reader.uint32(), $undefined, _depth + 1, message.graphEnd);
+                                            message.graphEnd = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfGraphEnd.decode(reader, reader.size(), $undefined, _depth + 1, message.graphEnd);
                                             message.$row = "graphEnd";
                                             continue;
                                         }
                                     case 6: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.namespace = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.uint32(), $undefined, _depth + 1, message.namespace);
+                                            message.namespace = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.decode(reader, reader.size(), $undefined, _depth + 1, message.namespace);
                                             message.$row = "namespace";
                                             continue;
                                         }
                                     case 9: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.name = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry.decode(reader, reader.uint32(), $undefined, _depth + 1, message.name);
+                                            message.name = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry.decode(reader, reader.size(), $undefined, _depth + 1, message.name);
                                             message.$row = "name";
                                             continue;
                                         }
                                     case 10: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.prefix = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry.decode(reader, reader.uint32(), $undefined, _depth + 1, message.prefix);
+                                            message.prefix = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfPrefixEntry.decode(reader, reader.size(), $undefined, _depth + 1, message.prefix);
                                             message.$row = "prefix";
                                             continue;
                                         }
                                     case 11: {
                                             if (wireType !== 2)
                                                 break;
-                                            message.datatype = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry.decode(reader, reader.uint32(), $undefined, _depth + 1, message.datatype);
+                                            message.datatype = $root.eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry.decode(reader, reader.size(), $undefined, _depth + 1, message.datatype);
                                             message.$row = "datatype";
                                             continue;
                                         }
@@ -5235,7 +5235,7 @@ export const eu = $root.eu = (() => {
                             RdfStreamRow.decodeDelimited = function(reader) {
                                 if (!(reader instanceof $Reader))
                                     reader = new $Reader(reader);
-                                return this.decode(reader, reader.uint32());
+                                return this.decode(reader, reader.size());
                             };
 
                             return RdfStreamRow;
@@ -5411,7 +5411,7 @@ export const eu = $root.eu = (() => {
                                  * @returns {$protobuf.Writer} Writer
                                  */
                                 SparqlResultsOptions.encodeDelimited = function(message, writer) {
-                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                                 };
 
                                 /**
@@ -5545,7 +5545,7 @@ export const eu = $root.eu = (() => {
                                 SparqlResultsOptions.decodeDelimited = function(reader) {
                                     if (!(reader instanceof $Reader))
                                         reader = new $Reader(reader);
-                                    return this.decode(reader, reader.uint32());
+                                    return this.decode(reader, reader.size());
                                 };
 
                                 return SparqlResultsOptions;
@@ -5559,7 +5559,7 @@ export const eu = $root.eu = (() => {
                              * @property {number} SPARQL_STREAM_TYPE_PUNCTUATED=1 SPARQL_STREAM_TYPE_PUNCTUATED value
                              */
                             sparql.SparqlStreamType = (function() {
-                                const valuesById = {}, values = $Object.create(valuesById);
+                                const valuesById = $Object.create(null), values = $Object.create(valuesById);
                                 values[valuesById[0] = "SPARQL_STREAM_TYPE_FLAT"] = 0;
                                 values[valuesById[1] = "SPARQL_STREAM_TYPE_PUNCTUATED"] = 1;
                                 return values;
@@ -5660,7 +5660,7 @@ export const eu = $root.eu = (() => {
                                  * @returns {$protobuf.Writer} Writer
                                  */
                                 SparqlAskResult.encodeDelimited = function(message, writer) {
-                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                                 };
 
                                 /**
@@ -5740,7 +5740,7 @@ export const eu = $root.eu = (() => {
                                 SparqlAskResult.decodeDelimited = function(reader) {
                                     if (!(reader instanceof $Reader))
                                         reader = new $Reader(reader);
-                                    return this.decode(reader, reader.uint32());
+                                    return this.decode(reader, reader.size());
                                 };
 
                                 return SparqlAskResult;
@@ -5841,7 +5841,7 @@ export const eu = $root.eu = (() => {
                                  * @returns {$protobuf.Writer} Writer
                                  */
                                 SparqlResultsTrailer.encodeDelimited = function(message, writer) {
-                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                                 };
 
                                 /**
@@ -5921,7 +5921,7 @@ export const eu = $root.eu = (() => {
                                 SparqlResultsTrailer.decodeDelimited = function(reader) {
                                     if (!(reader instanceof $Reader))
                                         reader = new $Reader(reader);
-                                    return this.decode(reader, reader.uint32());
+                                    return this.decode(reader, reader.size());
                                 };
 
                                 return SparqlResultsTrailer;
@@ -6145,7 +6145,7 @@ export const eu = $root.eu = (() => {
                                  * @returns {$protobuf.Writer} Writer
                                  */
                                 SparqlResultsFrame.encodeDelimited = function(message, writer) {
-                                    return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                                    return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                                 };
 
                                 /**
@@ -6189,7 +6189,7 @@ export const eu = $root.eu = (() => {
                                         case 1: {
                                                 if (wireType !== 2)
                                                     break;
-                                                message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.decode(reader, reader.uint32(), $undefined, _depth + 1, message.options);
+                                                message.options = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.decode(reader, reader.size(), $undefined, _depth + 1, message.options);
                                                 continue;
                                             }
                                         case 2: {
@@ -6214,7 +6214,7 @@ export const eu = $root.eu = (() => {
                                                     break;
                                                 if (!(message.names && message.names.length))
                                                     message.names = [];
-                                                message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                message.names.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                                 continue;
                                             }
                                         case 5: {
@@ -6222,7 +6222,7 @@ export const eu = $root.eu = (() => {
                                                     break;
                                                 if (!(message.prefixes && message.prefixes.length))
                                                     message.prefixes = [];
-                                                message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                message.prefixes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                                 continue;
                                             }
                                         case 6: {
@@ -6230,7 +6230,7 @@ export const eu = $root.eu = (() => {
                                                     break;
                                                 if (!(message.datatypes && message.datatypes.length))
                                                     message.datatypes = [];
-                                                message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                message.datatypes.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.decode(reader, reader.size(), $undefined, _depth + 1));
                                                 continue;
                                             }
                                         case 7: {
@@ -6238,19 +6238,19 @@ export const eu = $root.eu = (() => {
                                                     break;
                                                 if (!(message.columns && message.columns.length))
                                                     message.columns = [];
-                                                message.columns.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                                                message.columns.push($root.eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.decode(reader, reader.size(), $undefined, _depth + 1));
                                                 continue;
                                             }
                                         case 8: {
                                                 if (wireType !== 2)
                                                     break;
-                                                message.askResult = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.decode(reader, reader.uint32(), $undefined, _depth + 1, message.askResult);
+                                                message.askResult = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.decode(reader, reader.size(), $undefined, _depth + 1, message.askResult);
                                                 continue;
                                             }
                                         case 9: {
                                                 if (wireType !== 2)
                                                     break;
-                                                message.trailer = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.decode(reader, reader.uint32(), $undefined, _depth + 1, message.trailer);
+                                                message.trailer = $root.eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.decode(reader, reader.size(), $undefined, _depth + 1, message.trailer);
                                                 continue;
                                             }
                                         case 15: {
@@ -6258,7 +6258,7 @@ export const eu = $root.eu = (() => {
                                                     break;
                                                 if (message.metadata === $util.emptyObject)
                                                     message.metadata = {};
-                                                let end2 = reader.uint32() + reader.pos;
+                                                let end2 = reader.size() + reader.pos;
                                                 if (end2 > reader.len)
                                                     throw $RangeError("index out of range");
                                                 reader.len = end2;
@@ -6319,7 +6319,7 @@ export const eu = $root.eu = (() => {
                                 SparqlResultsFrame.decodeDelimited = function(reader) {
                                     if (!(reader instanceof $Reader))
                                         reader = new $Reader(reader);
-                                    return this.decode(reader, reader.uint32());
+                                    return this.decode(reader, reader.size());
                                 };
 
                                 return SparqlResultsFrame;

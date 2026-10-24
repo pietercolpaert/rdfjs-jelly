@@ -18,6 +18,10 @@ export class ColumnDecoder extends ColumnTermDecoder {
   private current: RDF.Quad[] = [];
   private openMessage = false;
   private counter = 0;
+  private readonly subjectCells: Array<RDF.Term | undefined> = [];
+  private readonly predicateCells: Array<RDF.Term | undefined> = [];
+  private readonly objectCells: Array<RDF.Term | undefined> = [];
+  private readonly graphCells: Array<RDF.Term | undefined> = [];
 
   public constructor(options: ParserOptions, private readonly events: DecoderEvents) { super(options); }
 
@@ -34,7 +38,7 @@ export class ColumnDecoder extends ColumnTermDecoder {
       this.current = [];
     }
     const endMessage = (): void => {
-      if (!output) out.push(new Message(this.counter, this.current, metadata));
+      if (!output) out.push(this.current instanceof Message ? this.current : new Message(this.counter, this.current, metadata));
       this.counter++;
       this.current = [];
       this.openMessage = false;
@@ -77,13 +81,20 @@ export class ColumnDecoder extends ColumnTermDecoder {
       this.events.namespace?.(ns.name, term);
     }
     if (this.streamOptions.physicalType === 1 && b.graphs) fail('Graphs column in a TRIPLES stream');
-    const subjects = this.column(b.subjects as C | null, n);
-    const predicates = this.column(b.predicates as C | null, n);
-    const objects = this.column(b.objects as C | null, n);
-    const graphs = b.graphs ? this.column(b.graphs as C, n) : undefined;
+    const subjects = this.column(b.subjects as C | null, n, this.subjectCells);
+    const predicates = this.column(b.predicates as C | null, n, this.predicateCells);
+    const objects = this.column(b.objects as C | null, n, this.objectCells);
+    const graphs = b.graphs ? this.column(b.graphs as C, n, this.graphCells) : undefined;
+    if (!graphs) this.graphCells.length = 0;
     const lengths = b.messageLengths;
     if (this.streamOptions.streamType === 0 && lengths.length) fail('Message boundaries in a FLAT stream');
     if (lengths.reduce((sum, v) => sum + v, 0) > n) fail('Message lengths exceed row_count');
+    // A complete message can be built in its final container. Partial messages
+    // still use the accumulation path so their terminating frame owns metadata.
+    if (!output && !this.openMessage && lengths.length === 1 && lengths[0] === n) {
+      this.current = new Message(this.counter, [], metadata);
+    }
+    const scoped = this.streamOptions.streamType === 1;
     let pos = 0;
     const append = (count: number): void => {
       for (const end = pos + count; pos < end; pos++) {
@@ -93,7 +104,12 @@ export class ColumnDecoder extends ColumnTermDecoder {
         if (!p || p.termType !== 'NamedNode') fail('Invalid or unbound predicate in column');
         if (!o) fail('Unbound object in column');
         if (g && g.termType !== 'NamedNode' && g.termType !== 'BlankNode') fail('Invalid graph in column');
-        const quad = this.factory.quad(this.scoped(s) as RDF.Quad_Subject, p, this.scoped(o) as RDF.Quad_Object, g ? this.scoped(g) as RDF.Quad_Graph : this.defaultGraph);
+        const quad = this.factory.quad(
+          (scoped && s.termType === 'BlankNode' ? this.scopeTerm(s, this.counter) : s) as RDF.Quad_Subject,
+          p,
+          (scoped && (o.termType === 'BlankNode' || o.termType === 'Quad') ? this.scopeTerm(o, this.counter) : o) as RDF.Quad_Object,
+          g ? (scoped && g.termType === 'BlankNode' ? this.scopeTerm(g, this.counter) : g) as RDF.Quad_Graph : this.defaultGraph,
+        );
         (output ?? this.current).push(quad);
         this.openMessage = true;
       }
@@ -119,7 +135,4 @@ export class ColumnDecoder extends ColumnTermDecoder {
     return [out];
   }
 
-  private scoped(term: RDF.Term): RDF.Term {
-    return this.streamOptions!.streamType === 1 ? this.scopeTerm(term, this.counter) : term;
-  }
 }

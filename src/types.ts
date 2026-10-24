@@ -91,6 +91,10 @@ export interface WriterOptions {
   delimited?: boolean;
   /** Row budget for 1.1, statement budget per column batch for 1.2. */
   messageSize?: number;
+  /** Jelly 1.2: pack complete messages into batches up to messageSize. Opt-in
+   * because it delays streaming output until a batch fills or the writer ends.
+   * Messages carrying metadata are emitted separately. */
+  packMessages?: boolean;
   streamName?: string;
   namespaces?: Record<string, string | RDF.NamedNode>;
   lookup?: Partial<LookupPreset>;

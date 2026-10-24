@@ -1,6 +1,7 @@
 import type * as RDF from '@rdfjs/types';
 import { eu } from '../generated/proto/rdf_pb.mjs';
 import { ColumnTermEncoder } from './ColumnTermEncoder';
+import { ColumnLookupEncoder } from './ColumnLookupEncoder';
 import type { RdfStreamFrame } from '../generated/rdf_pb';
 import { JellyConformanceError, JellyUnsupportedFeatureError } from '../errors';
 import { normalizeColumnLookupPreset, type LookupPreset } from '../options';
@@ -18,6 +19,9 @@ export class ColumnEncoder extends ColumnTermEncoder {
   private first = true;
   private finished = false;
   private inMessage = false;
+  private messageLengths: number[] = [];
+  private lastBoundary = 0;
+  private readonly persistentLookups?: readonly [ColumnLookupEncoder, ColumnLookupEncoder];
 
   public constructor(private readonly options: WriterOptions, private readonly sink?: (frame: RdfStreamFrame) => void) {
     super(options.rdfVersion ?? RdfVersion.RDF_1_2);
@@ -27,6 +31,7 @@ export class ColumnEncoder extends ColumnTermEncoder {
     this.streamType = options.streamType ?? RdfStreamType.FLAT;
     if (![0, 1].includes(this.streamType) || ![0, 1, 2, 3].includes(this.rdfVersion)) throw new JellyConformanceError('Invalid streamType or rdfVersion');
     this.lookup = normalizeColumnLookupPreset(options.lookup);
+    if (options.packMessages) this.persistentLookups = [new ColumnLookupEncoder(this.lookup.maxNames), new ColumnLookupEncoder(this.lookup.maxDatatypes)];
     if (this.lookup.maxNames < 128) throw new JellyConformanceError('Jelly 1.2 requires a name lookup size of at least 128');
     this.size = options.messageSize ?? 250;
     if (!Number.isInteger(this.size) || this.size < 1 || this.size > 0x7ffffff) throw new JellyConformanceError('messageSize must be between 1 and 2^27 - 1');
@@ -34,8 +39,9 @@ export class ColumnEncoder extends ColumnTermEncoder {
   private assertOpen(): void { if (this.finished) throw new JellyConformanceError('Jelly encoder has already ended'); }
   public addNamespace(name: string, iri: string): void {
     this.assertOpen();
+    if (this.options.packMessages && (this.quads.length || this.messageLengths.length)) this.flush();
     this.fit([iri], []);
-    this.tables[0]!.set(iri, this.tables[0]!.get(iri) ?? this.tables[0]!.size + 1);
+    this.register([iri], []);
     this.namespaces.push([name, iri]);
   }
   public addQuad(quad: RDF.Quad): void {
@@ -48,14 +54,22 @@ export class ColumnEncoder extends ColumnTermEncoder {
     for (const term of [quad.subject, quad.predicate, quad.object, quad.graph]) this.keys(term, names, datatypes);
     if (this.quads.length >= this.size) this.flush();
     this.fit(names, datatypes);
-    for (const [values, table] of [[names, this.tables[0]!], [datatypes, this.tables[1]!]] as const) for (const value of values) if (!table.has(value)) table.set(value, table.size + 1);
+    this.register(names, datatypes);
     this.quads.push(quad);
   }
   public addMessage(quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void {
     this.assertOpen();
     if (this.streamType !== 1) throw new JellyConformanceError('Jelly 1.2 addMessage() requires streamType MESSAGES');
+    const hasMetadata = metadata instanceof Map ? metadata.size > 0 : Object.keys(metadata ?? {}).length > 0;
+    if (this.options.packMessages && hasMetadata && (this.quads.length || this.messageLengths.length)) this.flush();
     this.inMessage = true;
-    try { for (const quad of quads) this.addQuad(quad); this.flush(metadata, true); }
+    try {
+      for (const quad of quads) this.addQuad(quad);
+      this.messageLengths.push(this.quads.length - this.lastBoundary);
+      this.lastBoundary = this.quads.length;
+      // Bound runs of empty messages as well as the statement count.
+      if (!this.options.packMessages || hasMetadata || this.messageLengths.length >= this.size) this.flush(metadata);
+    }
     finally { this.inMessage = false; }
   }
   public addGraph(_graph: RDF.Quad_Graph, _quads: Iterable<RDF.Quad>, _metadata?: MessageMetadata): void {
@@ -63,7 +77,7 @@ export class ColumnEncoder extends ColumnTermEncoder {
   }
   public finish(): readonly RdfStreamFrame[] {
     this.assertOpen();
-    if (this.first || this.quads.length || this.namespaces.length) this.flush();
+    if (this.first || this.quads.length || this.namespaces.length || this.messageLengths.length) this.flush();
     this.finished = true;
     return this.frames;
   }
@@ -72,15 +86,21 @@ export class ColumnEncoder extends ColumnTermEncoder {
     this.flush();
     if (!this.workingSetFits(names, datatypes, this.lookup)) throw new JellyConformanceError('A single statement does not fit in the configured lookup tables');
   }
-  private flush(metadata?: MessageMetadata, boundary = false): void {
+  private register(names: string[], datatypes: string[]): void {
+    const namesTable = this.tables[0]!, datatypeTable = this.tables[1]!;
+    const nameLookup = this.persistentLookups?.[0], datatypeLookup = this.persistentLookups?.[1];
+    for (const value of names) if (!namesTable.has(value)) namesTable.set(value, nameLookup ? nameLookup.ensure(value) : namesTable.size + 1);
+    for (const value of datatypes) if (!datatypeTable.has(value)) datatypeTable.set(value, datatypeLookup ? datatypeLookup.ensure(value) : datatypeTable.size + 1);
+  }
+  private flush(metadata?: MessageMetadata): void {
     const columns: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties = {
       rowCount: this.quads.length,
-      names: this.tables[0]!.size ? [{ id: 1, values: [...this.tables[0]!.keys()] }] : [],
-      datatypes: this.tables[1]!.size ? [{ id: 1, values: [...this.tables[1]!.keys()] }] : [],
+      names: this.persistentLookups ? this.persistentLookups[0].entries : this.tables[0]!.size ? [{ id: 1, values: [...this.tables[0]!.keys()] }] : [],
+      datatypes: this.persistentLookups ? this.persistentLookups[1].entries : this.tables[1]!.size ? [{ id: 1, values: [...this.tables[1]!.keys()] }] : [],
       namespaces: this.namespaces.map(([name, iri]) => ({ name, value: { nameId: this.tables[0]!.get(iri)! } })),
       subjects: this.column(this.quads.map(q => q.subject)), predicates: this.column(this.quads.map(q => q.predicate)), objects: this.column(this.quads.map(q => q.object)),
       ...(this.physicalType === 2 ? { graphs: this.column(this.quads.map(q => q.graph)) } : {}),
-      messageLengths: boundary ? [this.quads.length] : [],
+      messageLengths: this.messageLengths,
     };
     const frame: RdfStreamFrame = { rows: this.first ? [{ case: 'options', value: {
       streamName: this.options.streamName ?? '', physicalType: this.physicalType, generalizedStatements: false, rdfStar: false, logicalType: 0,
@@ -89,6 +109,9 @@ export class ColumnEncoder extends ColumnTermEncoder {
     if (this.sink) this.sink(frame); else this.frames.push(frame);
     this.first = false;
     this.quads = []; this.namespaces = [];
+    this.messageLengths = [];
+    this.lastBoundary = 0;
     for (const table of this.tables) table.clear();
+    if (this.persistentLookups) for (const lookup of this.persistentLookups) lookup.endBatch();
   }
 }

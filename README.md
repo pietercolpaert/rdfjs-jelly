@@ -283,6 +283,29 @@ a separate compression library, depending on the compression format.
 
 ## Performance
 
+See [PERFORMANCE.md](PERFORMANCE.md) for a reproducible six-dataset RiverBench
+comparison of `n3.js-messages` Turtle Message Logs, Jelly 1.1, and Jelly 1.2,
+including reading, writing, compressed size, and streaming.
+The [column optimization follow-up](docs/column-optimization-2026-10-24.md)
+compares the saved reader baseline with the current implementation and measures
+optional message packing separately.
+
+For Jelly 1.2 archive writing, `packMessages: true` lets messages share batches
+and reuses bounded lookup tables between batches:
+
+```js
+const writer = new Writer({
+  version: 3,
+  streamType: RdfStreamType.MESSAGES,
+  messageSize: 1024,
+  packMessages: true,
+});
+```
+
+This buffers output until a batch fills or the writer ends. Message boundaries
+and blank-node scopes remain separate, and messages carrying metadata are
+isolated. Default message framing remains unchanged.
+
 The [RiverBench Jelly 1.2 audit](docs/riverbench-performance-audit-2026-10-24.md)
 and [implementation follow-up](docs/riverbench-performance-followup-2026-10-24.md)
 include full-dataset streaming, writer timings, and allocation/GC measurements for

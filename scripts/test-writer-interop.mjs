@@ -27,16 +27,18 @@ function term(value) {
   return f.literal(value.value, value['its:dir'] ? { language: value['xml:lang'], direction: value['its:dir'] } : value['xml:lang'] || (value.datatype ? f.namedNode(value.datatype) : undefined));
 }
 try {
-  const rdf = fixture('rdf12-writer').filter(value => value.expected).map(value => {
+  const rdf = fixture('rdf12-writer').filter(value => value.expected).flatMap(value => {
     const options = new MessageDecoder({ delimited: true }).decode(Buffer.from(value.options, 'base64'))[0].rows[0].value;
-    const writer = new Writer({ version: 3, physicalType: options.physicalType, streamType: options.streamType, rdfVersion: options.rdfVersion, lookup: { maxNames: options.maxNameTableSize, maxPrefixes: options.maxPrefixTableSize, maxDatatypes: options.maxDatatypeTableSize }, messageSize: 7 });
-    for (const text of value.input) {
-      const quads = new TextParser({ format: 'N-Quads', factory }).parse(text);
-      if (options.streamType === 1) writer.addMessage(quads); else writer.addQuads(quads);
-    }
-    let actual;
-    writer.end((error, bytes) => { if (error) throw error; actual = Buffer.from(bytes).toString('base64'); });
-    return { name: value.name, actual, expected: value.expected };
+    return (options.streamType === 1 ? [false, true] : [false]).map(packMessages => {
+      const writer = new Writer({ version: 3, physicalType: options.physicalType, streamType: options.streamType, rdfVersion: options.rdfVersion, lookup: { maxNames: options.maxNameTableSize, maxPrefixes: options.maxPrefixTableSize, maxDatatypes: options.maxDatatypeTableSize }, messageSize: 7, packMessages });
+      for (const text of value.input) {
+        const quads = new TextParser({ format: 'N-Quads', factory }).parse(text);
+        if (options.streamType === 1) writer.addMessage(quads); else writer.addQuads(quads);
+      }
+      let actual;
+      writer.end((error, bytes) => { if (error) throw error; actual = Buffer.from(bytes).toString('base64'); });
+      return { name: value.name + (packMessages ? ' (packed)' : ''), actual, expected: value.expected };
+    });
   });
   const frame = protobuf.loadSync(fileURLToPath(new URL('../proto/sparql.proto', import.meta.url))).lookupType('eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame');
   const sparql = fixture('sparql-to_jelly').filter(value => value.data).map(value => {

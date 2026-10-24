@@ -1,4 +1,5 @@
 import { ColumnDecoder } from './ColumnDecoder';
+import { ColumnFrameReader } from './ColumnFrameReader';
 import { encodeRdfStreamFrame, proto, decodeProtoRdfStreamFrameReader } from '../generated/rdf_pb';
 import type * as RDF from '@rdfjs/types';
 import { Reader } from 'protobufjs/minimal.js';
@@ -43,6 +44,7 @@ export interface DecoderEvents {
 
 export class Decoder {
   private columns?: ColumnDecoder;
+  private columnReader?: ColumnFrameReader;
   private readonly parserOptions: ParserOptions;
   private readonly factory: RDF.DataFactory;
   private readonly strict: boolean;
@@ -76,7 +78,9 @@ export class Decoder {
   public decodePayloadMessages(reader: Reader, length: number, output?: RDF.Quad[]): Message[] {
     const start = reader.pos;
     if (!this.streamOptions || this.columns) {
-      const frame = decodeProtoRdfStreamFrameReader(reader, length);
+      const frame = this.columns
+        ? (this.columnReader ??= new ColumnFrameReader()).read(reader, length)
+        : decodeProtoRdfStreamFrameReader(reader, length);
       if (!frame.rows.length && !frame.columns && !this.columns) return [];
       const version = frame.rows[0]?.options?.version;
       if (this.columns || version === 3) {
