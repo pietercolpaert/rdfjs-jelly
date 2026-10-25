@@ -1,6 +1,12 @@
 # rdfjs-jelly
 
 [![npm](https://img.shields.io/npm/v/rdfjs-jelly.svg)](https://www.npmjs.com/package/rdfjs-jelly)
+[![CI](https://github.com/pietercolpaert/rdfjs-jelly/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pietercolpaert/rdfjs-jelly/actions/workflows/ci.yml)
+[![Performance reports](https://github.com/pietercolpaert/rdfjs-jelly/actions/workflows/performance.yml/badge.svg?branch=main)](https://github.com/pietercolpaert/rdfjs-jelly/actions/workflows/performance.yml)
+[![npm downloads](https://img.shields.io/npm/dm/rdfjs-jelly.svg)](https://www.npmjs.com/package/rdfjs-jelly)
+[![Node.js](https://img.shields.io/node/v/rdfjs-jelly.svg)](https://github.com/pietercolpaert/rdfjs-jelly/blob/main/package.json)
+[![TypeScript types](https://img.shields.io/npm/types/rdfjs-jelly.svg)](https://www.npmjs.com/package/rdfjs-jelly)
+[![License](https://img.shields.io/github/license/pietercolpaert/rdfjs-jelly.svg)](LICENSE)
 
 Jelly-RDF and Jelly-SPARQL binary parsers and writers using RDF/JS terms, for Node.js and browsers.
 
