@@ -91,9 +91,9 @@ export interface WriterOptions {
   delimited?: boolean;
   /** Row budget for 1.1, statement budget per column batch for 1.2. */
   messageSize?: number;
-  /** Jelly 1.2: pack complete messages into batches up to messageSize. Opt-in
-   * because it delays streaming output until a batch fills or the writer ends.
-   * Messages carrying metadata are emitted separately. */
+  /** Jelly 1.2: share batches across messages. Defaults to true. Output may be
+   * buffered until a batch fills, flush() is called, or the writer ends. Set
+   * false to emit each complete message. Metadata messages remain separate. */
   packMessages?: boolean;
   /** Jelly 1.2: keep bounded name and datatype tables across batches, so a name
    * is sent once per stream rather than once per batch. Defaults to true;

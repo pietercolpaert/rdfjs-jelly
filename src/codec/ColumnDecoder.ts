@@ -111,7 +111,7 @@ export class ColumnDecoder extends ColumnTermDecoder {
   }
 
   private endMessage(out: Message[], output: RDF.Quad[] | undefined, metadata: ReadonlyMap<string, Uint8Array>): void {
-    if (!output) out.push(this.current instanceof Message ? this.current : new Message(this.counter, this.current, metadata));
+    if (!output) out.push(this.current instanceof Message ? this.current : this.ownMessage(metadata));
     this.counter++;
     this.current = [];
     this.openMessage = false;
@@ -139,6 +139,16 @@ export class ColumnDecoder extends ColumnTermDecoder {
       ));
     }
     this.openMessage = true;
+  }
+
+  /** The accumulation array is private and is replaced immediately after this
+   * call. Transfer it to the result instead of copying every quad into a second
+   * array. Initialize the same public fields as the Message constructor. */
+  private ownMessage(metadata: ReadonlyMap<string, Uint8Array>): Message {
+    const message = this.current as RDF.Quad[] & { messageCounter: number; metadata: ReadonlyMap<string, Uint8Array> };
+    message.messageCounter = this.counter;
+    message.metadata = metadata;
+    return Object.setPrototypeOf(message, Message.prototype) as Message;
   }
 
   public finish(): Message[] {

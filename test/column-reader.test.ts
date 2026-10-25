@@ -106,6 +106,45 @@ describe('reusable column protobuf reader', () => {
 });
 
 describe('column node caches and buffer ownership', () => {
+  it('keeps retained packed messages separate and assigns metadata at their terminating boundary', () => {
+    const input = delimited([{ rows: [{ options }] }, { columns: {
+      rowCount: 3, names: [{ id: 1, values: ['urn:s', 'urn:p'] }],
+      subjects: { nameIds: [1], layouts: [1] }, predicates: { nameIds: [2], layouts: [1] },
+      objects: { lexValues: ['a', 'b', 'c'] }, messageLengths: [1, 1],
+    }, metadata: { first: Uint8Array.of(1) } }, { columns: {
+      rowCount: 2, subjects: { nameIds: [1], layouts: [0] }, predicates: { nameIds: [2], layouts: [0] },
+      objects: { lexValues: ['d', 'e'] }, messageLengths: [1, 1],
+    }, metadata: { last: Uint8Array.of(2) } }]);
+    const messages = new Parser().parseMessages(input);
+    input.fill(0);
+    expect(messages.map(m => m.length)).toEqual([1, 1, 2, 1]);
+    expect(messages.map(m => m.messageCounter)).toEqual([0, 1, 2, 3]);
+    expect(messages.every(m => m instanceof Message)).toBe(true);
+    expect(messages.map(m => m.map(q => q.object.value))).toEqual([['a'], ['b'], ['c', 'd'], ['e']]);
+    expect(messages.map(m => [...m.metadata.keys()])).toEqual([['first'], ['first'], ['last'], ['last']]);
+    expect([...messages[0]!.metadata.get('first')!]).toEqual([1]);
+    expect([...messages[2]!.metadata.get('last')!]).toEqual([2]);
+    expect(messages[0]!.map(q => q)).not.toBeInstanceOf(Message);
+    messages[0]!.push(messages[3]![0]!);
+    expect(messages.slice(1).map(m => m.length)).toEqual([1, 2, 1]);
+  });
+
+  it('returns independent Message arrays for flat batches, including an empty batch', () => {
+    const messages = new Parser().parseMessages(delimited([
+      { rows: [{ options: { ...options, streamType: 0 } }] },
+      { columns: { rowCount: 1, names: [{ id: 1, values: ['urn:s', 'urn:p'] }],
+        subjects: { nameIds: [1] }, predicates: { nameIds: [2] }, objects: { lexValues: ['first'] } } },
+      { columns: { rowCount: 0 } },
+      { columns: { rowCount: 1, subjects: { nameIds: [1] }, predicates: { nameIds: [2] }, objects: { lexValues: ['last'] } } },
+    ]));
+    expect(messages.every(m => m instanceof Message)).toBe(true);
+    expect(messages.map(m => m.messageCounter)).toEqual([0, 1, 2]);
+    expect(messages.map(m => m.length)).toEqual([1, 0, 1]);
+    messages[1]!.push(messages[2]![0]!);
+    expect(messages[0]![0]!.object.value).toBe('first');
+    expect(messages[2]).toHaveLength(1);
+  });
+
   it('invalidates cached nodes on name, prefix, datatype and options replacement', () => {
     const make = (prefix: string, name: string, datatype: string): Parameters<typeof bytes>[0] => ({ columns: {
       rowCount: 1, names: [{ id: 1, values: [name, 'p'] }], prefixes: [{ id: 1, values: [prefix] }],

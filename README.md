@@ -82,12 +82,32 @@ messageWriter.addMessage([]);
 ```
 
 For version 3, `messageSize` limits statements per batch; a message may span
-batches. Lookup capacity can also end a batch early. The writer uses packed
-full-IRI name entries and repeat runs. Bounded name and datatype tables remain
-available across batches and entries are resent after dictionary eviction; pass
-`persistentLookups: false` for batch-local dictionaries. `packMessages: true` also
-shares frames across small messages.
+batches. Lookup capacity can also end a batch early. The writer splits IRIs after
+the last `#`, or the last `/` when no `#` is present, into a prefix and a name
+(disable with `lookup: { maxPrefixes: 0 }`),
+and uses packed entries and repeat runs. Bounded prefix, name and datatype tables remain
+available across batches. Eviction favors colder entries and protects entries
+used by the current batch. Values can be resent after eviction. Pass
+`persistentLookups: false` for batch-local dictionaries. In 0.2.0,
+`packMessages` defaults to `true`: small messages share frames. Set
+`packMessages: false` to emit each completed message immediately.
 A statement that cannot fit an empty batch raises an error. The name table must hold at least 128 entries.
+
+Call `writer.flush()` to emit a partially filled batch without ending the writer:
+
+```ts
+messageWriter.addMessage([quad1, quad2]);
+messageWriter.flush();
+messageWriter.addMessage([quad3]);
+```
+
+With a delimited output sink, `flush()` writes buffered frames to that sink.
+Without a sink, it finalizes the batch and leaves the bytes available through
+`end()`. It preserves lookup dictionaries. Counter-based input completes its
+current logical message on flush; subsequent input must use a higher counter.
+`flush(callback)` reports serialization errors through the callback; without a
+callback it throws. Flushing requires delimited output. Packing has no timer:
+use explicit flushes or `packMessages: false` for latency-sensitive delivery.
 
 The 1.2 layout supports `TRIPLES` and `QUADS`. Use `QUADS` for named graphs;
 `GRAPHS`, `addGraph()`, and `logicalType` belong to the older layout. Use
@@ -237,6 +257,10 @@ for await (const quad of createReadStream('data.jelly').pipe(new StreamParser())
 ```
 
 `StreamWriter` accepts RDF/JS quads in object mode and emits binary chunks. Both Node stream classes expose `import(readable)`.
+Call the Node writer's `flush(callback)` to serialize buffered input after all
+preceding writes, including corked writes, without ending the stream. Its return
+value follows Node's writable backpressure convention. The callback signals that
+bytes have entered the readable side; downstream delivery may still be pending.
 
 ## Browser streams
 
@@ -285,23 +309,31 @@ a separate compression library, depending on the compression format.
 ## Performance
 
 Across six RiverBench datasets containing 60,000 messages and 2.10 million
-statements, the current Jelly 1.2 reader achieves **2.60 million statements/s**
-on downloaded archives. Locally packed message streams read at **3.56 million/s**.
-These are geometric means of per-dataset rates, measured on 2026-10-24 with
+statements, the current Jelly 1.2 reader achieves **2.26 million statements/s**
+on downloaded archives. Locally packed message streams read at **3.89 million/s**.
+These are geometric means of per-dataset rates, measured on 2026-10-25 with
 Node v25.9.0 / V8 14.1 on an Intel Core i7-1265U with 30.8 GiB RAM.
+For `assist-iot-weather`, locally written Jelly 1.1 (tag 2) parses at
+**3.08 million statements/s**, versus
+**4.92 million/s** for packed Jelly 1.2:
+**1.59×** the throughput, or
+**59% faster**. These uncompressed reads contain the same 1,150,000 statements
+and 10,000 messages; framing and dictionary contents differ. This example uses a
+separate sequential batch with two warmups and seven timed iterations per format.
 
 | Retained-message parsing | Million statements/s |
 | --- | ---: |
-| Turtle source logs, N3 message parser | 0.93 |
-| Legacy Jelly archives, row layout, tag 1 (1.0) | 2.43 |
-| Jelly 1.2 archives, column layout, tag 3 | 2.60 |
-| Jelly 1.2 archives + gzip, including decompression | 2.41 |
-| Jelly 1.2 archives + zstd, including decompression | 2.53 |
-| Locally packed Jelly 1.2 messages | 3.56 |
+| Turtle source logs, N3 message parser | 0.85 |
+| Legacy Jelly archives, row layout, tag 1 (1.0) | 2.28 |
+| Jelly 1.2 archives, column layout, tag 3 | 2.26 |
+| Jelly 1.2 archives + gzip, including decompression | 2.00 |
+| Jelly 1.2 archives + zstd, including decompression | 2.10 |
+| Locally written per-message-framed Jelly 1.2 | 2.88 |
+| Locally packed Jelly 1.2 messages | 3.89 |
 
-Downloaded Jelly 1.2 reads **2.79×** as fast as source Turtle logs and
-**1.07×** as fast as the legacy archives. Packed-file reading reaches
-**1.46×** the legacy archive throughput, but changes framing and dictionary
+Downloaded Jelly 1.2 reads **2.64×** as fast as source Turtle logs and
+**0.99×** as fast as the legacy archives. Packed-file reading reaches
+**1.70×** the legacy archive throughput, but changes framing and dictionary
 contents as well as the parser's input. This is not a format-only comparison.
 
 The downloaded 1.2 encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip
@@ -311,15 +343,15 @@ data, representation and codec settings.
 
 | Writing the same source messages | Million statements/s |
 | --- | ---: |
-| Turtle with shared prefixes | 1.55 |
-| Jelly 1.1, tag 2 | 1.33 |
-| Jelly 1.2, default message framing | 1.26 |
-| Jelly 1.2, packed messages | 2.03 |
+| Turtle with shared prefixes | 1.46 |
+| Jelly 1.1, tag 2 | 1.28 |
+| Jelly 1.2, per-message framing | 1.22 |
+| Jelly 1.2, packed messages | 1.76 |
 
 Writer timing includes collecting serialized bytes and excludes compression.
-Default framing completes a batch at each message boundary. Both configurations
-retain bounded lookup dictionaries across batches by default. Packing additionally
-lets small messages share batches:
+Per-message framing completes a batch at each message boundary. Both configurations
+retain bounded lookup dictionaries across batches. Jelly 1.2 message streams
+pack by default; configure the batch size with `messageSize`:
 
 ```js
 const writer = new Writer({
@@ -331,16 +363,20 @@ const writer = new Writer({
 });
 ```
 
-Packing buffers output until a batch fills or the writer ends, while keeping
+Set `packMessages: false` for per-message framing. Packing buffers output until
+a batch fills, `flush()` is called, or the writer ends, while keeping
 message boundaries and blank-node scopes separate. Metadata-bearing messages
-are isolated. Packed weather output uses **20.43 raw bytes/statement**, versus
-**21.30** with default framing and **9.33** in the downloaded archive. The local
-writer uses full IRI names without prefix compression, so its output sizes differ
-from RiverBench's encodings. Packed reads and writes were measured in separate
-sequential batches using the same source RDF and timing policy.
+are isolated. Weather output uses **9.04 raw bytes/statement** when packed and
+**9.35** with per-message framing, close to **9.33** in the downloaded archive.
+The current writer uses prefix/name splitting, inferred IDs and persistent
+dictionaries. Smaller encoded files need not parse faster: prefix reconstruction,
+lookups and RDF term creation still cost CPU time. Per-message-framed local reads
+were measured in a later sequential batch than the archive/packed table. A
+separate packed-read batch measured 4.22 million statements/s. Packed reads and
+writes use the same source RDF and timing policy in separate sequential batches.
 
-Gzip file streaming into a discard sink delivers **0.66–4.00 million statements/s**
-for Jelly 1.2, with **74–130 MiB** whole-process peak RSS across these datasets.
+Gzip file streaming into a discard sink delivers **0.53–3.55 million statements/s**
+for Jelly 1.2, with **82–129 MiB** whole-process peak RSS across these datasets.
 RSS includes startup, input buffers and warmups; it is not parser-only memory.
 
 Retained reads keep complete RDF/JS message arrays in memory. Each case runs in
@@ -352,10 +388,10 @@ for RDF equivalence and blank-node scope outside timing. The six datasets contai
 triples; these results do not measure browser, named-graph, RDF 1.2 term, SPARQL
 result, network or slow-consumer performance.
 
-An independent repetition of the uncompressed Jelly reads, using new worker
-processes, gives 2.64 million statements/s for Jelly 1.2. The main tables
-use the primary run; the repetition and per-dataset rates in PERFORMANCE.md
-show the observed process-to-process variation.
+Independent archive-read repetitions give 2.84 million statements/s for Jelly
+1.2 and 2.81 million/s for the legacy archives. The main tables retain the
+primary measurements. Scheduling, thermal state and heap behavior are not
+controlled; the repetitions do not identify the cause of the variation.
 
 ### Comparison with the JVM
 
@@ -368,9 +404,13 @@ message benchmark retains RDF objects and applies message-local scopes. The
 archive reader comparison is also against Jelly 1.0; the JVM version comparison
 uses 1.1 and 1.2. These are different workloads and APIs.
 
-Possible contributors include RDF/JS object and array allocation, garbage
-collection under retained output, packed-column decoding and term materialization,
-factory-call costs, and fixed overhead per small frame or message. The JavaScript
+Local CPU profiles show work in message construction, string decoding, RDF
+materialization and garbage collection. Packing amortizes frame setup across
+small messages. Those approximate inclusive profiles are not additive phase
+timings and do not profile the current prefix-compressing writer. A discard sink
+avoids retaining final results but can still allocate RDF objects. Factory-call
+instrumentation also shows that prefix/name encodings can cause more named-node
+construction on some datasets even while they use fewer wire bytes. The JavaScript
 row and column decoders use different paths. V8 and GraalVM can specialize calls,
 represent objects and eliminate temporary allocations differently. These are
 possible explanations, not measured causes of the gap: the timings do not

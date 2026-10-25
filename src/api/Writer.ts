@@ -122,6 +122,22 @@ export class Writer {
     this.lastCompletedCounter++;
   }
 
+  /** Emit buffered delimited frames without ending the writer. Counter-based
+   * input completes its current logical message. Without a sink, bytes remain
+   * buffered for end(). */
+  public flush(done?: (error?: Error | null) => void): void {
+    try {
+      if (this.ended) throw new JellyConformanceError('Writer has already ended');
+      if (!this.messageEncoder.delimited) throw new JellyConformanceError('flush() requires delimited output');
+      this.flushPending();
+      this.encoder.flush();
+      done?.(null);
+    } catch (error) {
+      const actual = error instanceof Error ? error : new Error(String(error));
+      if (done) done(actual); else throw actual;
+    }
+  }
+
   public end(done?: WriterEndCallback): void {
     try {
       if (this.ended) throw new JellyConformanceError('Writer has already ended');
@@ -158,6 +174,7 @@ export class Writer {
     this.requireMode('messages');
     if (!Number.isInteger(entry.messageCounter) || entry.messageCounter < 0) throw new JellyConformanceError('Invalid messageCounter');
     if (this.pendingCounter === undefined) {
+      if (entry.messageCounter <= this.lastCompletedCounter) throw new JellyConformanceError('Message counters must increase');
       while (this.lastCompletedCounter + 1 < entry.messageCounter) {
         this.encoder.addMessage([]);
         this.lastCompletedCounter++;

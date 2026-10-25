@@ -108,7 +108,7 @@ export class Encoder {
 
   public addMessage(quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void {
     this.assertOpen();
-    if (this.hasStatements) this.flush(undefined, true);
+    if (this.hasStatements) this.flushFrame(undefined, true);
     for (const quad of quads) {
       if (this.physicalType === PhysicalStreamType.GRAPHS) throw new JellyConformanceError('Use addGraph() for GRAPHS streams');
       if (this.physicalType === PhysicalStreamType.TRIPLES && quad.graph.termType !== 'DefaultGraph') {
@@ -118,13 +118,13 @@ export class Encoder {
       else this.encodeQuad(quad, this.rows);
       this.hasStatements = true;
     }
-    this.flush(metadata, true);
+    this.flushFrame(metadata, true);
   }
 
   public addGraph(graph: RDF.Quad_Graph, quads: Iterable<RDF.Quad>, metadata?: MessageMetadata): void {
     this.assertOpen();
     if (this.physicalType !== PhysicalStreamType.GRAPHS) throw new JellyConformanceError('addGraph() requires a GRAPHS physical stream');
-    if (this.hasStatements) this.flush(undefined, true);
+    if (this.hasStatements) this.flushFrame(undefined, true);
     const encodedGraph = this.encodeTerm(graph, 3, this.rows, true);
     this.rows.push({ case: 'graphStart', value: { graph: encodedGraph } });
     for (const quad of quads) {
@@ -133,23 +133,29 @@ export class Encoder {
       this.hasStatements = true;
     }
     this.rows.push({ case: 'graphEnd', value: {} });
-    this.flush(metadata, true);
+    this.flushFrame(metadata, true);
+  }
+
+  /** Emit the current batch without closing the stream. */
+  public flush(): void {
+    this.assertOpen();
+    if (this.rows.length > 0 || this.frameCount === 0) this.flushFrame(undefined, true);
   }
 
   public finish(): readonly RdfStreamFrame[] {
     this.assertOpen();
     this.finished = true;
-    if (this.rows.length > 0 || this.frameCount === 0) this.flush(undefined, true);
+    if (this.rows.length > 0 || this.frameCount === 0) this.flushFrame(undefined, true);
     return this.frames;
   }
 
   private appendRows(rows: RdfStreamRow[], statement: boolean): void {
-    if (statement && this.hasStatements && this.rows.length + rows.length > this.messageSize) this.flush(undefined, true);
+    if (statement && this.hasStatements && this.rows.length + rows.length > this.messageSize) this.flushFrame(undefined, true);
     this.rows.push(...rows);
     this.hasStatements ||= statement;
   }
 
-  private flush(metadata?: MessageMetadata, force = false): void {
+  private flushFrame(metadata?: MessageMetadata, force = false): void {
     if (force || this.rows.length > 0) {
       const frame = { rows: this.rows, metadata: metadataMap(metadata) };
       this.frameCount++;

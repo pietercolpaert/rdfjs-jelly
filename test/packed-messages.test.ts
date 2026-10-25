@@ -14,7 +14,7 @@ function encode(messages: Array<RDF.Quad[] | Message>, size = 4, packMessages = 
   return bytes;
 }
 
-describe('opt-in Jelly 1.2 message packing', () => {
+describe('Jelly 1.2 message packing', () => {
   it('packs messages, empty boundaries and repeated blank labels without merging scopes', () => {
     const input = [[quad('a')], [], [quad('b')], [quad('c')], []];
     const bytes = encode(input);
@@ -54,7 +54,7 @@ describe('opt-in Jelly 1.2 message packing', () => {
     expect(new Parser().parseMessages(bytes)).toHaveLength(100);
   });
 
-  it('retains default framing when packing is disabled', () => {
+  it('emits one frame per message when packing is disabled', () => {
     const input = [[quad('a')], [quad('b')], []];
     const bytes = encode(input, 100, false);
     expect(new MessageDecoder().end(bytes)).toHaveLength(3);
@@ -112,13 +112,13 @@ describe('Jelly 1.2 persistent lookups with one frame per message', () => {
   ]);
   const write = (persistentLookups?: boolean): Uint8Array => {
     const writer = new Writer({ version: 3, physicalType: PhysicalStreamType.TRIPLES, streamType: RdfStreamType.MESSAGES,
-      messageSize: 1024, lookup: { maxNames: 128, maxDatatypes: 2 }, persistentLookups });
+      packMessages: false, messageSize: 1024, lookup: { maxNames: 128, maxDatatypes: 2 }, persistentLookups });
     for (const message of messages) writer.addMessage(message);
     let bytes!: Uint8Array; writer.end((error, data) => { if (error) throw error; bytes = data!; });
     return bytes;
   };
 
-  it('is the default and keeps every message in its own frame, even when slots are evicted', () => {
+  it('keeps lookups persistent by default with per-message framing, even during eviction', () => {
     const bytes = write();
     expect(new MessageDecoder().end(bytes)).toHaveLength(messages.length);
     const output = new Parser().parseMessages(bytes);
