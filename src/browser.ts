@@ -33,11 +33,13 @@ export class StreamParser {
     let input: WritableStreamDefaultController;
     let pending: Message | undefined;
     let index = 0;
+    let pendingMessages: Message[] = [];
     let stopped = false;
     let failure: unknown;
     let wake: (() => void) | undefined;
     const release = (): void => {
       pending = undefined;
+      pendingMessages = [];
       reader = undefined;
       decoder = undefined;
     };
@@ -51,10 +53,8 @@ export class StreamParser {
       wake?.();
       wake = undefined;
     };
-    const accept = (message: Message): false => {
-      pending = message;
-      index = 0;
-      this.emit('message', message);
+    const accept = (messages: Message[]): false => {
+      pendingMessages.push(...messages);
       return false;
     };
     // Stop after each frame so a large frame can also be delivered a quad at a
@@ -75,7 +75,9 @@ export class StreamParser {
             output.enqueue(entry);
           } else output.enqueue(quad);
         } else {
-          pending = undefined;
+          pending = pendingMessages.shift();
+          index = 0;
+          if (pending) { this.emit('message', pending); continue; }
           if (!reader!.paused) return;
           // Do not decode another frame while the output queue is full.
           if (output.desiredSize! <= 0) {
@@ -114,7 +116,8 @@ export class StreamParser {
         try {
           reader!.endEach(accept);
           await drain();
-          decoder!.finish();
+          accept(decoder!.finishMessages());
+          await drain();
           output.close();
           stopped = true;
           release();
@@ -172,3 +175,4 @@ export class StreamWriter {
     return stream.pipeThrough(this);
   }
 }
+export { SparqlStreamParser, SparqlStreamWriter } from './sparql/browserStreams';

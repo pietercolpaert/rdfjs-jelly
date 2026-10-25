@@ -1,6 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { Writer as ProtoWriter } from 'protobufjs/minimal.js';
-import { Decoder, JellyConformanceError, JellyUnsupportedFeatureError, MessageEncoder, Parser, PhysicalStreamType } from '../src';
+import { JellyConformanceError, JellyUnsupportedFeatureError, MessageEncoder, Parser, PhysicalStreamType } from '../src';
 import { eu } from '../src/generated/proto/rdf_pb.mjs';
 import type { RdfStreamFrame } from '../src/generated/rdf_pb';
 

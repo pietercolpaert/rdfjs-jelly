@@ -1,5 +1,8 @@
+import { ColumnDecoder } from './ColumnDecoder';
+import { ColumnFrameReader } from './ColumnFrameReader';
+import { encodeRdfStreamFrame, proto, decodeProtoRdfStreamFrameReader } from '../generated/rdf_pb';
 import type * as RDF from '@rdfjs/types';
-import type { Reader } from 'protobufjs/minimal.js';
+import { Reader } from 'protobufjs/minimal.js';
 import { JellyConformanceError, JellyUnsupportedFeatureError } from '../errors';
 import {
   ProtoRowKind,
@@ -25,7 +28,7 @@ import type {
   RdfTerm,
   RdfTriple,
 } from '../generated/rdf_pb';
-import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, RDF_LANG_STRING, XSD_STRING } from '../options';
+import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, XSD_STRING } from '../options';
 import { DataFactory } from '../rdfjs/adapter';
 import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type StreamOptions } from '../types';
 import { LookupDecoder } from './LookupDecoder';
@@ -40,6 +43,9 @@ export interface DecoderEvents {
 }
 
 export class Decoder {
+  private columns?: ColumnDecoder;
+  private columnReader?: ColumnFrameReader;
+  private readonly parserOptions: ParserOptions;
   private readonly factory: RDF.DataFactory;
   private readonly strict: boolean;
   private readonly maxSupportedVersion: number;
@@ -59,15 +65,51 @@ export class Decoder {
   public readonly namespaces: Record<string, RDF.NamedNode> = Object.create(null) as Record<string, RDF.NamedNode>;
 
   public constructor(options: ParserOptions = {}, events: DecoderEvents = {}) {
+    this.parserOptions = options;
     this.factory = options.factory ?? DataFactory;
     this.strict = options.strict ?? true;
-    this.maxSupportedVersion = options.maxSupportedVersion ?? 2;
+    this.maxSupportedVersion = options.maxSupportedVersion ?? 3;
     this.maxLookupTableSize = options.maxLookupTableSize ?? MAX_DECODED_LOOKUP_SIZE;
     this.events = events;
     this.defaultGraph = this.factory.defaultGraph();
   }
 
+  /** Decodes logical messages, which may cross or share column frames. */
+  public decodePayloadMessages(reader: Reader, length: number, output?: RDF.Quad[]): Message[] {
+    const start = reader.pos;
+    if (!this.streamOptions || this.columns) {
+      const frame = this.columns
+        ? (this.columnReader ??= new ColumnFrameReader()).read(reader, length)
+        : decodeProtoRdfStreamFrameReader(reader, length);
+      if (!frame.rows.length && !frame.columns && !this.columns) return [];
+      const version = frame.rows[0]?.options?.version;
+      if (this.columns || version === 3) {
+        if (3 > this.maxSupportedVersion) throw new JellyUnsupportedFeatureError('Unsupported Jelly protocol version 3');
+        this.columns ??= new ColumnDecoder(this.parserOptions, this.events);
+        const messages = this.columns.decode(frame, output);
+        this.streamOptions = this.columns.streamOptions;
+        if (this.columns.namespacesChanged) {
+          Object.assign(this.namespaces, this.columns.namespaces);
+          this.columns.namespacesChanged = false;
+        }
+        return messages;
+      }
+      if (frame.columns) throw new JellyConformanceError('Column batch before version 3 stream options');
+      reader.pos = start;
+    }
+    return [this.decodeRowPayload(reader, length)];
+  }
+
+  public finishMessages(): Message[] {
+    if (this.columns) return this.columns.finish();
+    this.finish();
+    return [];
+  }
+
   public decode(frame: RdfStreamFrame): Message {
+    if (this.columns || frame.columns || frame.rows.some(r => r.case === 'options' && r.value.version === 3)) {
+      return this.decodeEncodedFrame(encodeRdfStreamFrame(frame));
+    }
     const message = new Message(this.messageCounter++, [], frame.metadata);
     for (const row of frame.rows) {
       if (row.case === 'options') { this.ingestOptions(row.value); continue; }
@@ -88,6 +130,9 @@ export class Decoder {
 
   public decodeProto(frame: unknown): Message {
     const protoFrame = frame as ProtoFrame;
+    if (this.columns || protoFrame.columns || protoFrame.rows.some(r => r.options?.version === 3)) {
+      return this.decodeEncodedFrame(proto.RdfStreamFrame.encode(protoFrame).finish());
+    }
     let metadata: Map<string, Uint8Array> | undefined;
     for (const key in protoFrame.metadata) {
       if (Object.hasOwn(protoFrame.metadata, key)) (metadata ??= new Map()).set(key, protoFrame.metadata[key]!);
@@ -114,7 +159,17 @@ export class Decoder {
     return message;
   }
 
+  private decodeEncodedFrame(bytes: Uint8Array): Message {
+    return this.decodeProtoPayload(Reader.create(bytes), bytes.length);
+  }
+
+  /** Frame-oriented compatibility API; use decodePayloadMessages for logical boundaries. */
   public decodeProtoPayload(rawReader: unknown, length: number): Message {
+    const messages = this.decodePayloadMessages(rawReader as Reader, length);
+    return new Message(messages[0]?.messageCounter ?? this.messageCounter, messages.flat(), messages[0]?.metadata);
+  }
+
+  private decodeRowPayload(rawReader: unknown, length: number): Message {
     const metadata = new Map<string, Uint8Array>();
     const message = new Message(this.messageCounter++, [], metadata);
     decodeProtoRdfStreamFrameRows(
@@ -129,6 +184,10 @@ export class Decoder {
   }
 
   public decodeProtoPayloadTo(rawReader: unknown, length: number, output: RDF.Quad[]): void {
+    if (!this.streamOptions || this.columns) {
+      for (const message of this.decodePayloadMessages(rawReader as Reader, length, output)) for (const quad of message) output.push(quad);
+      return;
+    }
     this.messageCounter++;
     decodeProtoRdfStreamFrameRows(
       rawReader as Reader,
@@ -445,7 +504,8 @@ export class Decoder {
   }
 
   public finish(): void {
-    if (!this.streamOptions) throw new JellyConformanceError('No Jelly stream options row was found');
+    if (this.columns) return;
+    if (!this.streamOptions && this.sawAnyRow) throw new JellyConformanceError('No Jelly stream options row was found');
     if (this.graph !== undefined) throw new JellyConformanceError('Jelly graph stream ended before graph_end');
   }
 
@@ -464,6 +524,7 @@ export class Decoder {
     if (raw.version < 1 || raw.version > this.maxSupportedVersion) {
       throw new JellyUnsupportedFeatureError(`Unsupported Jelly protocol version ${raw.version}`);
     }
+    if (raw.version === 3) throw new JellyConformanceError('Cannot change Jelly layout within a stream');
     if (raw.rdfStar) throw new JellyUnsupportedFeatureError('RDF-star Jelly streams are not supported');
     if (raw.generalizedStatements) throw new JellyUnsupportedFeatureError('Generalized RDF Jelly streams are not supported');
     if (raw.maxNameTableSize < MIN_NAME_LOOKUP_SIZE || raw.maxNameTableSize > this.maxLookupTableSize) {

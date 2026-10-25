@@ -60,11 +60,12 @@ export class StreamParser extends Transform {
       // End of input: deliver everything that is left, backpressure or not.
       this.drainPending();
       this.messageReader.endEach(message => {
-        this.enqueue(message);
+        for (const item of message) this.enqueue(item);
         this.drainPending();
         return true;
       });
-      this.decoder.finish();
+      for (const message of this.decoder.finishMessages()) this.enqueue(message);
+      this.drainPending();
     } catch (error) {
       this.busy = false;
       callback(error instanceof Error ? error : new Error(String(error)));
@@ -93,8 +94,8 @@ export class StreamParser extends Transform {
   }
 
   /** Returns false when the readable side is full and decoding should pause. */
-  private accept(message: Message): boolean {
-    this.enqueue(message);
+  private accept(messages: Message[]): boolean {
+    for (const message of messages) this.enqueue(message);
     return this.flushPending();
   }
 

@@ -1,5 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import { concatBytes } from '../codec/bytes';
+import { ColumnEncoder } from '../codec/ColumnEncoder';
 import { Encoder } from '../codec/Encoder';
 import { MessageEncoder } from '../codec/MessageEncoder';
 import { JellyConformanceError } from '../errors';
@@ -19,7 +20,7 @@ function isOutput(value: unknown): value is BinaryOutput {
 }
 
 export class Writer {
-  private readonly encoder: Encoder;
+  private readonly encoder: Encoder | ColumnEncoder;
   private readonly messageEncoder: MessageEncoder;
   private readonly output?: BinaryOutput;
   private pendingCounter: number | undefined;
@@ -44,7 +45,8 @@ export class Writer {
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
     const buffered = !this.output && this.messageEncoder.delimited;
     if (buffered) this.chunks = [];
-    this.encoder = new Encoder(options, this.streaming
+    const EncoderClass = options.version === 3 ? ColumnEncoder : Encoder;
+    this.encoder = new EncoderClass(options, this.streaming
       ? frame => this.writeFrame(frame)
       : buffered ? frame => this.chunks!.push(this.messageEncoder.encode(frame)) : undefined);
     for (const [prefix, iri] of Object.entries(options.namespaces ?? {})) {
@@ -120,6 +122,22 @@ export class Writer {
     this.lastCompletedCounter++;
   }
 
+  /** Emit buffered delimited frames without ending the writer. Counter-based
+   * input completes its current logical message. Without a sink, bytes remain
+   * buffered for end(). */
+  public flush(done?: (error?: Error | null) => void): void {
+    try {
+      if (this.ended) throw new JellyConformanceError('Writer has already ended');
+      if (!this.messageEncoder.delimited) throw new JellyConformanceError('flush() requires delimited output');
+      this.flushPending();
+      this.encoder.flush();
+      done?.(null);
+    } catch (error) {
+      const actual = error instanceof Error ? error : new Error(String(error));
+      if (done) done(actual); else throw actual;
+    }
+  }
+
   public end(done?: WriterEndCallback): void {
     try {
       if (this.ended) throw new JellyConformanceError('Writer has already ended');
@@ -156,6 +174,7 @@ export class Writer {
     this.requireMode('messages');
     if (!Number.isInteger(entry.messageCounter) || entry.messageCounter < 0) throw new JellyConformanceError('Invalid messageCounter');
     if (this.pendingCounter === undefined) {
+      if (entry.messageCounter <= this.lastCompletedCounter) throw new JellyConformanceError('Message counters must increase');
       while (this.lastCompletedCounter + 1 < entry.messageCounter) {
         this.encoder.addMessage([]);
         this.lastCompletedCounter++;

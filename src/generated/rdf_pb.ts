@@ -2,7 +2,7 @@ import { JellyConformanceError } from '../errors';
 import { Reader, Writer as ProtobufWriter } from 'protobufjs/minimal.js';
 import { eu } from './proto/rdf_pb.mjs';
 
-const proto = eu.ostrzyciel.jelly.core.proto.v1;
+export const proto = eu.ostrzyciel.jelly.core.proto.v1;
 
 export type ProtoIri = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
 export type ProtoLiteral = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral;
@@ -208,6 +208,8 @@ export interface RdfStreamOptions {
   maxDatatypeTableSize: number;
   logicalType: number;
   version: number;
+  streamType?: number;
+  rdfVersion?: number;
 }
 
 export type RdfStreamRow =
@@ -224,6 +226,7 @@ export type RdfStreamRow =
 
 export interface RdfStreamFrame {
   rows: RdfStreamRow[];
+  columns?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties;
   metadata: Map<string, Uint8Array>;
 }
 
@@ -357,6 +360,8 @@ function fromOptions(value: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions):
     maxDatatypeTableSize: value.maxDatatypeTableSize,
     logicalType: value.logicalType,
     version: value.version,
+    streamType: value.streamType,
+    rdfVersion: value.rdfVersion,
   };
 }
 
@@ -454,6 +459,8 @@ function encodeOptionsWire(writer: ProtobufWriter, value: RdfStreamOptions): voi
   if (value.physicalType !== 0) writer.uint32(16).int32(value.physicalType);
   if (value.generalizedStatements) writer.uint32(24).bool(value.generalizedStatements);
   if (value.rdfStar) writer.uint32(32).bool(value.rdfStar);
+  if (value.streamType) writer.uint32(40).int32(value.streamType);
+  if (value.rdfVersion) writer.uint32(48).int32(value.rdfVersion);
   if (value.maxNameTableSize !== 0) writer.uint32(72).uint32(value.maxNameTableSize);
   if (value.maxPrefixTableSize !== 0) writer.uint32(80).uint32(value.maxPrefixTableSize);
   if (value.maxDatatypeTableSize !== 0) writer.uint32(88).uint32(value.maxDatatypeTableSize);
@@ -511,6 +518,7 @@ function encodeFrameWire(writer: ProtobufWriter, frame: RdfStreamFrame): void {
     encodeRowWire(writer, row);
     writer.ldelim();
   }
+  if (frame.columns) proto.RdfColumnBatch.encode(frame.columns, writer.uint32(18).fork()).ldelim();
   for (const [key, value] of frame.metadata) {
     writer.uint32(122).fork().uint32(10).string(key).uint32(18).bytes(value).ldelim();
   }
@@ -551,7 +559,7 @@ export function decodeRdfStreamFrame(input: Uint8Array): RdfStreamFrame {
     const frame = decodeProtoRdfStreamFrame(input);
     const metadata = new Map<string, Uint8Array>();
     for (const [key, value] of Object.entries(frame.metadata)) metadata.set(key, new Uint8Array(value));
-    return { rows: frame.rows.map(row => fromRow(row as ProtoRow)), metadata };
+    return { rows: frame.rows.map(row => fromRow(row as ProtoRow)), columns: frame.columns ?? undefined, metadata };
   } catch (error) {
     throw new JellyConformanceError('Invalid Jelly protobuf frame', {
       cause: error instanceof Error ? error : undefined,

@@ -27,6 +27,7 @@ export const MAX_LOOKUP_SIZE = 4096;
 export const MAX_DECODED_LOOKUP_SIZE = 1_048_576;
 
 export const XSD_STRING = 'http://www.w3.org/2001/XMLSchema#string';
+export const RDF_DIR_LANG_STRING = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString';
 export const RDF_LANG_STRING = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString';
 
 export interface LookupPreset {
@@ -66,3 +67,14 @@ export function normalizeLookupPreset(value: Partial<LookupPreset> = {}): Lookup
   return preset;
 }
 
+
+/** Column layouts have a minimum of 128 names and allow any prefix capacity. */
+export function normalizeColumnLookupPreset(value: Partial<LookupPreset> = {}): LookupPreset {
+  const preset = normalizeLookupPreset({ ...value, maxPrefixes: 0 });
+  const maxPrefixes = value.maxPrefixes ?? DEFAULT_LOOKUP_PRESET.maxPrefixes;
+  if (!Number.isInteger(maxPrefixes) || maxPrefixes < 0 || maxPrefixes > MAX_LOOKUP_SIZE) {
+    throw new JellyConformanceError(`Prefix lookup size must be between 0 and ${MAX_LOOKUP_SIZE}`);
+  }
+  if (preset.maxNames < 128) throw new JellyConformanceError('Column streams require a name lookup size of at least 128');
+  return { ...preset, maxPrefixes };
+}

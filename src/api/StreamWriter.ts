@@ -3,6 +3,8 @@ import type * as RDF from '@rdfjs/types';
 import { Writer } from './Writer';
 import type { MessageQuad, WriterOptions } from '../types';
 
+const FLUSH = Symbol('flush');
+
 export class StreamWriter extends Transform {
   private readonly writer: Writer;
 
@@ -20,8 +22,15 @@ export class StreamWriter extends Transform {
     return this;
   }
 
-  public override _transform(value: RDF.Quad | MessageQuad, _encoding: BufferEncoding, callback: TransformCallback): void {
-    this.writer.addQuad(value, error => callback(error ?? undefined));
+  /** Flush after all preceding writes. The callback signals serialization into
+   * the readable side, not delivery to a downstream consumer. */
+  public flush(callback?: (error?: Error | null) => void): boolean {
+    return this.write(FLUSH, callback);
+  }
+
+  public override _transform(value: RDF.Quad | MessageQuad | typeof FLUSH, _encoding: BufferEncoding, callback: TransformCallback): void {
+    if (value === FLUSH) this.writer.flush(error => callback(error ?? undefined));
+    else this.writer.addQuad(value, error => callback(error ?? undefined));
   }
 
   public override _flush(callback: TransformCallback): void {

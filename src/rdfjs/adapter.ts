@@ -1,5 +1,5 @@
 import type * as RDF from '@rdfjs/types';
-import { RDF_LANG_STRING, XSD_STRING } from '../options';
+import { RDF_DIR_LANG_STRING, RDF_LANG_STRING, XSD_STRING } from '../options';
 
 function sameTerm(term: RDF.Term, other: RDF.Term | null | undefined): boolean {
   if (!other || term.termType !== other.termType || term.value !== other.value) return false;
@@ -75,7 +75,7 @@ const dataFactory = {
       return new Literal(
         value,
         languageOrDatatype.language.toLowerCase(),
-        new NamedNode(RDF_LANG_STRING),
+        new NamedNode(languageOrDatatype.direction ? RDF_DIR_LANG_STRING : RDF_LANG_STRING),
         languageOrDatatype.direction,
       );
     }

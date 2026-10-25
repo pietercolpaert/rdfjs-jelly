@@ -1,4 +1,4 @@
-import * as $protobuf from "protobufjs";
+import * as $protobuf from "protobufjs/minimal.js";
 
 /** Namespace eu. */
 export namespace eu {
@@ -106,6 +106,35 @@ export namespace eu {
                             type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties;
                         }
 
+                        /** RdfVersion enum. */
+                        enum RdfVersion {
+
+                            /** RDF_VERSION_UNSPECIFIED value */
+                            RDF_VERSION_UNSPECIFIED = 0,
+
+                            /** RDF_VERSION_1_1 value */
+                            RDF_VERSION_1_1 = 1,
+
+                            /** RDF_VERSION_1_2_BASIC value */
+                            RDF_VERSION_1_2_BASIC = 2,
+
+                            /** RDF_VERSION_1_2 value */
+                            RDF_VERSION_1_2 = 3
+                        }
+
+                        /** RdfBaseDirection enum. */
+                        enum RdfBaseDirection {
+
+                            /** RDF_BASE_DIRECTION_UNSPECIFIED value */
+                            RDF_BASE_DIRECTION_UNSPECIFIED = 0,
+
+                            /** RDF_BASE_DIRECTION_LTR value */
+                            RDF_BASE_DIRECTION_LTR = 1,
+
+                            /** RDF_BASE_DIRECTION_RTL value */
+                            RDF_BASE_DIRECTION_RTL = 2
+                        }
+
                         /**
                          * Properties of a RdfLiteral.
                          * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties instead.
@@ -133,6 +162,9 @@ export namespace eu {
 
                             /** RdfLiteral datatype. */
                             datatype?: (number|null);
+
+                            /** RdfLiteral direction. */
+                            direction: eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection;
 
                             /** RdfLiteral literalKind. */
                             literalKind?: ("langtag"|"datatype");
@@ -195,6 +227,9 @@ export namespace eu {
                                 /** RdfLiteral datatype */
                                 datatype?: (number|null);
 
+                                /** RdfLiteral direction */
+                                direction?: (eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection|null);
+
                                 /** RdfLiteral literalKind */
                                 literalKind?: ("langtag"|"datatype");
 
@@ -207,10 +242,893 @@ export namespace eu {
                               lex?: string|null;
                               langtag?: string|null;
                               datatype?: number|null;
+                              direction?: eu.ostrzyciel.jelly.core.proto.v1.RdfBaseDirection|null;
                               $unknowns?: Uint8Array[];
                             } & (
                               ({ literalKind?: undefined; langtag?: null; datatype?: null }|{ literalKind?: "langtag"; langtag: string; datatype?: null }|{ literalKind?: "datatype"; langtag?: null; datatype: number })
                             );
+                        }
+
+                        /**
+                         * Properties of a RdfTripleTerm.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties instead.
+                         */
+                        interface IRdfTripleTerm extends eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties {
+                        }
+
+                        /** Represents a RdfTripleTerm. */
+                        class RdfTripleTerm {
+
+                            /**
+                             * Constructs a new RdfTripleTerm.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfTripleTerm sIri. */
+                            sIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                            /** RdfTripleTerm sBnode. */
+                            sBnode?: (string|null);
+
+                            /** RdfTripleTerm pIri. */
+                            pIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                            /** RdfTripleTerm oIri. */
+                            oIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                            /** RdfTripleTerm oBnode. */
+                            oBnode?: (string|null);
+
+                            /** RdfTripleTerm oLiteral. */
+                            oLiteral?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties|null);
+
+                            /** RdfTripleTerm oTripleTerm. */
+                            oTripleTerm?: (eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties|null);
+
+                            /** RdfTripleTerm subject. */
+                            subject?: ("sIri"|"sBnode");
+
+                            /** RdfTripleTerm object. */
+                            object?: ("oIri"|"oBnode"|"oLiteral"|"oTripleTerm");
+
+                            /**
+                             * Creates a new RdfTripleTerm instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfTripleTerm instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm;
+
+                            /**
+                             * Encodes the specified RdfTripleTerm message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.verify|verify} messages.
+                             * @param message RdfTripleTerm message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfTripleTerm message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.verify|verify} messages.
+                             * @param message RdfTripleTerm message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfTripleTerm message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape} RdfTripleTerm
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape;
+
+                            /**
+                             * Decodes a RdfTripleTerm message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape} RdfTripleTerm
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm & eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape;
+                        }
+
+                        namespace RdfTripleTerm {
+
+                            /** Properties of a RdfTripleTerm. */
+                            interface $Properties {
+
+                                /** RdfTripleTerm sIri */
+                                sIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                                /** RdfTripleTerm sBnode */
+                                sBnode?: (string|null);
+
+                                /** RdfTripleTerm pIri */
+                                pIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                                /** RdfTripleTerm oIri */
+                                oIri?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                                /** RdfTripleTerm oBnode */
+                                oBnode?: (string|null);
+
+                                /** RdfTripleTerm oLiteral */
+                                oLiteral?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Properties|null);
+
+                                /** RdfTripleTerm oTripleTerm */
+                                oTripleTerm?: (eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties|null);
+
+                                /** RdfTripleTerm subject */
+                                subject?: ("sIri"|"sBnode");
+
+                                /** RdfTripleTerm object */
+                                object?: ("oIri"|"oBnode"|"oLiteral"|"oTripleTerm");
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Narrowed shape of a RdfTripleTerm. */
+                            type $Shape = {
+                              sIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                              sBnode?: string|null;
+                              pIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                              oIri?: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape|null;
+                              oBnode?: string|null;
+                              oLiteral?: eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Shape|null;
+                              oTripleTerm?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape|null;
+                              $unknowns?: Uint8Array[];
+                            } & (
+                              ({ subject?: undefined; sIri?: null; sBnode?: null }|{ subject?: "sIri"; sIri: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape; sBnode?: null }|{ subject?: "sBnode"; sIri?: null; sBnode: string })
+                            ) & (
+                              ({ object?: undefined; oIri?: null; oBnode?: null; oLiteral?: null; oTripleTerm?: null }|{ object?: "oIri"; oIri: eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Shape; oBnode?: null; oLiteral?: null; oTripleTerm?: null }|{ object?: "oBnode"; oIri?: null; oBnode: string; oLiteral?: null; oTripleTerm?: null }|{ object?: "oLiteral"; oIri?: null; oBnode?: null; oLiteral: eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral.$Shape; oTripleTerm?: null }|{ object?: "oTripleTerm"; oIri?: null; oBnode?: null; oLiteral?: null; oTripleTerm: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape })
+                            );
+                        }
+
+                        /**
+                         * Properties of a RdfLookupEntryPacked.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties instead.
+                         */
+                        interface IRdfLookupEntryPacked extends eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties {
+                        }
+
+                        /** Represents a RdfLookupEntryPacked. */
+                        class RdfLookupEntryPacked {
+
+                            /**
+                             * Constructs a new RdfLookupEntryPacked.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfLookupEntryPacked id. */
+                            id: number;
+
+                            /** RdfLookupEntryPacked values. */
+                            values: string[];
+
+                            /**
+                             * Creates a new RdfLookupEntryPacked instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfLookupEntryPacked instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked;
+
+                            /**
+                             * Encodes the specified RdfLookupEntryPacked message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.verify|verify} messages.
+                             * @param message RdfLookupEntryPacked message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfLookupEntryPacked message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.verify|verify} messages.
+                             * @param message RdfLookupEntryPacked message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfLookupEntryPacked message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape} RdfLookupEntryPacked
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape;
+
+                            /**
+                             * Decodes a RdfLookupEntryPacked message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape} RdfLookupEntryPacked
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked & eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape;
+                        }
+
+                        namespace RdfLookupEntryPacked {
+
+                            /** Properties of a RdfLookupEntryPacked. */
+                            interface $Properties {
+
+                                /** RdfLookupEntryPacked id */
+                                id?: (number|null);
+
+                                /** RdfLookupEntryPacked values */
+                                values?: (string[]|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfLookupEntryPacked. */
+                            type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties;
+                        }
+
+                        /**
+                         * Properties of a RdfStreamOptions.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties instead.
+                         */
+                        interface IRdfStreamOptions extends eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties {
+                        }
+
+                        /** Represents a RdfStreamOptions. */
+                        class RdfStreamOptions {
+
+                            /**
+                             * Constructs a new RdfStreamOptions.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfStreamOptions streamName. */
+                            streamName: string;
+
+                            /** RdfStreamOptions physicalType. */
+                            physicalType: eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType;
+
+                            /** RdfStreamOptions generalizedStatements. */
+                            generalizedStatements: boolean;
+
+                            /** RdfStreamOptions rdfStar. */
+                            rdfStar: boolean;
+
+                            /** RdfStreamOptions streamType. */
+                            streamType: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamType;
+
+                            /** RdfStreamOptions rdfVersion. */
+                            rdfVersion: eu.ostrzyciel.jelly.core.proto.v1.RdfVersion;
+
+                            /** RdfStreamOptions maxNameTableSize. */
+                            maxNameTableSize: number;
+
+                            /** RdfStreamOptions maxPrefixTableSize. */
+                            maxPrefixTableSize: number;
+
+                            /** RdfStreamOptions maxDatatypeTableSize. */
+                            maxDatatypeTableSize: number;
+
+                            /** RdfStreamOptions logicalType. */
+                            logicalType: eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType;
+
+                            /** RdfStreamOptions version. */
+                            version: number;
+
+                            /**
+                             * Creates a new RdfStreamOptions instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfStreamOptions instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions;
+
+                            /**
+                             * Encodes the specified RdfStreamOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
+                             * @param message RdfStreamOptions message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfStreamOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
+                             * @param message RdfStreamOptions message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfStreamOptions message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
+
+                            /**
+                             * Decodes a RdfStreamOptions message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
+                        }
+
+                        namespace RdfStreamOptions {
+
+                            /** Properties of a RdfStreamOptions. */
+                            interface $Properties {
+
+                                /** RdfStreamOptions streamName */
+                                streamName?: (string|null);
+
+                                /** RdfStreamOptions physicalType */
+                                physicalType?: (eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType|null);
+
+                                /** RdfStreamOptions generalizedStatements */
+                                generalizedStatements?: (boolean|null);
+
+                                /** RdfStreamOptions rdfStar */
+                                rdfStar?: (boolean|null);
+
+                                /** RdfStreamOptions streamType */
+                                streamType?: (eu.ostrzyciel.jelly.core.proto.v1.RdfStreamType|null);
+
+                                /** RdfStreamOptions rdfVersion */
+                                rdfVersion?: (eu.ostrzyciel.jelly.core.proto.v1.RdfVersion|null);
+
+                                /** RdfStreamOptions maxNameTableSize */
+                                maxNameTableSize?: (number|null);
+
+                                /** RdfStreamOptions maxPrefixTableSize */
+                                maxPrefixTableSize?: (number|null);
+
+                                /** RdfStreamOptions maxDatatypeTableSize */
+                                maxDatatypeTableSize?: (number|null);
+
+                                /** RdfStreamOptions logicalType */
+                                logicalType?: (eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType|null);
+
+                                /** RdfStreamOptions version */
+                                version?: (number|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfStreamOptions. */
+                            type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties;
+                        }
+
+                        /** PhysicalStreamType enum. */
+                        enum PhysicalStreamType {
+
+                            /** PHYSICAL_STREAM_TYPE_UNSPECIFIED value */
+                            PHYSICAL_STREAM_TYPE_UNSPECIFIED = 0,
+
+                            /** PHYSICAL_STREAM_TYPE_TRIPLES value */
+                            PHYSICAL_STREAM_TYPE_TRIPLES = 1,
+
+                            /** PHYSICAL_STREAM_TYPE_QUADS value */
+                            PHYSICAL_STREAM_TYPE_QUADS = 2,
+
+                            /** PHYSICAL_STREAM_TYPE_GRAPHS value */
+                            PHYSICAL_STREAM_TYPE_GRAPHS = 3
+                        }
+
+                        /** RdfStreamType enum. */
+                        enum RdfStreamType {
+
+                            /** RDF_STREAM_TYPE_FLAT value */
+                            RDF_STREAM_TYPE_FLAT = 0,
+
+                            /** RDF_STREAM_TYPE_MESSAGES value */
+                            RDF_STREAM_TYPE_MESSAGES = 1
+                        }
+
+                        /**
+                         * Properties of a RdfStreamFrame.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties instead.
+                         */
+                        interface IRdfStreamFrame extends eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties {
+                        }
+
+                        /** Represents a RdfStreamFrame. */
+                        class RdfStreamFrame {
+
+                            /**
+                             * Constructs a new RdfStreamFrame.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfStreamFrame rows. */
+                            rows: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties[];
+
+                            /** RdfStreamFrame columns. */
+                            columns?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties|null);
+
+                            /** RdfStreamFrame metadata. */
+                            metadata: { [k: string]: Uint8Array };
+
+                            /**
+                             * Creates a new RdfStreamFrame instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfStreamFrame instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
+
+                            /**
+                             * Encodes the specified RdfStreamFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
+                             * @param message RdfStreamFrame message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfStreamFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
+                             * @param message RdfStreamFrame message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfStreamFrame message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
+
+                            /**
+                             * Decodes a RdfStreamFrame message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
+                        }
+
+                        namespace RdfStreamFrame {
+
+                            /** Properties of a RdfStreamFrame. */
+                            interface $Properties {
+
+                                /** RdfStreamFrame rows */
+                                rows?: (eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties[]|null);
+
+                                /** RdfStreamFrame columns */
+                                columns?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties|null);
+
+                                /** RdfStreamFrame metadata */
+                                metadata?: ({ [k: string]: Uint8Array }|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfStreamFrame. */
+                            type $Shape = {
+                              rows?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Shape[]|null;
+                              columns?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape|null;
+                              metadata?: { [k: string]: Uint8Array }|null;
+                              $unknowns?: Uint8Array[];
+                            };
+                        }
+
+                        /**
+                         * Properties of a RdfColumnBatch.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties instead.
+                         */
+                        interface IRdfColumnBatch extends eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties {
+                        }
+
+                        /** Represents a RdfColumnBatch. */
+                        class RdfColumnBatch {
+
+                            /**
+                             * Constructs a new RdfColumnBatch.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfColumnBatch rowCount. */
+                            rowCount: number;
+
+                            /** RdfColumnBatch names. */
+                            names: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                            /** RdfColumnBatch prefixes. */
+                            prefixes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                            /** RdfColumnBatch datatypes. */
+                            datatypes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                            /** RdfColumnBatch namespaces. */
+                            namespaces: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties[];
+
+                            /** RdfColumnBatch subjects. */
+                            subjects?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                            /** RdfColumnBatch predicates. */
+                            predicates?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                            /** RdfColumnBatch objects. */
+                            objects?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                            /** RdfColumnBatch graphs. */
+                            graphs?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                            /** RdfColumnBatch messageLengths. */
+                            messageLengths: number[];
+
+                            /**
+                             * Creates a new RdfColumnBatch instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfColumnBatch instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch;
+
+                            /**
+                             * Encodes the specified RdfColumnBatch message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.verify|verify} messages.
+                             * @param message RdfColumnBatch message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfColumnBatch message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.verify|verify} messages.
+                             * @param message RdfColumnBatch message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfColumnBatch message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape} RdfColumnBatch
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape;
+
+                            /**
+                             * Decodes a RdfColumnBatch message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape} RdfColumnBatch
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch & eu.ostrzyciel.jelly.core.proto.v1.RdfColumnBatch.$Shape;
+                        }
+
+                        namespace RdfColumnBatch {
+
+                            /** Properties of a RdfColumnBatch. */
+                            interface $Properties {
+
+                                /** RdfColumnBatch rowCount */
+                                rowCount?: (number|null);
+
+                                /** RdfColumnBatch names */
+                                names?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                /** RdfColumnBatch prefixes */
+                                prefixes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                /** RdfColumnBatch datatypes */
+                                datatypes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                /** RdfColumnBatch namespaces */
+                                namespaces?: (eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties[]|null);
+
+                                /** RdfColumnBatch subjects */
+                                subjects?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                                /** RdfColumnBatch predicates */
+                                predicates?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                                /** RdfColumnBatch objects */
+                                objects?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                                /** RdfColumnBatch graphs */
+                                graphs?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties|null);
+
+                                /** RdfColumnBatch messageLengths */
+                                messageLengths?: (number[]|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfColumnBatch. */
+                            type $Shape = {
+                              rowCount?: number|null;
+                              names?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                              prefixes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                              datatypes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                              namespaces?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape[]|null;
+                              subjects?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                              predicates?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                              objects?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                              graphs?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape|null;
+                              messageLengths?: number[]|null;
+                              $unknowns?: Uint8Array[];
+                            };
+                        }
+
+                        /**
+                         * Properties of a RdfNamespaceDeclaration.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties instead.
+                         */
+                        interface IRdfNamespaceDeclaration extends eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties {
+                        }
+
+                        /** Represents a RdfNamespaceDeclaration. */
+                        class RdfNamespaceDeclaration {
+
+                            /**
+                             * Constructs a new RdfNamespaceDeclaration.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfNamespaceDeclaration name. */
+                            name: string;
+
+                            /** RdfNamespaceDeclaration value. */
+                            value?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                            /**
+                             * Creates a new RdfNamespaceDeclaration instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfNamespaceDeclaration instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration;
+
+                            /**
+                             * Encodes the specified RdfNamespaceDeclaration message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
+                             * @param message RdfNamespaceDeclaration message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfNamespaceDeclaration message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
+                             * @param message RdfNamespaceDeclaration message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
+
+                            /**
+                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
+                        }
+
+                        namespace RdfNamespaceDeclaration {
+
+                            /** Properties of a RdfNamespaceDeclaration. */
+                            interface $Properties {
+
+                                /** RdfNamespaceDeclaration name */
+                                name?: (string|null);
+
+                                /** RdfNamespaceDeclaration value */
+                                value?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfNamespaceDeclaration. */
+                            type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties;
+                        }
+
+                        /**
+                         * Properties of a RdfColumn.
+                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties instead.
+                         */
+                        interface IRdfColumn extends eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties {
+                        }
+
+                        /** Represents a RdfColumn. */
+                        class RdfColumn {
+
+                            /**
+                             * Constructs a new RdfColumn.
+                             * @param [properties] Properties to set
+                             */
+                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties);
+
+                            /** Unknown fields preserved while decoding when enabled */
+                            $unknowns?: Uint8Array[];
+
+                            /** RdfColumn kinds. */
+                            kinds: Uint8Array;
+
+                            /** RdfColumn layouts. */
+                            layouts: number[];
+
+                            /** RdfColumn nameIds. */
+                            nameIds: number[];
+
+                            /** RdfColumn prefixIds. */
+                            prefixIds: number[];
+
+                            /** RdfColumn lexValues. */
+                            lexValues: string[];
+
+                            /** RdfColumn literalKinds. */
+                            literalKinds: number[];
+
+                            /** RdfColumn langtags. */
+                            langtags: string[];
+
+                            /** RdfColumn langtagDirections. */
+                            langtagDirections: number[];
+
+                            /** RdfColumn bnodes. */
+                            bnodes: string[];
+
+                            /** RdfColumn tripleTerms. */
+                            tripleTerms: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties[];
+
+                            /**
+                             * Creates a new RdfColumn instance using the specified properties.
+                             * @param [properties] Properties to set
+                             * @returns RdfColumn instance
+                             */
+                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape;
+                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn;
+
+                            /**
+                             * Encodes the specified RdfColumn message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.verify|verify} messages.
+                             * @param message RdfColumn message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Encodes the specified RdfColumn message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.verify|verify} messages.
+                             * @param message RdfColumn message or plain object to encode
+                             * @param [writer] Writer to encode to
+                             * @returns Writer
+                             */
+                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                            /**
+                             * Decodes a RdfColumn message from the specified reader or buffer.
+                             * @param reader Reader or buffer to decode from
+                             * @param [length] Message length if known beforehand
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape} RdfColumn
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape;
+
+                            /**
+                             * Decodes a RdfColumn message from the specified reader or buffer, length delimited.
+                             * @param reader Reader or buffer to decode from
+                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape} RdfColumn
+                             * @throws {Error} If the payload is not a reader or valid buffer
+                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                             */
+                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfColumn & eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape;
+                        }
+
+                        namespace RdfColumn {
+
+                            /** Properties of a RdfColumn. */
+                            interface $Properties {
+
+                                /** RdfColumn kinds */
+                                kinds?: (Uint8Array|null);
+
+                                /** RdfColumn layouts */
+                                layouts?: (number[]|null);
+
+                                /** RdfColumn nameIds */
+                                nameIds?: (number[]|null);
+
+                                /** RdfColumn prefixIds */
+                                prefixIds?: (number[]|null);
+
+                                /** RdfColumn lexValues */
+                                lexValues?: (string[]|null);
+
+                                /** RdfColumn literalKinds */
+                                literalKinds?: (number[]|null);
+
+                                /** RdfColumn langtags */
+                                langtags?: (string[]|null);
+
+                                /** RdfColumn langtagDirections */
+                                langtagDirections?: (number[]|null);
+
+                                /** RdfColumn bnodes */
+                                bnodes?: (string[]|null);
+
+                                /** RdfColumn tripleTerms */
+                                tripleTerms?: (eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Properties[]|null);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+                            }
+
+                            /** Shape of a RdfColumn. */
+                            type $Shape = {
+                              kinds?: Uint8Array|null;
+                              layouts?: number[]|null;
+                              nameIds?: number[]|null;
+                              prefixIds?: number[]|null;
+                              lexValues?: string[]|null;
+                              literalKinds?: number[]|null;
+                              langtags?: string[]|null;
+                              langtagDirections?: number[]|null;
+                              bnodes?: string[]|null;
+                              tripleTerms?: eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm.$Shape[]|null;
+                              $unknowns?: Uint8Array[];
+                            };
                         }
 
                         /**
@@ -888,94 +1806,6 @@ export namespace eu {
                         }
 
                         /**
-                         * Properties of a RdfNamespaceDeclaration.
-                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties instead.
-                         */
-                        interface IRdfNamespaceDeclaration extends eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties {
-                        }
-
-                        /** Represents a RdfNamespaceDeclaration. */
-                        class RdfNamespaceDeclaration {
-
-                            /**
-                             * Constructs a new RdfNamespaceDeclaration.
-                             * @param [properties] Properties to set
-                             */
-                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties);
-
-                            /** Unknown fields preserved while decoding when enabled */
-                            $unknowns?: Uint8Array[];
-
-                            /** RdfNamespaceDeclaration name. */
-                            name: string;
-
-                            /** RdfNamespaceDeclaration value. */
-                            value?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
-
-                            /**
-                             * Creates a new RdfNamespaceDeclaration instance using the specified properties.
-                             * @param [properties] Properties to set
-                             * @returns RdfNamespaceDeclaration instance
-                             */
-                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
-                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration;
-
-                            /**
-                             * Encodes the specified RdfNamespaceDeclaration message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
-                             * @param message RdfNamespaceDeclaration message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Encodes the specified RdfNamespaceDeclaration message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.verify|verify} messages.
-                             * @param message RdfNamespaceDeclaration message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer.
-                             * @param reader Reader or buffer to decode from
-                             * @param [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
-
-                            /**
-                             * Decodes a RdfNamespaceDeclaration message from the specified reader or buffer, length delimited.
-                             * @param reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape} RdfNamespaceDeclaration
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration & eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Shape;
-                        }
-
-                        namespace RdfNamespaceDeclaration {
-
-                            /** Properties of a RdfNamespaceDeclaration. */
-                            interface $Properties {
-
-                                /** RdfNamespaceDeclaration name */
-                                name?: (string|null);
-
-                                /** RdfNamespaceDeclaration value */
-                                value?: (eu.ostrzyciel.jelly.core.proto.v1.RdfIri.$Properties|null);
-
-                                /** Unknown fields preserved while decoding when enabled */
-                                $unknowns?: Uint8Array[];
-                            }
-
-                            /** Shape of a RdfNamespaceDeclaration. */
-                            type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfNamespaceDeclaration.$Properties;
-                        }
-
-                        /**
                          * Properties of a RdfNameEntry.
                          * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfNameEntry.$Properties instead.
                          */
@@ -1239,152 +2069,6 @@ export namespace eu {
                             type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfDatatypeEntry.$Properties;
                         }
 
-                        /**
-                         * Properties of a RdfStreamOptions.
-                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties instead.
-                         */
-                        interface IRdfStreamOptions extends eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties {
-                        }
-
-                        /** Represents a RdfStreamOptions. */
-                        class RdfStreamOptions {
-
-                            /**
-                             * Constructs a new RdfStreamOptions.
-                             * @param [properties] Properties to set
-                             */
-                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties);
-
-                            /** Unknown fields preserved while decoding when enabled */
-                            $unknowns?: Uint8Array[];
-
-                            /** RdfStreamOptions streamName. */
-                            streamName: string;
-
-                            /** RdfStreamOptions physicalType. */
-                            physicalType: eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType;
-
-                            /** RdfStreamOptions generalizedStatements. */
-                            generalizedStatements: boolean;
-
-                            /** RdfStreamOptions rdfStar. */
-                            rdfStar: boolean;
-
-                            /** RdfStreamOptions maxNameTableSize. */
-                            maxNameTableSize: number;
-
-                            /** RdfStreamOptions maxPrefixTableSize. */
-                            maxPrefixTableSize: number;
-
-                            /** RdfStreamOptions maxDatatypeTableSize. */
-                            maxDatatypeTableSize: number;
-
-                            /** RdfStreamOptions logicalType. */
-                            logicalType: eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType;
-
-                            /** RdfStreamOptions version. */
-                            version: number;
-
-                            /**
-                             * Creates a new RdfStreamOptions instance using the specified properties.
-                             * @param [properties] Properties to set
-                             * @returns RdfStreamOptions instance
-                             */
-                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
-                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions;
-
-                            /**
-                             * Encodes the specified RdfStreamOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
-                             * @param message RdfStreamOptions message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Encodes the specified RdfStreamOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.verify|verify} messages.
-                             * @param message RdfStreamOptions message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Decodes a RdfStreamOptions message from the specified reader or buffer.
-                             * @param reader Reader or buffer to decode from
-                             * @param [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
-
-                            /**
-                             * Decodes a RdfStreamOptions message from the specified reader or buffer, length delimited.
-                             * @param reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape} RdfStreamOptions
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Shape;
-                        }
-
-                        namespace RdfStreamOptions {
-
-                            /** Properties of a RdfStreamOptions. */
-                            interface $Properties {
-
-                                /** RdfStreamOptions streamName */
-                                streamName?: (string|null);
-
-                                /** RdfStreamOptions physicalType */
-                                physicalType?: (eu.ostrzyciel.jelly.core.proto.v1.PhysicalStreamType|null);
-
-                                /** RdfStreamOptions generalizedStatements */
-                                generalizedStatements?: (boolean|null);
-
-                                /** RdfStreamOptions rdfStar */
-                                rdfStar?: (boolean|null);
-
-                                /** RdfStreamOptions maxNameTableSize */
-                                maxNameTableSize?: (number|null);
-
-                                /** RdfStreamOptions maxPrefixTableSize */
-                                maxPrefixTableSize?: (number|null);
-
-                                /** RdfStreamOptions maxDatatypeTableSize */
-                                maxDatatypeTableSize?: (number|null);
-
-                                /** RdfStreamOptions logicalType */
-                                logicalType?: (eu.ostrzyciel.jelly.core.proto.v1.LogicalStreamType|null);
-
-                                /** RdfStreamOptions version */
-                                version?: (number|null);
-
-                                /** Unknown fields preserved while decoding when enabled */
-                                $unknowns?: Uint8Array[];
-                            }
-
-                            /** Shape of a RdfStreamOptions. */
-                            type $Shape = eu.ostrzyciel.jelly.core.proto.v1.RdfStreamOptions.$Properties;
-                        }
-
-                        /** PhysicalStreamType enum. */
-                        enum PhysicalStreamType {
-
-                            /** PHYSICAL_STREAM_TYPE_UNSPECIFIED value */
-                            PHYSICAL_STREAM_TYPE_UNSPECIFIED = 0,
-
-                            /** PHYSICAL_STREAM_TYPE_TRIPLES value */
-                            PHYSICAL_STREAM_TYPE_TRIPLES = 1,
-
-                            /** PHYSICAL_STREAM_TYPE_QUADS value */
-                            PHYSICAL_STREAM_TYPE_QUADS = 2,
-
-                            /** PHYSICAL_STREAM_TYPE_GRAPHS value */
-                            PHYSICAL_STREAM_TYPE_GRAPHS = 3
-                        }
-
                         /** LogicalStreamType enum. */
                         enum LogicalStreamType {
 
@@ -1562,96 +2246,448 @@ export namespace eu {
                             );
                         }
 
-                        /**
-                         * Properties of a RdfStreamFrame.
-                         * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties instead.
-                         */
-                        interface IRdfStreamFrame extends eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties {
-                        }
-
-                        /** Represents a RdfStreamFrame. */
-                        class RdfStreamFrame {
+                        /** Namespace sparql. */
+                        namespace sparql {
 
                             /**
-                             * Constructs a new RdfStreamFrame.
-                             * @param [properties] Properties to set
+                             * Properties of a SparqlResultsOptions.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties instead.
                              */
-                            constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties);
+                            interface ISparqlResultsOptions extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties {
+                            }
 
-                            /** Unknown fields preserved while decoding when enabled */
-                            $unknowns?: Uint8Array[];
+                            /** Represents a SparqlResultsOptions. */
+                            class SparqlResultsOptions {
 
-                            /** RdfStreamFrame rows. */
-                            rows: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties[];
-
-                            /** RdfStreamFrame metadata. */
-                            metadata: { [k: string]: Uint8Array };
-
-                            /**
-                             * Creates a new RdfStreamFrame instance using the specified properties.
-                             * @param [properties] Properties to set
-                             * @returns RdfStreamFrame instance
-                             */
-                            static create(properties: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
-                            static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame;
-
-                            /**
-                             * Encodes the specified RdfStreamFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
-                             * @param message RdfStreamFrame message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encode(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Encodes the specified RdfStreamFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.verify|verify} messages.
-                             * @param message RdfStreamFrame message or plain object to encode
-                             * @param [writer] Writer to encode to
-                             * @returns Writer
-                             */
-                            static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
-
-                            /**
-                             * Decodes a RdfStreamFrame message from the specified reader or buffer.
-                             * @param reader Reader or buffer to decode from
-                             * @param [length] Message length if known beforehand
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
-
-                            /**
-                             * Decodes a RdfStreamFrame message from the specified reader or buffer, length delimited.
-                             * @param reader Reader or buffer to decode from
-                             * @returns {eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape} RdfStreamFrame
-                             * @throws {Error} If the payload is not a reader or valid buffer
-                             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                             */
-                            static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame & eu.ostrzyciel.jelly.core.proto.v1.RdfStreamFrame.$Shape;
-                        }
-
-                        namespace RdfStreamFrame {
-
-                            /** Properties of a RdfStreamFrame. */
-                            interface $Properties {
-
-                                /** RdfStreamFrame rows */
-                                rows?: (eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Properties[]|null);
-
-                                /** RdfStreamFrame metadata */
-                                metadata?: ({ [k: string]: Uint8Array }|null);
+                                /**
+                                 * Constructs a new SparqlResultsOptions.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties);
 
                                 /** Unknown fields preserved while decoding when enabled */
                                 $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsOptions streamName. */
+                                streamName: string;
+
+                                /** SparqlResultsOptions streamType. */
+                                streamType: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType;
+
+                                /** SparqlResultsOptions rdfVersion. */
+                                rdfVersion: eu.ostrzyciel.jelly.core.proto.v1.RdfVersion;
+
+                                /** SparqlResultsOptions maxNameTableSize. */
+                                maxNameTableSize: number;
+
+                                /** SparqlResultsOptions maxPrefixTableSize. */
+                                maxPrefixTableSize: number;
+
+                                /** SparqlResultsOptions maxDatatypeTableSize. */
+                                maxDatatypeTableSize: number;
+
+                                /** SparqlResultsOptions version. */
+                                version: number;
+
+                                /**
+                                 * Creates a new SparqlResultsOptions instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsOptions instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions;
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @param message SparqlResultsOptions message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsOptions message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.verify|verify} messages.
+                                 * @param message SparqlResultsOptions message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsOptions message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape} SparqlResultsOptions
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape;
                             }
 
-                            /** Shape of a RdfStreamFrame. */
-                            type $Shape = {
-                              rows?: eu.ostrzyciel.jelly.core.proto.v1.RdfStreamRow.$Shape[]|null;
-                              metadata?: { [k: string]: Uint8Array }|null;
-                              $unknowns?: Uint8Array[];
-                            };
+                            namespace SparqlResultsOptions {
+
+                                /** Properties of a SparqlResultsOptions. */
+                                interface $Properties {
+
+                                    /** SparqlResultsOptions streamName */
+                                    streamName?: (string|null);
+
+                                    /** SparqlResultsOptions streamType */
+                                    streamType?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlStreamType|null);
+
+                                    /** SparqlResultsOptions rdfVersion */
+                                    rdfVersion?: (eu.ostrzyciel.jelly.core.proto.v1.RdfVersion|null);
+
+                                    /** SparqlResultsOptions maxNameTableSize */
+                                    maxNameTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions maxPrefixTableSize */
+                                    maxPrefixTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions maxDatatypeTableSize */
+                                    maxDatatypeTableSize?: (number|null);
+
+                                    /** SparqlResultsOptions version */
+                                    version?: (number|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsOptions. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties;
+                            }
+
+                            /** SparqlStreamType enum. */
+                            enum SparqlStreamType {
+
+                                /** SPARQL_STREAM_TYPE_FLAT value */
+                                SPARQL_STREAM_TYPE_FLAT = 0,
+
+                                /** SPARQL_STREAM_TYPE_PUNCTUATED value */
+                                SPARQL_STREAM_TYPE_PUNCTUATED = 1
+                            }
+
+                            /**
+                             * Properties of a SparqlAskResult.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties instead.
+                             */
+                            interface ISparqlAskResult extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties {
+                            }
+
+                            /** Represents a SparqlAskResult. */
+                            class SparqlAskResult {
+
+                                /**
+                                 * Constructs a new SparqlAskResult.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlAskResult value. */
+                                value: boolean;
+
+                                /**
+                                 * Creates a new SparqlAskResult instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlAskResult instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult;
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @param message SparqlAskResult message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlAskResult message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.verify|verify} messages.
+                                 * @param message SparqlAskResult message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+
+                                /**
+                                 * Decodes a SparqlAskResult message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape} SparqlAskResult
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape;
+                            }
+
+                            namespace SparqlAskResult {
+
+                                /** Properties of a SparqlAskResult. */
+                                interface $Properties {
+
+                                    /** SparqlAskResult value */
+                                    value?: (boolean|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlAskResult. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties;
+                            }
+
+                            /**
+                             * Properties of a SparqlResultsTrailer.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties instead.
+                             */
+                            interface ISparqlResultsTrailer extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties {
+                            }
+
+                            /** Represents a SparqlResultsTrailer. */
+                            class SparqlResultsTrailer {
+
+                                /**
+                                 * Constructs a new SparqlResultsTrailer.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsTrailer error. */
+                                error: string;
+
+                                /**
+                                 * Creates a new SparqlResultsTrailer instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsTrailer instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @param message SparqlResultsTrailer message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsTrailer message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.verify|verify} messages.
+                                 * @param message SparqlResultsTrailer message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsTrailer message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape} SparqlResultsTrailer
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape;
+                            }
+
+                            namespace SparqlResultsTrailer {
+
+                                /** Properties of a SparqlResultsTrailer. */
+                                interface $Properties {
+
+                                    /** SparqlResultsTrailer error */
+                                    error?: (string|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsTrailer. */
+                                type $Shape = eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties;
+                            }
+
+                            /**
+                             * Properties of a SparqlResultsFrame.
+                             * @deprecated Use eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties instead.
+                             */
+                            interface ISparqlResultsFrame extends eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties {
+                            }
+
+                            /** Represents a SparqlResultsFrame. */
+                            class SparqlResultsFrame {
+
+                                /**
+                                 * Constructs a new SparqlResultsFrame.
+                                 * @param [properties] Properties to set
+                                 */
+                                constructor(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties);
+
+                                /** Unknown fields preserved while decoding when enabled */
+                                $unknowns?: Uint8Array[];
+
+                                /** SparqlResultsFrame options. */
+                                options?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null);
+
+                                /** SparqlResultsFrame variables. */
+                                variables: string[];
+
+                                /** SparqlResultsFrame rowCount. */
+                                rowCount: number;
+
+                                /** SparqlResultsFrame names. */
+                                names: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame prefixes. */
+                                prefixes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame datatypes. */
+                                datatypes: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[];
+
+                                /** SparqlResultsFrame columns. */
+                                columns: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties[];
+
+                                /** SparqlResultsFrame askResult. */
+                                askResult?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null);
+
+                                /** SparqlResultsFrame trailer. */
+                                trailer?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null);
+
+                                /** SparqlResultsFrame metadata. */
+                                metadata: { [k: string]: Uint8Array };
+
+                                /**
+                                 * Creates a new SparqlResultsFrame instance using the specified properties.
+                                 * @param [properties] Properties to set
+                                 * @returns SparqlResultsFrame instance
+                                 */
+                                static create(properties: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+                                static create(properties?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame;
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @param message SparqlResultsFrame message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encode(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Encodes the specified SparqlResultsFrame message, length delimited. Does not implicitly {@link eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.verify|verify} messages.
+                                 * @param message SparqlResultsFrame message or plain object to encode
+                                 * @param [writer] Writer to encode to
+                                 * @returns Writer
+                                 */
+                                static encodeDelimited(message: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Properties, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer.
+                                 * @param reader Reader or buffer to decode from
+                                 * @param [length] Message length if known beforehand
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+
+                                /**
+                                 * Decodes a SparqlResultsFrame message from the specified reader or buffer, length delimited.
+                                 * @param reader Reader or buffer to decode from
+                                 * @returns {eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape} SparqlResultsFrame
+                                 * @throws {Error} If the payload is not a reader or valid buffer
+                                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                                 */
+                                static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame & eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsFrame.$Shape;
+                            }
+
+                            namespace SparqlResultsFrame {
+
+                                /** Properties of a SparqlResultsFrame. */
+                                interface $Properties {
+
+                                    /** SparqlResultsFrame options */
+                                    options?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Properties|null);
+
+                                    /** SparqlResultsFrame variables */
+                                    variables?: (string[]|null);
+
+                                    /** SparqlResultsFrame rowCount */
+                                    rowCount?: (number|null);
+
+                                    /** SparqlResultsFrame names */
+                                    names?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame prefixes */
+                                    prefixes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame datatypes */
+                                    datatypes?: (eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Properties[]|null);
+
+                                    /** SparqlResultsFrame columns */
+                                    columns?: (eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Properties[]|null);
+
+                                    /** SparqlResultsFrame askResult */
+                                    askResult?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Properties|null);
+
+                                    /** SparqlResultsFrame trailer */
+                                    trailer?: (eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Properties|null);
+
+                                    /** SparqlResultsFrame metadata */
+                                    metadata?: ({ [k: string]: Uint8Array }|null);
+
+                                    /** Unknown fields preserved while decoding when enabled */
+                                    $unknowns?: Uint8Array[];
+                                }
+
+                                /** Shape of a SparqlResultsFrame. */
+                                type $Shape = {
+                                  options?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsOptions.$Shape|null;
+                                  variables?: string[]|null;
+                                  rowCount?: number|null;
+                                  names?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  prefixes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  datatypes?: eu.ostrzyciel.jelly.core.proto.v1.RdfLookupEntryPacked.$Shape[]|null;
+                                  columns?: eu.ostrzyciel.jelly.core.proto.v1.RdfColumn.$Shape[]|null;
+                                  askResult?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlAskResult.$Shape|null;
+                                  trailer?: eu.ostrzyciel.jelly.core.proto.v1.sparql.SparqlResultsTrailer.$Shape|null;
+                                  metadata?: { [k: string]: Uint8Array }|null;
+                                  $unknowns?: Uint8Array[];
+                                };
+                            }
                         }
                     }
                 }
