@@ -34,14 +34,48 @@ RDF 1.2 Message Stream Log:
 
 ```sh
 npx rdfjs-jelly inspect 'https://example.org/data.jelly.zst'
-npx rdfjs-jelly convert messages.log --output messages.jelly.zst
+npx rdfjs-jelly convert messages.log --version 3 --output messages.jelly.zst
+npx rdfjs-jelly convert messages.log --version 3 --message-size 1024 --compression gzip
 ```
 
 Both commands accept a URL, local file path, or `-` for stdin. Plain, gzip, and
 zstd-compressed input is detected from its bytes. `read` is an alias for
-`inspect`; run `npx rdfjs-jelly --help` for the complete usage. Conversion is a
-bounded-memory pipeline: the input, RDF Message parser, Jelly writer, native
-zstd compressor, and output file are all streamed.
+`inspect`; run `npx rdfjs-jelly --help` for the complete usage. Inspection preserves
+RDF 1.2 literal directions and nested triple terms in its N-Quads output.
+
+Conversion defaults to Jelly 1.1 (protocol tag 2) with zstd level 3. Use
+`--version 3` for Jelly 1.2, including directional literals, triple terms and
+explicit logical message boundaries. Tag-3 output uses `MESSAGES` and enables
+packing and persistent dictionaries by default.
+
+| Convert option | Meaning and default |
+| --- | --- |
+| `--version 2\|3` | Protocol tag: Jelly 1.1 or 1.2; default `2` |
+| `--message-size N` | Frame row budget for tag 2, statement budget per batch for tag 3; default `250` |
+| `--pack-messages`, `--no-pack-messages` | Share batches across tag-3 messages; enabled by default |
+| `--persistent-lookups`, `--no-persistent-lookups` | Retain tag-3 dictionaries across batches; enabled by default |
+| `--max-names N` | Name dictionary capacity; default `4000`, minimum `8` for tag 2 or `128` for tag 3 |
+| `--max-prefixes N` | Prefix dictionary capacity; default `150`; `0` disables prefix splitting |
+| `--max-datatypes N` | Datatype dictionary capacity; default `32` |
+| `--compression zstd\|gzip\|none` | Output codec; default `zstd` |
+| `--compression-level N` | Native codec level; default `3` for zstd or `6` for gzip; unavailable with `none` |
+| `--output PATH`, `-o PATH` | Output file, or `-` for stdout; default filename follows the selected codec |
+
+The default suffix is `.jelly.zst`, `.jelly.gz` or `.jelly` for zstd, gzip or no
+compression. An explicit output path does not select the codec; use
+`--compression` for that. Packing and persistent-lookup switches require
+`--version 3`; other writer limits follow the API's validation rules. All CLI
+output uses delimited frames. Diagnostics go to stderr, leaving stdout available
+for piping binary output:
+
+```sh
+cat messages.log | npx rdfjs-jelly convert - --version 3 --compression none -o - > messages.jelly
+```
+
+Conversion streams the input, RDF Message parser, Jelly writer, compressor and
+output without loading the complete file. Memory use includes the current
+logical message. `--no-pack-messages` finalizes each message's last frame at its
+boundary; messages can still span batches when they exceed `--message-size`.
 
 ## Parse and write
 
@@ -64,7 +98,9 @@ writer.end((error, bytes) => {
 });
 ```
 
-`Writer` emits a delimited version-2 stream by default. Set `delimited: false` for a single-message protobuf payload. A non-delimited output cannot contain multiple messages.
+`Writer` emits a delimited Jelly 1.1 stream (protocol tag 2) by default. Set
+`delimited: false` for one bare protobuf frame. All output must fit in that frame;
+a Jelly 1.2 frame can contain several logical messages when packing is enabled.
 
 ## Jelly-RDF 1.2
 
@@ -75,38 +111,43 @@ The parser selects the layout from the stream options. Existing 1.0/1.1 streams
 remain readable, and the default writer stays on 1.1 for older consumers.
 
 ```ts
-import { Writer, RdfStreamType, RdfVersion } from 'rdfjs-jelly';
+import { DataFactory, Parser, Writer, RdfStreamType, RdfVersion } from 'rdfjs-jelly';
 
-const flatWriter = new Writer({ version: 3 });
+const { namedNode, literal, quad } = DataFactory;
 const messageWriter = new Writer({
   version: 3,
   streamType: RdfStreamType.MESSAGES,
   rdfVersion: RdfVersion.RDF_1_2,
 });
-messageWriter.addMessage([quad1, quad2]);
+messageWriter.addMessage([
+  quad(namedNode('urn:sensor'), namedNode('urn:value'), literal('21')),
+]);
 messageWriter.addMessage([]);
+messageWriter.flush(); // Finalizes this batch; the writer stays open.
+messageWriter.addMessage([
+  quad(namedNode('urn:sensor'), namedNode('urn:value'), literal('22')),
+]);
+messageWriter.end((error, bytes) => {
+  if (error) throw error;
+  console.log(new Parser().parseMessages(bytes!).map(message => message.length));
+  // [1, 0, 1]
+});
 ```
 
-For version 3, `messageSize` limits statements per batch; a message may span
-batches. Lookup capacity can also end a batch early. The writer splits IRIs after
-the last `#`, or the last `/` when no `#` is present, into a prefix and a name
+With `version: 3`, `streamType` defaults to `FLAT`; use `MESSAGES` for explicit
+logical boundaries as above. `messageSize` defaults to 250 statements per batch;
+a message may span batches. Lookup capacity can also end a batch early. The
+writer splits IRIs after the last `#`, or the last `/` when no `#` is present, into a prefix and a name
 (disable with `lookup: { maxPrefixes: 0 }`),
 and uses packed entries and repeat runs. Bounded prefix, name and datatype tables remain
 available across batches. Eviction favors colder entries and protects entries
 used by the current batch. Values can be resent after eviction. Pass
 `persistentLookups: false` for batch-local dictionaries. In 0.2.0,
 `packMessages` defaults to `true`: small messages share frames. Set
-`packMessages: false` to emit each completed message immediately.
+`packMessages: false` to finalize each message's last frame immediately.
 A statement that cannot fit an empty batch raises an error. The name table must hold at least 128 entries.
 
-Call `writer.flush()` to emit a partially filled batch without ending the writer:
-
-```ts
-messageWriter.addMessage([quad1, quad2]);
-messageWriter.flush();
-messageWriter.addMessage([quad3]);
-```
-
+Call `writer.flush()` to emit a partially filled batch without ending the writer.
 With a delimited output sink, `flush()` writes buffered frames to that sink.
 Without a sink, it finalizes the batch and leaves the bytes available through
 `end()`. It preserves lookup dictionaries. Counter-based input completes its
@@ -157,19 +198,39 @@ Automatic framing of a flat stream can split such a structure because its
 blank-node scope continues across frames.
 
 ```ts
-const writer = new Writer();
-writer.addMessage([quad1], { source: new TextEncoder().encode('sensor-a') });
+import { DataFactory, Parser, Writer, RdfStreamType } from 'rdfjs-jelly';
+
+const statement = DataFactory.quad(
+  DataFactory.blankNode('sensor'),
+  DataFactory.namedNode('urn:value'),
+  DataFactory.literal('21'),
+);
+const writer = new Writer({ version: 3, streamType: RdfStreamType.MESSAGES });
+writer.addMessage([statement], { source: new TextEncoder().encode('sensor-a') });
 writer.addMessage([]); // Empty messages are preserved.
-writer.addMessage([quad2]);
+writer.addMessage([statement]); // The blank node has a separate message-local identity.
 
 writer.end((error, bytes) => {
   if (error) throw error;
   const messages = new Parser().parseMessages(bytes!);
-  console.log(messages.map(message => message.messageCounter));
+  console.log(messages.map(message => message.messageCounter)); // [0, 1, 2]
 });
 ```
 
-For compatibility with `rdf-parser-ts`, use `new Parser({ messages: true })` to receive `{ quad, messageCounter }` entries. The returned array has a `messageCount` property. `isMessageQuad()` and `toMessages()` convert between flat and grouped forms while preserving empty messages.
+For compatibility with `rdf-parser-ts`, use `new Parser({ messages: true })` to
+receive `{ quad, messageCounter }` entries. The returned array has a `messageCount`
+property. `isMessageQuad()` identifies wrapped entries; `toMessages()` groups them
+by counter and uses `messageCount` (or its explicit second argument) to preserve
+trailing empty messages. Wrapped entries carry no metadata; use `parseMessages()`
+to retain message metadata. `Writer.addQuads()` honors the returned array's
+`messageCount`. For incremental wrapped input, call
+`writer.finishMessages(totalMessageCount)` before `end()` to record trailing
+empty messages.
+
+Stream parsers emit a `message` event for every message, including empty ones.
+With `messages: true`, output items are wrapped entries and a `messageCounter`
+event accompanies each quad. Quad-only output cannot represent empty messages;
+retain the `message` events if forwarding a message stream.
 
 ## SPARQL result sets
 
@@ -191,8 +252,8 @@ writer.addBinding({ item: DataFactory.namedNode('https://example.org/item/2') })
 // Missing keys are unbound. Map<string, SparqlTerm> inputs are accepted too.
 const bytes = writer.end(); // Synchronous; finalizes the result with a trailer.
 const [result] = new SparqlParser().parse(bytes);
-if (result.type === 'select') {
-  console.log(result.variables, result.bindings[0].get('item'), result.complete);
+if (result?.type === 'select') {
+  console.log(result.variables, result.bindings[0]?.get('item'), result.complete);
 }
 ```
 
@@ -241,14 +302,22 @@ because concatenated options can invalidate an earlier success trailer.
 and browser Web Streams are available through the corresponding package entry:
 
 ```ts
+import { createReadStream, createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { SparqlStreamParser, SparqlStreamWriter } from 'rdfjs-jelly';
-// For browser ReadableStream.pipeThrough(), import from 'rdfjs-jelly/browser'.
-input.pipe(new SparqlStreamParser()).pipe(new SparqlStreamWriter()).pipe(output);
+
+await pipeline(
+  createReadStream('results.jellys'),
+  new SparqlStreamParser(),
+  new SparqlStreamWriter(),
+  createWriteStream('results-copy.jellys'),
+);
 ```
 
-Set `streamType: SparqlStreamType.PUNCTUATED` on the stream writer when forwarding
-multiple result sets. Stream parsers apply backpressure between frames and retain
-at most one decoded frame of events. Binary metadata is copied, and invalid UTF-8
+For browser `ReadableStream.pipeThrough()`, import the stream classes from
+`rdfjs-jelly/browser`. Set `streamType: SparqlStreamType.PUNCTUATED` on the stream
+writer when forwarding multiple result sets. Stream parsers apply backpressure
+between frames and retain at most one decoded frame of events. Binary metadata is copied, and invalid UTF-8
 in the well-known `link` key is ignored. Unknown metadata keys remain binary.
 
 ## Node streams
@@ -262,7 +331,11 @@ for await (const quad of createReadStream('data.jelly').pipe(new StreamParser())
 }
 ```
 
-`StreamWriter` accepts RDF/JS quads in object mode and emits binary chunks. Both Node stream classes expose `import(readable)`.
+`StreamWriter` accepts RDF/JS quads or `{ quad, messageCounter }` entries in
+object mode and emits binary chunks. To write Jelly 1.2 messages, configure it
+with `version: 3` and `streamType: RdfStreamType.MESSAGES`, and supply wrapped
+entries. Both Node stream classes expose `import(readable)`.
+
 Call the Node writer's `flush(callback)` to serialize buffered input after all
 preceding writes, including corked writes, without ending the stream. Its return
 value follows Node's writable backpressure convention. The callback signals that
@@ -279,20 +352,29 @@ for await (const quad of response.body!.pipeThrough(new StreamParser())) {
 }
 ```
 
-The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and Node parsers emit `options`, `namespace`, `message`, and `messageCounter` events.
+The browser parser accepts `Uint8Array` and `ArrayBuffer` chunks. Browser and Node
+parsers emit `options`, `namespace` and `message` events, plus `messageCounter`
+events when `messages: true`. Browser listeners use `on()` or `addEventListener()`.
 
 The browser parser resumes buffered decoding as its reader consumes output, even
 while input stays open. It queues at most 256 output items, including during
-closure; a decoded frame and unread input bytes occupy additional memory. When
+closure; decoded data and unread input bytes occupy additional memory. When
 using the writable side directly, consume the readable side concurrently: writes
 and closure can wait for reader demand. Cancelling the reader stops pending
 writes and propagates cancellation upstream when piping.
 
+RDF stream parsers assemble complete logical messages before emitting their
+quads. A message spanning many frames can therefore retain more than one frame's
+worth of RDF data; `maxRowsPerBatch` limits individual batches, not total message
+length. The browser `StreamWriter` exposes `readable`, `writable` and `import()`;
+its underlying `Writer` flushes on batch boundaries or stream closure. The public
+stream-level `flush(callback)` described above belongs to the Node wrapper.
+
 ## Compression
 
-Transport compression is intentionally separate from Jelly framing. Node.js
-22.15/23.8 and newer expose `createZstdCompress()` and
-`createZstdDecompress()` in `node:zlib`, alongside gzip and Brotli transforms:
+Transport compression is separate from Jelly framing. The supported Node.js
+versions expose `createZstdCompress()` and `createZstdDecompress()` in `node:zlib`,
+alongside gzip and Brotli transforms:
 
 ```ts
 import { createReadStream } from 'node:fs';
@@ -315,8 +397,8 @@ a separate compression library, depending on the compression format.
 ## Performance
 
 Across six RiverBench datasets containing 60,000 messages and 2.10 million
-statements, the current Jelly 1.2 reader achieves **2.26 million statements/s**
-on downloaded archives. Locally packed message streams read at **3.89 million/s**.
+statements, Jelly 1.2 reads downloaded archives at **2.26–2.84 million statements/s**
+and locally packed message streams at **3.89–4.22 million/s** across separate runs.
 These are geometric means of per-dataset rates, measured on 2026-10-25 with
 Node v25.9.0 / V8 14.1 on an Intel Core i7-1265U with 30.8 GiB RAM.
 For `assist-iot-weather`, locally written Jelly 1.1 (tag 2) parses at
@@ -326,6 +408,8 @@ For `assist-iot-weather`, locally written Jelly 1.1 (tag 2) parses at
 **59% faster**. These uncompressed reads contain the same 1,150,000 statements
 and 10,000 messages; framing and dictionary contents differ. This example uses a
 separate sequential batch with two warmups and seven timed iterations per format.
+The ranges above span measurement batches, rather than confidence intervals;
+the tables below retain the primary archive and packed measurements.
 
 | Retained-message parsing | Million statements/s |
 | --- | ---: |
@@ -355,11 +439,14 @@ data, representation and codec settings.
 | Jelly 1.2, packed messages | 1.76 |
 
 Writer timing includes collecting serialized bytes and excludes compression.
-Per-message framing completes a batch at each message boundary. Both configurations
+Per-message framing completes a message's last batch at its boundary. Both Jelly 1.2 configurations
 retain bounded lookup dictionaries across batches. Jelly 1.2 message streams
-pack by default; configure the batch size with `messageSize`:
+pack by default. The local writer and packed-read benchmarks explicitly use
+`messageSize: 1024`, rather than the API default of 250:
 
 ```js
+import { Writer, PhysicalStreamType, RdfStreamType } from 'rdfjs-jelly';
+
 const writer = new Writer({
   version: 3,
   physicalType: PhysicalStreamType.TRIPLES,
@@ -454,7 +541,7 @@ consumer installation. The root export supports CJS and ESM with separate
 matching declarations; `rdfjs-jelly/browser` is ESM-only (use dynamic import
 from CJS). The legacy `browser` field remains for older bundlers.
 
-Coverage excludes generated protobuf code and starts at the measured baseline:
+Coverage excludes generated protobuf code and enforces minimum thresholds of
 79.34% statements, 74.89% branches, 83.10% functions, and 84.89% lines. Raise
 these thresholds as tests improve. CI uploads LCOV and JSON coverage reports.
 ESLint uses the maintained typescript-eslint recommended rules plus typed

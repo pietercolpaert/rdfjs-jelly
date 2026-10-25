@@ -69,6 +69,20 @@ void parser;`);
   writeFileSync(join(directory, 'input.nq'), '<urn:s> <urn:p> "hello" .\n');
   run(process.execPath, [cli, 'convert', 'input.nq', '--output', 'output.jelly.zst']);
   assert.match(run(process.execPath, [cli, 'inspect', 'output.jelly.zst']), /<urn:s> <urn:p> "hello"/u);
+  writeFileSync(join(directory, 'rdf12.log'), 'VERSION "1.2-messages"\n<urn:s> <urn:p> "hello"@en--ltr .\nMESSAGE\nMESSAGE\n<urn:s> <urn:p> <<( <urn:a> <urn:b> <urn:c> )>> .\nMESSAGE\n');
+  run(process.execPath, [cli, 'convert', 'rdf12.log', '--version', '3', '--message-size', '1', '--no-pack-messages', '--max-names', '128', '--max-prefixes', '0', '--compression', 'none', '--output', 'rdf12.jelly']);
+  assert.match(run(process.execPath, [cli, 'inspect', 'rdf12.jelly']), /"hello"@en--ltr/u);
+  writeFileSync(join(directory, 'cli-version3.mjs'), `import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { MessageDecoder, Parser } from 'rdfjs-jelly';
+const bytes = readFileSync('rdf12.jelly');
+assert.equal(new MessageDecoder().decode(bytes)[0].rows[0].value.version, 3);
+const messages = new Parser().parseMessages(bytes);
+assert.deepEqual(messages.map(m => m.length), [1, 0, 1]);
+assert.equal(messages[0][0].object.direction, 'ltr');
+assert.equal(messages[2][0].object.termType, 'Quad');
+`);
+  run(process.execPath, ['cli-version3.mjs']);
   if (process.argv.includes('--browser')) {
     const { chromium } = await import('@playwright/test');
     const server = createServer((request, response) => {

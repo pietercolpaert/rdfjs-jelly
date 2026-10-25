@@ -4,20 +4,34 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { basename } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { constants, createGunzip, createZstdCompress, createZstdDecompress } from 'node:zlib';
+import { parseArgs } from 'node:util';
+import { constants, createGunzip, createGzip, createZstdCompress, createZstdDecompress } from 'node:zlib';
 import { IncrementalParser as RdfTextIncrementalParser, isMessageQuad as isRdfTextMessageQuad } from 'rdf-parser-ts';
-import { Parser, Writer } from '../dist/index.mjs';
+import { DataFactory, Parser, RdfStreamType, Writer } from '../dist/index.mjs';
 
 const HELP = `Usage:
   rdfjs-jelly inspect <URL|file|->
-  rdfjs-jelly convert <URL|file|-> [--output <file>]
+  rdfjs-jelly convert <URL|file|-> [options]
 
 Aliases:
-  read                    Alias for inspect
+  read                            Alias for inspect
+
+Convert options:
+  -o, --output <file|->            Output path, or - for stdout (default: derived from input)
+  --version <2|3>                 Protocol tag: 2 = Jelly 1.1 (default), 3 = Jelly 1.2
+  --message-size <integer>        Rows per 1.1 frame / statements per 1.2 batch (default: 250)
+  --[no-]pack-messages            Share batches across 1.2 messages (default: enabled)
+  --[no-]persistent-lookups       Retain 1.2 dictionaries across batches (default: enabled)
+  --max-names <integer>           Name dictionary capacity (default: 4000)
+  --max-prefixes <integer>        Prefix dictionary capacity; 0 disables splitting (default: 150)
+  --max-datatypes <integer>       Datatype dictionary capacity (default: 32)
+  --compression <zstd|gzip|none>   Output compression (default: zstd)
+  --compression-level <integer>   Codec level (default: zstd 3, gzip 6)
 
 Input may be plain, gzip-compressed, or zstd-compressed. A dash reads stdin.
-Inspect writes RDF Messages as N-Quads to stdout. Convert writes a
-zstd-compressed Jelly v2 file.`;
+Inspect writes RDF Messages as N-Quads to stdout. Convert writes delimited Jelly;
+version 3 preserves RDF 1.2 terms and explicit logical message boundaries.
+Packing and persistent-lookup switches require --version 3.`;
 
 async function main(args) {
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
@@ -30,16 +44,18 @@ async function main(args) {
     throw new Error(`Unknown operation: ${operation}\n\n${HELP}`);
   }
 
-  const { input, output } = parseArguments(args, operation === 'convert');
+  const { input, output, writerOptions, compression, compressionLevel } = parseArguments(args, operation === 'convert');
+  // Validate writer and compressor settings before opening input or output files.
+  const converter = operation === 'convert' ? new MessageLogToJelly(writerOptions) : undefined;
+  const compressor = operation === 'convert' ? outputCompression(compression, compressionLevel) : undefined;
   const source = await openInput(input);
   const decoded = await decompress(source.body);
 
   if (operation === 'convert') {
-    const outputPath = output ?? outputFilename(source.name);
-    const converter = new MessageLogToJelly();
-    const compressor = createZstdCompress({ params: { [constants.ZSTD_c_compressionLevel]: 3 } });
-    await pipeline(decoded, converter, compressor, createWriteStream(outputPath));
-    console.error(`Saved ${outputPath} (${converter.messageCount.toLocaleString()} messages, ${converter.quadCount.toLocaleString()} quads).`);
+    const outputPath = output ?? outputFilename(source.name, compression);
+    const destination = outputPath === '-' ? process.stdout : createWriteStream(outputPath);
+    await pipeline(...[decoded, converter, compressor, destination].filter(Boolean));
+    console.error(`Saved ${outputPath === '-' ? 'stdout' : outputPath} (${converter.messageCount.toLocaleString()} messages, ${converter.quadCount.toLocaleString()} quads).`);
     return;
   }
 
@@ -53,22 +69,58 @@ async function main(args) {
   }
 }
 
-function parseArguments(args, allowOutput) {
-  let input;
-  let output;
-  for (let index = 0; index < args.length; index++) {
-    const argument = args[index];
-    if (argument === '--output' || argument === '-o') {
-      if (!allowOutput) throw new Error(`${argument} is only valid for convert.`);
-      output = args[++index];
-      if (!output) throw new Error(`${argument} requires a file path.`);
-    } else if (argument.startsWith('-') && argument !== '-') {
-      throw new Error(`Unknown option: ${argument}`);
-    } else if (input === undefined) input = argument;
-    else throw new Error(`Unexpected argument: ${argument}`);
+function parseArguments(args, convert) {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    allowNegative: true,
+    options: {
+      output: { type: 'string', short: 'o' },
+      version: { type: 'string' },
+      'message-size': { type: 'string' },
+      'pack-messages': { type: 'boolean' },
+      'persistent-lookups': { type: 'boolean' },
+      'max-names': { type: 'string' },
+      'max-prefixes': { type: 'string' },
+      'max-datatypes': { type: 'string' },
+      compression: { type: 'string' },
+      'compression-level': { type: 'string' },
+    },
+  });
+  if (!convert && Object.keys(values).length) throw new Error(`--${Object.keys(values)[0]} is only valid for convert.`);
+  if (positionals.length !== 1) throw new Error(`Exactly one input URL, file path, or - is required.\n\n${HELP}`);
+  if (values.output === '') throw new Error('--output requires a file path or -.');
+  const version = integerOption('version', values.version ?? '2');
+  if (version !== 2 && version !== 3) throw new Error('--version must be 2 (Jelly 1.1) or 3 (Jelly 1.2).');
+  const writerOptions = { version };
+  if (version === 3) writerOptions.streamType = RdfStreamType.MESSAGES;
+  for (const [option, property] of [['pack-messages', 'packMessages'], ['persistent-lookups', 'persistentLookups']]) {
+    if (values[option] === undefined) continue;
+    if (version !== 3) throw new Error(`--${option} requires --version 3.`);
+    writerOptions[property] = values[option];
   }
-  if (input === undefined) throw new Error(`An input URL, file path, or - is required.\n\n${HELP}`);
-  return { input, output };
+  if (values['message-size'] !== undefined) writerOptions.messageSize = integerOption('message-size', values['message-size']);
+  const lookup = {};
+  for (const [option, property] of [['max-names', 'maxNames'], ['max-prefixes', 'maxPrefixes'], ['max-datatypes', 'maxDatatypes']]) {
+    if (values[option] !== undefined) lookup[property] = integerOption(option, values[option]);
+  }
+  if (Object.keys(lookup).length) writerOptions.lookup = lookup;
+  const compression = values.compression ?? 'zstd';
+  if (!['zstd', 'gzip', 'none'].includes(compression)) throw new Error('--compression must be zstd, gzip, or none.');
+  const compressionLevel = values['compression-level'] === undefined ? undefined : integerOption('compression-level', values['compression-level']);
+  if (compression === 'none' && compressionLevel !== undefined) throw new Error('--compression-level requires gzip or zstd compression.');
+  return { input: positionals[0], output: values.output, writerOptions, compression, compressionLevel };
+}
+
+function integerOption(name, value) {
+  if (!/^-?\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new Error(`--${name} requires an integer.`);
+  return Number(value);
+}
+
+function outputCompression(codec, level) {
+  if (codec === 'none') return undefined;
+  if (codec === 'gzip') return createGzip({ level: level ?? 6 });
+  return createZstdCompress({ params: { [constants.ZSTD_c_compressionLevel]: level ?? 3 } });
 }
 
 async function openInput(input) {
@@ -133,18 +185,18 @@ function isZstd(bytes) {
 }
 
 class MessageLogToJelly extends Transform {
-  parser = new RdfTextIncrementalParser({ rdfMessages: true });
+  parser = new RdfTextIncrementalParser({ rdfMessages: true, factory: DataFactory });
   decoder = new TextDecoder('utf-8', { fatal: true });
   writer;
   messageCount = 0;
   quadCount = 0;
 
-  constructor() {
+  constructor(options) {
     super({ readableObjectMode: false, writableObjectMode: false });
     this.writer = new Writer({
       write: chunk => this.push(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)),
       end: callback => callback?.(null),
-    }, { version: 2 });
+    }, options);
   }
 
   _transform(chunk, encoding, callback) {
@@ -180,9 +232,9 @@ class MessageLogToJelly extends Transform {
   }
 }
 
-function outputFilename(inputName) {
+function outputFilename(inputName, compression) {
   const base = inputName.replace(/\.(?:gz|zst|zstd)$/i, '').replace(/\.(?:ttl|trig|nt|nq|rdf|log)$/i, '') || 'messages';
-  return `${base}.jelly.zst`;
+  return `${base}.jelly${compression === 'zstd' ? '.zst' : compression === 'gzip' ? '.gz' : ''}`;
 }
 
 function formatQuad(quad) {
@@ -196,11 +248,11 @@ function formatTerm(term) {
   if (term.termType === 'DefaultGraph') return '';
   if (term.termType === 'Literal') {
     const value = JSON.stringify(term.value);
-    if (term.language) return `${value}@${term.language}`;
+    if (term.language) return `${value}@${term.language}${term.direction ? `--${term.direction}` : ''}`;
     if (term.datatype.value === 'http://www.w3.org/2001/XMLSchema#string') return value;
     return `${value}^^<${term.datatype.value}>`;
   }
-  return `<< ${formatQuad(term)} >>`;
+  return `<<( ${formatTerm(term.subject)} ${formatTerm(term.predicate)} ${formatTerm(term.object)} )>>`;
 }
 
 function formatBytes(value) {
