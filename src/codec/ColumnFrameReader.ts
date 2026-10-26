@@ -1,4 +1,4 @@
-import { Reader } from 'protobufjs/minimal.js';
+import { Reader, util } from 'protobufjs/minimal.js';
 import { proto, decodeProtoRdfStreamFrameReader, type ProtoFrame } from '../generated/rdf_pb';
 import { JellyConformanceError } from '../errors';
 
@@ -9,8 +9,13 @@ type Entry = InstanceType<typeof proto.RdfLookupEntryPacked>;
  * Nothing in this storage escapes the synchronous term decoder. Options,
  * metadata, namespaces, triple terms, unknown fields and merged singular
  * messages use the generated reader, preserving all protobuf semantics.
+ *
+ * With `lazyLex`, literal text is recorded as byte ranges of the input and
+ * decoded by `ColumnCursor.lex` only for values that are actually used, which
+ * is what lets a filter skip the UTF-8 decoding of rejected literals.
  */
 export class ColumnFrameReader {
+  public constructor(private readonly lazyLex = false) {}
   private readonly batch = new proto.RdfColumnBatch();
   private readonly columns = [new ReusableColumn(), new ReusableColumn(), new ReusableColumn(), new ReusableColumn()];
   private readonly entries: Entry[][] = [[], [], []];
@@ -99,6 +104,8 @@ export class ColumnFrameReader {
     column.kinds = EMPTY_BYTES;
     column.kindsLength = column.layoutCount = column.nameIdCount = column.prefixIdCount = column.lexCount = 0;
     column.literalKindCount = column.langtagCount = column.directionCount = column.bnodeCount = 0;
+    column.lexBuf = undefined;
+    const lazy = this.lazyLex;
     while (reader.pos < end) {
       const tag = reader.tag(), field = tag >>> 3, wire = tag & 7;
       if (field === 1 && wire === 2) {
@@ -112,7 +119,17 @@ export class ColumnFrameReader {
       else if (field === 4 && (wire === 0 || wire === 2)) column.prefixIdCount = readNumbers(reader, wire, column.prefixIds, column.prefixIdCount);
       else if (field === 6 && (wire === 0 || wire === 2)) column.literalKindCount = readNumbers(reader, wire, column.literalKinds, column.literalKindCount);
       else if (field === 8 && (wire === 0 || wire === 2)) column.directionCount = readNumbers(reader, wire, column.langtagDirections, column.directionCount);
-      else if (field === 5 && wire === 2) column.lexValues[column.lexCount++] = reader.string();
+      else if (field === 5 && wire === 2) {
+        if (lazy) {
+          const size = reader.uint32(), start = reader.pos;
+          if (start + size > end) throw new RangeError('Truncated Jelly literal');
+          column.lexOffsets[2 * column.lexCount] = start;
+          column.lexOffsets[2 * column.lexCount + 1] = start + size;
+          column.lexCount++;
+          column.lexBuf = reader.buf;
+          reader.pos = start + size;
+        } else column.lexValues[column.lexCount++] = reader.string();
+      }
       else if (field === 7 && wire === 2) column.langtags[column.langtagCount++] = reader.string();
       else if (field === 9 && wire === 2) column.bnodes[column.bnodeCount++] = reader.string();
       else return false;
@@ -138,6 +155,17 @@ export class ReusableColumn extends proto.RdfColumn {
   /** `kinds` aliases the input buffer: its live bytes are `kindsLength` bytes at `kindsOffset`. */
   public kindsOffset = 0;
   public kindsLength = 0;
+  /** Set instead of `lexValues` in lazy mode: start and end of literal `j` in `lexBuf` are `lexOffsets[2j]` and `lexOffsets[2j+1]`. */
+  public lexBuf: Uint8Array | undefined;
+  public readonly lexOffsets: number[] = [];
+}
+
+type Utf8Source = Uint8Array & { utf8Slice?(start: number, end: number): string };
+
+/** Decode a byte range the way the protobuf reader decodes a string. */
+export function decodeUtf8(buf: Uint8Array, start: number, end: number): string {
+  const source = buf as Utf8Source;
+  return source.utf8Slice ? source.utf8Slice(start, end) : util.utf8.read(buf, start, end);
 }
 
 /** Appends a packed or single unpacked varint to `values[count...]` and returns the new count. */

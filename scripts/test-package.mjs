@@ -24,6 +24,8 @@ writer.addQuad(quad);
 let bytes;
 writer.end((error, value) => { if (error) throw error; bytes = value; });
 if (!new Parser().parse(bytes)[0].equals(quad)) throw new Error('RDF round trip failed');
+if (new Parser({ quadPatterns: [{ predicate: f.namedNode('urn:absent') }] }).parse(bytes).length) throw new Error('Quad filter failed');
+if (!new Parser({ quadPatterns: [{ predicate: quad.predicate }] }).parse(bytes)[0].equals(quad)) throw new Error('Quad selection failed');
 const sparql = new SparqlWriter();
 sparql.startSelect(['value']);
 sparql.addBinding({ value: quad.object });
@@ -43,10 +45,12 @@ try {
     writeFileSync(join(directory, `smoke.${extension}`), statement + smoke);
     run(process.execPath, [`smoke.${extension}`]);
   }
-  const types = `import { Parser, Writer, DataFactory, SparqlParser, SparqlWriter } from 'rdfjs-jelly';
+  const types = `import { Parser, Writer, DataFactory, SparqlParser, SparqlWriter, type QuadPattern } from 'rdfjs-jelly';
 import { StreamParser } from 'rdfjs-jelly/browser';
 const q = DataFactory.quad(DataFactory.namedNode('urn:s'), DataFactory.namedNode('urn:p'), DataFactory.literal('o'));
 new Writer().addQuad(q);
+const patterns: QuadPattern[] = [{ predicate: DataFactory.namedNode('urn:p') }];
+new Parser({ quadPatterns: patterns });
 new Parser().parse(new Uint8Array());
 new SparqlWriter().addAsk(true);
 new SparqlParser().parse(new Uint8Array());

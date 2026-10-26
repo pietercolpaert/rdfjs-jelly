@@ -65,7 +65,19 @@ export interface StreamOptions {
   rdfVersion?: RdfVersion;
 }
 
+/** Positions within a pattern are ANDed; patterns are ORed. Omitted or null
+ * positions are wildcards. Blank-node labels refer to parser output labels. */
+export interface QuadPattern {
+  subject?: RDF.Term | null;
+  predicate?: RDF.Term | null;
+  object?: RDF.Term | null;
+  graph?: RDF.Term | null;
+}
+
 export interface ParserOptions {
+  /** Select quads before RDF/JS materialization in Jelly 1.2. An empty array
+   * selects no quads. Message boundaries, counters and metadata are retained. */
+  quadPatterns?: readonly QuadPattern[];
   factory?: RDF.DataFactory;
   delimited?: boolean | 'auto';
   strict?: boolean;

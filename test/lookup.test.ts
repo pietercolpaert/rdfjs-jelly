@@ -30,3 +30,39 @@ describe('Jelly lookups', () => {
     expect(() => decoder.datatype(0)).toThrow(JellyConformanceError);
   });
 });
+
+describe('Jelly lookup change tracking', () => {
+  it('tracks the assigned prefix of a table', () => {
+    const decoder = new LookupDecoder(8);
+    expect(decoder.contiguous).toBe(0);
+    decoder.assign(2, 'b');
+    expect(decoder.contiguous).toBe(0);
+    decoder.assign(1, 'a');
+    expect(decoder.contiguous).toBe(2);
+    decoder.assign(3, 'c');
+    expect(decoder.contiguous).toBe(3);
+    decoder.assign(5, 'e');
+    decoder.assign(4, 'd');
+    decoder.assign(3, 'x');
+    expect(decoder.contiguous).toBe(5);
+    expect([1, 2, 3, 4, 5].every(index => decoder.stamp(index) > 0)).toBe(true);
+    expect(decoder.stamp(6)).toBe(0);
+    expect(decoder.stamp(0)).toBe(0);
+    expect(decoder.stamp(99)).toBe(0);
+  });
+
+  it('reports only the overwriting of assigned entries', () => {
+    const decoder = new LookupDecoder(8), replaced: number[] = [];
+    decoder.onReplace = index => replaced.push(index);
+    decoder.assign(1, 'a');
+    decoder.assign(2, 'b');
+    expect(replaced).toEqual([]);
+    const stamp = decoder.stamp(1);
+    decoder.assign(1, 'changed');
+    decoder.assign(2, 'b');
+    expect(replaced).toEqual([1, 2]);
+    expect(decoder.stamp(1)).not.toBe(stamp);
+    expect(decoder.name(1)).toBe('changed');
+    expect(decoder.contiguous).toBe(2);
+  });
+});

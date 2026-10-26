@@ -37,6 +37,7 @@ export type {
   MessageQuadArray,
   ParseCallback,
   ParserOptions,
+  QuadPattern,
   ParserOutput,
   ParserOutputItem,
   StreamOptions,

@@ -1,6 +1,6 @@
 # Performance
 
-Measured 2026-10-25 with rdfjs-jelly 0.2.0. Across 6 RiverBench datasets (60,000 messages and 2,103,143 statements), Jelly 1.2 reads at **2.26 million statements/s**, compared with **2.28 million/s** for legacy Jelly row-layout archives (protocol tag 1) and **0.85 million/s** for source-preserving Turtle message logs. For `assist-iot-weather`, locally written Jelly 1.1 (tag 2) parses at **3.08 million statements/s**, versus **4.92 million/s** for packed Jelly 1.2: **1.59×** the throughput, or **59% faster**. These uncompressed reads contain the same 1,150,000 statements and 10,000 messages; framing and dictionary contents differ.
+Unless stated otherwise, measured 2026-10-25 with rdfjs-jelly 0.2.0. The filter-pushdown section adds separate 0.2.1 measurements from 2026-10-26. Across 6 RiverBench datasets (60,000 messages and 2,103,143 statements), Jelly 1.2 reads at **2.26 million statements/s**, compared with **2.28 million/s** for legacy Jelly row-layout archives (protocol tag 1) and **0.85 million/s** for source-preserving Turtle message logs. For `assist-iot-weather`, locally written Jelly 1.1 (tag 2) parses at **3.08 million statements/s**, versus **4.92 million/s** for packed Jelly 1.2: **1.59×** the throughput, or **59% faster**. These uncompressed reads contain the same 1,150,000 statements and 10,000 messages; framing and dictionary contents differ.
 
 Jelly 1.2 achieves **0.99×** the legacy read throughput and **2.64×** the Turtle throughput. Its downloaded encodings use **26.8% fewer raw bytes**, **16.4% fewer gzip bytes**, and **10.7% fewer zstd bytes** than the legacy archives. All aggregate rates and ratios are geometric means across datasets; they are not pooled throughputs or averages across individual statements.
 
@@ -199,6 +199,248 @@ These cases read the current writer's uncompressed files, rather than the downlo
 
 Geometric means: 2.88 million statements/s for per-message-framed output and 4.22 million/s for packed output. A writer's encoding choices can change parsing time without a change to parser code. The archive measurements above continue to use their original bytes.
 
+## Pushing down a filter to the parser
+
+Since rdfjs-jelly 0.2.1, `quadPatterns` lets the parser return selected statements:
+
+```ts
+import { DataFactory, Parser } from 'rdfjs-jelly';
+
+const parser = new Parser({
+  quadPatterns: [{
+    predicate: DataFactory.namedNode(
+      'http://www.ontology-of-units-of-measure.org/resource/om-2/hasNumericalValue',
+    ),
+  }],
+});
+const messages = parser.parseMessages(bytes);
+```
+
+Patterns use OR semantics; unspecified positions are wildcards. Jelly 1.1
+(protocol tag 2) decodes the terms of every statement, then checks the pattern
+before creating its quad. Jelly 1.2 (tag 3) works on the column layout, before
+any RDF/JS term or quad exists. Both preserve message counters, metadata and
+empty messages, including messages whose statements are all rejected.
+
+This is a selective **full scan**: all input bytes are read, lookup tables are
+updated and every value is validated, including in rejected statements. It does
+not provide random access, skip file ranges or avoid decompression.
+
+With a predicate filter that keeps about 10% of the statements, the Jelly 1.2
+parser filter runs **2.3× faster** than fully parsing and then filtering
+(geometric mean over six datasets, steady state; range 1.8–3.6×), **1.9× faster** than a full parse with no filter, and
+**2.7× faster** than the Jelly 1.1 parser filter. Filters on a single subject or object IRI
+are **2.5× faster** than fully parsing and then filtering. Measurements follow.
+
+### How Jelly 1.2 selects rows
+
+When every pattern pins the same position to an IRI, that column alone chooses
+the rows. The positions are tried in the order subject, object, predicate,
+graph: subjects and objects have the most distinct values, so they usually
+reject the most rows. Per batch the parser then makes these passes:
+
+1. **Scan.** Each column's lists are validated in tight loops, and its IRIs are
+   resolved to final lookup ids. No term is built and no literal text is decoded.
+   Inferred name and prefix ids make this a sequential pass, but over integers only.
+2. **Select.** The selecting column's layout is walked once. Whether an IRI is
+   selected is decided once per lookup slot and cached; a cached verdict is
+   dropped only when the lookup table reports that its entry was overwritten, so
+   a replaced name or prefix cannot leave a stale match. A repeat run is one
+   verdict for all of its rows. The result is the ascending list of selected rows.
+3. **Gather.** The other columns' layouts are walked against that list. A run
+   containing no selected row costs its layout token; values are built only for
+   selected rows, and literal text is decoded from the input bytes on demand
+   (the frame reader records byte ranges instead of strings).
+4. **Assemble.** Quads are built for the selected rows. A message without any
+   selected row is constructed directly as an empty `Message`, which is several
+   times cheaper than converting an accumulated array (about 0.1 against 0.9 ms per 10,000
+   empty messages in a microbenchmark). Patterns that also pin
+   other positions check those on the few candidates before the data factory is
+   called.
+
+Patterns that share no IRI-pinned position (a literal-only object, or an OR of
+patterns on different positions) use a value-based path that builds a lightweight
+value for every row. Measured below, it is slower than parsing everything and
+filtering afterwards.
+
+### Experiment
+
+The following experiment uses the same six RiverBench datasets as above, with
+10,000 messages each, measured on 2026-10-26 with 0.2.1. Each dataset is locally
+encoded as actual Jelly 1.1 (tag 2) and packed Jelly 1.2 (tag 3), using TRIPLES,
+`messageSize: 1024` and default dictionaries. The 1.1 writer uses logical type
+GRAPHS; 1.2 uses stream type MESSAGES and `packMessages: true`. The downloaded
+legacy tag-1 archives are not used as the 1.1 baseline.
+
+For each dataset, a single predicate is chosen whose frequency is closest to
+10% of its statements; the actual selected fraction is shown below. Parser
+filters and the postfilter return the same RDF in each message, checked for
+isomorphism outside timing, and the full parse is checked for the complete
+statement count. Exact predicates and input hashes are recorded in the
+[measurement data](perf/quad-filter-2026-10-26-column-selection.json).
+
+Rates are **million input statements scanned per second**, including rejected
+statements. They are not the rate of returned statements. “1.2 postfilter” fully
+materializes 1.2 messages, then removes nonmatching quads in place; its timing
+includes both parsing and filtering. “1.2 full parse” is the same input parsed
+with no filter. All cases retain their selected message arrays until the
+operation completes.
+
+Two timing regimes are reported, because they answer different questions:
+
+- **Steady state** measures consecutive parses with no forced GC, five warmups
+  and nine timed iterations. The heap stays warm, as in a consumer that parses
+  continuously.
+- **Forced GC** is the method of the other tables: an explicit GC precedes every
+  timed operation, with two warmups.
+
+**Steady state**
+
+| Dataset | Selected | 1.1 parser filter M/s | 1.2 parser filter M/s | 1.2 / 1.1 | 1.2 postfilter M/s | 1.2 filter / postfilter | 1.2 full parse M/s | 1.2 filter / full parse |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| assist-iot-weather | 7.83% | 6.37 | 20.79 | 3.26× | 5.78 | 3.60× | 7.40 | 2.81× |
+| citypulse-traffic | 11.11% | 4.70 | 10.80 | 2.30× | 5.04 | 2.14× | 6.37 | 1.69× |
+| digital-agenda-indicators | 8.63% | 6.03 | 15.81 | 2.62× | 9.03 | 1.75× | 10.41 | 1.52× |
+| linked-spending | 6.50% | 4.28 | 15.07 | 3.52× | 6.31 | 2.39× | 6.10 | 2.47× |
+| muziekweb | 9.81% | 3.62 | 7.98 | 2.21× | 4.06 | 1.96× | 5.12 | 1.56× |
+| osm2rdf-denmark | 6.63% | 4.62 | 12.35 | 2.67× | 5.28 | 2.34× | 6.81 | 1.81× |
+
+Geometric means of the ratios: **2.72×** the 1.1 filter,
+**2.30×** the postfilter and **1.92×** a full parse in this run
+(2.83×, 2.34× and 1.96× in an
+[independent process repetition](perf/quad-filter-2026-10-26-column-selection-repeat.json)).
+
+**Forced GC before every operation**
+
+| Dataset | Selected | 1.1 parser filter M/s | 1.2 parser filter M/s | 1.2 / 1.1 | 1.2 postfilter M/s | 1.2 filter / postfilter | 1.2 full parse M/s | 1.2 filter / full parse |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| assist-iot-weather | 7.83% | 5.84 | 13.20 | 2.26× | 5.92 | 2.23× | 6.33 | 2.09× |
+| citypulse-traffic | 11.11% | 3.83 | 6.62 | 1.73× | 3.93 | 1.68× | 4.32 | 1.53× |
+| digital-agenda-indicators | 8.63% | 2.36 | 4.27 | 1.81× | 3.16 | 1.35× | 3.74 | 1.14× |
+| linked-spending | 6.50% | 3.01 | 4.56 | 1.51× | 3.48 | 1.31× | 3.83 | 1.19× |
+| muziekweb | 9.81% | 1.72 | 2.26 | 1.31× | 1.95 | 1.16× | 2.10 | 1.07× |
+| osm2rdf-denmark | 6.63% | 3.91 | 5.71 | 1.46× | 4.19 | 1.36× | 4.47 | 1.28× |
+
+Geometric means: **1.65×** the 1.1 filter, **1.48×** the postfilter and
+**1.35×** a full parse (1.61×, 1.47× and 1.36× in the repetition).
+### Why the two regimes differ
+
+A full garbage collection before an operation makes the **first** parse after it
+much slower than the parses that follow, by a fixed amount that does not depend
+on how much work the parse does:
+
+| Dataset | Steady-state parse | First parse after a full GC | Second | Fourth |
+| --- | --- | --- | --- | --- |
+| muziekweb | 6.0 ms | 21.4 ms | 10.0 ms | 7.2 ms |
+| linked-spending | 9.4 ms | 30.5 ms | 14.0 ms | 12.0 ms |
+| assist-iot-weather | 63.1 ms | 83.6 ms | 57.9 ms | 64.6 ms |
+
+(The 1.2 parser filter with the ~10% predicate. Medians of ten steady parses, and of
+five collections each followed by four parses; [raw data](perf/gc-recovery-2026-10-26.json).)
+The cause was not isolated. The pattern is consistent with the collector
+shrinking the heap and the next parse paying to grow and fault it back in. It
+adds about 15–20 ms to the forced-GC timings of these three datasets. That is a large share of
+a 10–20 ms parse of a small dataset and a small share of a 100 ms one, which
+is why in the forced-GC table the filter's advantage over the postfilter tends to grow with dataset
+size (muziekweb, 51,721 statements, gains least; assist-iot-weather,
+1,150,000, gains most). The forced-GC regime stays in this report because
+it matches the other tables. Steady state is the better guide for a long-running
+consumer.
+
+### Filters on other positions
+
+Subject and object patterns use the same column selection. The table
+below measures steady-state parsing of the packed Jelly 1.2 input with one IRI
+pinned: the subject, or the object, whose frequency is closest to 5% of the
+statements (often far lower, since few subjects repeat that much), and that
+object together with the predicate it most often appears with. Each dataset
+runs in its own process, with five warmups and nine timed iterations
+([measurement data](perf/quad-filter-2026-10-26-positions.json)).
+
+| Dataset | Pattern | Selected | Parser filter M/s | Postfilter M/s | Filter / postfilter | Full parse M/s |
+| --- | --- | --- | --- | --- | --- | --- |
+| assist-iot-weather | subject IRI | 2.61% | 19.38 | 6.02 | 3.22× | 7.57 |
+| assist-iot-weather | object IRI | 7.83% | 18.60 | 5.98 | 3.11× | 7.48 |
+| assist-iot-weather | predicate + object IRI | 7.83% | 12.85 | 5.59 | 2.30× | 7.42 |
+| citypulse-traffic | subject IRI | 0.77% | 9.95 | 4.11 | 2.42× | 6.00 |
+| citypulse-traffic | object IRI | 5.56% | 8.56 | 3.62 | 2.37× | 5.70 |
+| citypulse-traffic | predicate + object IRI | 5.56% | 6.80 | 4.03 | 1.69× | 5.65 |
+| digital-agenda-indicators | subject IRI | 0.01% | 17.68 | 6.52 | 2.71× | 8.90 |
+| digital-agenda-indicators | object IRI | 4.55% | 14.52 | 6.72 | 2.16× | 8.94 |
+| digital-agenda-indicators | predicate + object IRI | 4.55% | 12.34 | 7.09 | 1.74× | 8.01 |
+| linked-spending | subject IRI | 0.06% | 19.47 | 4.22 | 4.62× | 5.22 |
+| linked-spending | object IRI | 6.26% | 16.68 | 4.83 | 3.45× | 6.13 |
+| linked-spending | predicate + object IRI | 6.26% | 13.31 | 4.89 | 2.72× | 6.29 |
+| muziekweb | subject IRI | 0.02% | 9.96 | 3.98 | 2.50× | 4.80 |
+| muziekweb | object IRI | 6.44% | 9.77 | 4.67 | 2.09× | 5.47 |
+| muziekweb | predicate + object IRI | 6.44% | 8.10 | 4.02 | 2.01× | 5.43 |
+| osm2rdf-denmark | subject IRI | 2.96% | 12.39 | 4.28 | 2.89× | 6.79 |
+| osm2rdf-denmark | object IRI | 3.16% | 9.43 | 3.88 | 2.43× | 6.45 |
+| osm2rdf-denmark | predicate + object IRI | 3.15% | 8.37 | 3.84 | 2.18× | 6.18 |
+
+The geometric mean of filter / postfilter is **2.51×** in this run and
+**2.44×** in an [independent repetition](perf/quad-filter-2026-10-26-positions-repeat.json).
+
+Patterns that share no IRI-pinned position take the value-based path described
+above, which builds a lightweight value for every row. In a quick steady-state
+check on muziekweb, linked-spending and assist-iot-weather (not saved as a data
+file), a literal-only object pattern and a subject-OR-object pattern ran at
+0.78–0.94× the speed of fully parsing and then filtering, so they are not worth
+using for speed.
+
+### Where the time goes
+
+Short CPU profiles of the 1.2 filter on three datasets, and of a full parse for
+comparison, sampled every 200 µs over 60 steady-state parses
+([profiles](perf/quad-filter-profile-2026-10-26-assist-iot-weather-filter.json),
+[muziekweb](perf/quad-filter-profile-2026-10-26-muziekweb-filter.json),
+[osm2rdf](perf/quad-filter-profile-2026-10-26-osm2rdf-denmark-filter.json),
+[full parse](perf/quad-filter-profile-2026-10-26-muziekweb-plain.json)). Self-time
+shares of named functions; they locate costs and are not wall-clock phases.
+Sampling inflates the per-parse time.
+
+| Profile | ms per parse | Largest self-time shares among the labelled functions |
+| --- | --- | --- |
+| assist-iot-weather, filter | 54.9 | packed-list reading 20%; IRI scan 18%; layout walks 15%; statement assembly 6%; UTF-8 decoding 5%; kind scan 4% |
+| muziekweb, filter | 7.1 | statement assembly 12%; verdict computation 8%; UTF-8 decoding 7%; layout walks 7%; packed-list reading 7%; IRI scan 5% |
+| osm2rdf-denmark, filter | 23.6 | IRI scan 12%; UTF-8 decoding 12%; packed-list reading 11%; statement assembly 8%; layout walks 7%; lookup updates 5% |
+| muziekweb, full parse | 11.0 | UTF-8 decoding 19%; message finalization 11%; statement assembly (unfiltered) 8%; packed-list reading 4%; lookup updates 2% |
+
+What remains is largely work the format requires: reading the packed lists
+(layouts, name ids, prefix ids), resolving and validating every IRI reference,
+and walking layouts. Lookup-name decoding (up to 12% on osm2rdf) is not
+deferred, and rejected statements are still validated, so a filtered parse costs
+more than the selected fraction alone would suggest.
+
+### Factory calls
+
+The materialization savings are visible independently of the timings. For
+assist-iot-weather, selecting 90,000 of 1,150,000 statements makes these calls to
+the supplied factory, counted in a separate untimed pass:
+
+| Factory method | 1.1 parser filter | 1.2 parser filter | 1.2 postfilter |
+| --- | --- | --- | --- |
+| `namedNode` | 2,290,005 | 90,002 | 270,287 |
+| `literal` | 210,000 | 90,000 | 210,000 |
+| `quad` | 90,000 | 90,000 | 1,150,000 |
+
+These are explicit factory-call counts, not total object allocations, allocated
+bytes or peak memory. For example, a factory may create datatype nodes inside
+`literal()` without calling its public `namedNode()` method. Both parser filters
+avoid creating rejected quads; 1.2 additionally avoids materializing their terms.
+
+### Method
+
+Each dataset runs in a fresh process; the four cases rotate within each
+iteration. Timings exclude encoding, file I/O and decompression: both encodings
+are reused as raw in-memory buffers. Message and statement counts are checked after
+every operation. There is no CPU affinity, thermal control or confidence
+interval; the machine was shared with a desktop session, so differences of a
+few percent are inconclusive, and the two repetitions above show how far runs
+differ. Runtime: Node v25.9.0 / V8 14.1.146.11-node.25 on the Intel i7-1265U
+listed below; the 0.2.1 ESM bundle SHA-256 is
+`4dde8ac42b922654c9e1beff8449bc8f1fe047bd83c5edafcbe48f3da427201f`.
+
 ## Independent read repetition
 
 Each listed uncompressed Jelly case was measured again in a fresh worker, with two warmups and seven timed iterations. This measures process-to-process variation for the same runtime bundle and input bytes. The main tables use the primary run; these repetitions are reported separately. Rates are million statements/s.
@@ -249,7 +491,7 @@ Three CPU profiles of the current runtime bundle use the same input bytes and de
 - Source base revision: `d73c5d6977cedd0acfd89eadb23b89fbd63749bd` (working tree for 0.2.0 with prefix-compressing writer, column message-array ownership, default message packing and public flush APIs).
 - Measured ESM bundle SHA-256: `929e01a1a69e303431ceeaddf5f168a53541fb5659a5b1d144bc2b7e575083f4`.
 
-The recorded bundle matches the current runtime build. All six datasets contain triples; they do not measure named-graph, RDF-star, RDF 1.2 term, SPARQL result, browser, network or slow-consumer throughput. The measurements characterize these dataset/library/API combinations, not universal format rankings.
+The recorded bundle identifies the 0.2.0 measurements; the filter-pushdown section records its separate 0.2.1 bundle. All six datasets contain triples; they do not measure named-graph, RDF-star, RDF 1.2 term, SPARQL result, browser, network or slow-consumer throughput. The measurements characterize these dataset/library/API combinations, not universal format rankings.
 
 ## Validation
 
