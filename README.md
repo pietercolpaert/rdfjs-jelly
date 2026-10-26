@@ -13,7 +13,7 @@ Jelly-RDF and Jelly-SPARQL binary parsers and writers using RDF/JS terms, for No
 ## Support
 
 - Reads Jelly-RDF 1.0, 1.1, and 1.2 (protocol tags 1, 2, and 3).
-- Writes Jelly-RDF 1.1 by default; opt into 1.2 with `version: 3`.
+- Writes packed Jelly-RDF 1.2 by default; use `version: 2` for Jelly 1.1.
 - Supports physical triple, quad, and graph streams; delimited and non-delimited encoding; lookup/repeated-term compression; namespaces; and message metadata.
 - Reads and writes Jelly-SPARQL 1.0 SELECT and ASK result sets, including punctuated streams.
 - Uses RDF/JS terms and accepts a custom RDF/JS data factory.
@@ -98,7 +98,9 @@ writer.end((error, bytes) => {
 });
 ```
 
-`Writer` emits a delimited Jelly 1.1 stream (protocol tag 2) by default. Set
+`Writer`, Node `StreamWriter`, and browser `StreamWriter` emit delimited Jelly 1.2
+streams (protocol tag 3) with message packing enabled by default. Use `version: 2`
+for Jelly 1.1 compatibility. Set
 `delimited: false` for one bare protobuf frame. All output must fit in that frame;
 a Jelly 1.2 frame can contain several logical messages when packing is enabled.
 
@@ -108,7 +110,7 @@ a Jelly 1.2 frame can contain several logical messages when packing is enabled.
 introduces a column layout (protocol tag **3**), packed lookup entries, repeat
 runs, RDF 1.2 terms, explicit RDF Message boundaries, and concatenable streams.
 The parser selects the layout from the stream options. Existing 1.0/1.1 streams
-remain readable, and the default writer stays on 1.1 for older consumers.
+remain readable; pass `version: 2` to write Jelly 1.1 for older consumers.
 
 ```ts
 import { DataFactory, Parser, Writer, RdfStreamType, RdfVersion } from 'rdfjs-jelly';
@@ -157,7 +159,7 @@ callback it throws. Flushing requires delimited output. Packing has no timer:
 use explicit flushes or `packMessages: false` for latency-sensitive delivery.
 
 The 1.2 layout supports `TRIPLES` and `QUADS`. Use `QUADS` for named graphs;
-`GRAPHS`, `addGraph()`, and `logicalType` belong to the older layout. Use
+`GRAPHS`, `addGraph()`, and `logicalType` require `version: 2`. Use
 `streamType` (`FLAT` or `MESSAGES`) instead. `rdfVersion` defaults to RDF 1.2;
 writers reject terms that the declared version cannot represent. Custom factories
 must preserve direction and `rdf:dirLangString` for directional literals.

@@ -20,8 +20,8 @@ function end(writer: Writer): Promise<Uint8Array> {
 }
 
 describe('Writer', () => {
-  it('writes only protocol version 2 and round-trips RDF/JS quads', async () => {
-    const writer = new Writer();
+  it.each([undefined, 2, 3] as const)('round-trips RDF/JS quads with version %s (default: 3)', async version => {
+    const writer = new Writer({ version });
     const input = [
       quad(namedNode('https://example.org/s'), namedNode('https://example.org/p'), literal('hello')),
       quad(blankNode('b'), namedNode('https://example.org/p'), literal('bonjour', 'fr'), namedNode('https://example.org/g')),
@@ -30,13 +30,13 @@ describe('Writer', () => {
     writer.addQuads(input);
     const bytes = await end(writer);
     const frames = new MessageDecoder().decode(bytes);
-    expect(frames[0]?.rows[0]).toMatchObject({ case: 'options', value: { version: 2, rdfStar: false, generalizedStatements: false } });
+    expect(frames[0]?.rows[0]).toMatchObject({ case: 'options', value: { version: version ?? 3 } });
     const output = new Parser().parse(bytes) as RDF.Quad[];
     expect(output).toHaveLength(input.length);
     for (let i = 0; i < input.length; i++) expect(output[i]!.equals(input[i])).toBe(true);
   });
 
-  it('rejects writer versions other than 2', () => {
+  it('rejects unsupported writer versions', () => {
     expect(() => new Writer({ version: 1 as 2 })).toThrow(JellyUnsupportedFeatureError);
   });
 
@@ -48,7 +48,7 @@ describe('Writer', () => {
   });
 
   it('rejects multiple non-delimited messages', async () => {
-    const writer = new Writer({ delimited: false });
+    const writer = new Writer({ version: 2, delimited: false });
     writer.addMessage([]);
     writer.addMessage([]);
     await expect(end(writer)).rejects.toThrow(/exactly one message/);
@@ -57,7 +57,7 @@ describe('Writer', () => {
   it('rejects RDF-star, generalized positions, and named graphs in triples', async () => {
     const quoted = quad(namedNode('urn:s'), namedNode('urn:p'), namedNode('urn:o'));
     const outer = quad(quoted, namedNode('urn:p'), namedNode('urn:o'));
-    const starWriter = new Writer();
+    const starWriter = new Writer({ version: 2 });
     expect(() => starWriter.addQuad(outer)).toThrow(JellyUnsupportedFeatureError);
 
     const tripleWriter = new Writer({ physicalType: PhysicalStreamType.TRIPLES });
@@ -68,7 +68,7 @@ describe('Writer', () => {
   it('writes explicit graph messages', async () => {
     const graph = namedNode('urn:g');
     const statement = quad(namedNode('urn:s'), namedNode('urn:p'), literal('o'), graph);
-    const writer = new Writer({ physicalType: PhysicalStreamType.GRAPHS, logicalType: LogicalStreamType.FLAT_QUADS });
+    const writer = new Writer({ version: 2, physicalType: PhysicalStreamType.GRAPHS, logicalType: LogicalStreamType.FLAT_QUADS });
     writer.addGraph(graph, [statement], { source: new Uint8Array([1, 2]) });
     const messages = new Parser().parseMessages(await end(writer));
     expect(messages).toHaveLength(1);

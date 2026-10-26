@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import { finished } from 'node:stream/promises';
 import type * as RDF from '@rdfjs/types';
-import { DataFactory, StreamParser, StreamWriter, Writer } from '../src';
+import { DataFactory, MessageDecoder, StreamParser, StreamWriter, Writer } from '../src';
 
 const statement = DataFactory.quad(DataFactory.namedNode('urn:s'), DataFactory.namedNode('urn:p'), DataFactory.literal('value'));
 
@@ -32,6 +32,7 @@ describe('Node streams', () => {
     const output = Buffer.concat(chunks);
     expect(chunks.length).toBeGreaterThan(1);
     expect(output.byteLength).toBeGreaterThan(0);
+    expect(new MessageDecoder().decode(output)[0]!.rows[0]).toMatchObject({ case: 'options', value: { version: 3 } });
     expect((await import('../src')).Parser.prototype.parse.call(new (await import('../src')).Parser(), output)).toHaveLength(3);
   });
 });

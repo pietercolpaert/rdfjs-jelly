@@ -1,5 +1,5 @@
 import type * as RDF from '@rdfjs/types';
-import { DataFactory, Message, Parser, Writer, isMessageQuad, toMessages, type MessageQuadArray } from '../src';
+import { DataFactory, Message, MessageDecoder, Parser, RdfStreamType, Writer, isMessageQuad, toMessages, type MessageQuadArray } from '../src';
 
 const { namedNode, quad } = DataFactory;
 const q = (suffix: string): RDF.Quad => quad(namedNode(`urn:s${suffix}`), namedNode('urn:p'), namedNode('urn:o'));
@@ -10,7 +10,7 @@ function end(writer: Writer): Promise<Uint8Array> {
 
 describe('message APIs', () => {
   it('preserves leading, intermediate, and trailing empty messages', async () => {
-    const writer = new Writer();
+    const writer = new Writer({ streamType: RdfStreamType.MESSAGES });
     writer.addMessage(new Message(0));
     writer.addMessage(new Message(1, [q('1')], { id: new Uint8Array([7]) }));
     writer.addMessage(new Message(2));
@@ -25,12 +25,15 @@ describe('message APIs', () => {
   });
 
   it('matches rdf-parser.ts MessageQuad output and conversion', async () => {
-    const writer = new Writer();
+    const writer = new Writer({ streamType: RdfStreamType.MESSAGES });
     writer.addMessage([q('0')]);
     writer.addMessage([]);
     writer.addMessage([q('2')]);
     writer.addMessage([]);
     const bytes = await end(writer);
+    const frames = new MessageDecoder().decode(bytes);
+    expect(frames).toHaveLength(1);
+    expect(frames[0]!.rows[0]).toMatchObject({ case: 'options', value: { version: 3, streamType: 1 } });
     const output = new Parser({ messages: true }).parse(bytes) as MessageQuadArray;
     expect(output.every(isMessageQuad)).toBe(true);
     expect(output.messageCount).toBe(4);
@@ -44,7 +47,7 @@ describe('message APIs', () => {
       { quad: q('2'), messageCounter: 2 },
     ] as MessageQuadArray;
     values.messageCount = 4;
-    const writer = new Writer();
+    const writer = new Writer({ streamType: RdfStreamType.MESSAGES });
     writer.addQuads(values);
     expect(new Parser().parseMessages(await end(writer)).map(message => message.length)).toEqual([1, 0, 1, 0]);
   });

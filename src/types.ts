@@ -102,7 +102,7 @@ export interface WriterOptions {
   streamName?: string;
   namespaces?: Record<string, string | RDF.NamedNode>;
   lookup?: Partial<LookupPreset>;
-  /** Protocol tag: 2 = Jelly 1.1 (default), 3 = Jelly 1.2. */
+  /** Protocol tag: 2 = Jelly 1.1, 3 = Jelly 1.2 (default). */
   version?: 2 | 3;
   streamType?: RdfStreamType;
   rdfVersion?: RdfVersion;

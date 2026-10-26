@@ -69,8 +69,8 @@ describe('Jelly-RDF 1.2 writer', () => {
     expect(messages.map(m => m.length)).toEqual([3, 0, 1]);
     expect(messages[0]![0]!.subject.equals(messages[2]![0]!.subject)).toBe(false);
   });
-  it('keeps 1.1 output as the default and allows an explicit parser cap', () => {
-    const writer = new Writer(); let bytes!: Uint8Array; writer.end((e, b) => { if (e) throw e; bytes = b!; });
+  it('allows explicit 1.1 output and a parser version cap', () => {
+    const writer = new Writer({ version: 2 }); let bytes!: Uint8Array; writer.end((e, b) => { if (e) throw e; bytes = b!; });
     expect(() => new Parser({ maxSupportedVersion: 2 }).parse(bytes)).not.toThrow();
     expect(() => new Parser({ maxSupportedVersion: 2 }).parse(write([]))).toThrow(/version 3/);
   });

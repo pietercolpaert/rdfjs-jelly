@@ -1,6 +1,6 @@
 import type * as RDF from '@rdfjs/types';
 import type { MessageQuad } from '../src';
-import { DataFactory, Parser, Writer } from '../src';
+import { DataFactory, MessageDecoder, Parser, Writer } from '../src';
 import { StreamParser, StreamWriter } from '../src/browser';
 
 const statement = DataFactory.quad(DataFactory.namedNode('urn:s'), DataFactory.namedNode('urn:p'), DataFactory.literal('browser'));
@@ -32,6 +32,7 @@ describe('browser Web Streams', () => {
       allBytes.set(chunk, offset);
       offset += chunk.byteLength;
     }
+    expect(new MessageDecoder().decode(allBytes)[0]!.rows[0]).toMatchObject({ case: 'options', value: { version: 3 } });
     expect(new Parser().parse(allBytes)).toHaveLength(2);
 
     const bytes = allBytes;

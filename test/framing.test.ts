@@ -6,7 +6,7 @@ import type { WriterOptions } from '../src';
 const { blankNode, defaultGraph, literal, namedNode, quad } = DataFactory;
 
 function write(quads: RDF.Quad[], options: WriterOptions = {}): Uint8Array {
-  const writer = new Writer(options);
+  const writer = new Writer({ version: 2, ...options });
   writer.addQuads(quads);
   let output: Uint8Array | undefined;
   writer.end((error, bytes) => {
@@ -47,7 +47,7 @@ describe('frame accumulation', () => {
 
   // The accumulation buffer is reused across frames, so metadata must own its bytes.
   it('keeps message metadata valid after the frame buffer is reused', async () => {
-    const writer = new Writer({ messageSize: 1 });
+    const writer = new Writer({ version: 2, messageSize: 1 });
     for (let index = 0; index < 8; index++) {
       writer.addMessage([statements[index]!], { tag: new TextEncoder().encode(`payload-${index}`) });
     }

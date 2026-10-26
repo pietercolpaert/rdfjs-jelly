@@ -45,7 +45,7 @@ export class Writer {
     this.streaming = Boolean(this.output && this.messageEncoder.delimited);
     const buffered = !this.output && this.messageEncoder.delimited;
     if (buffered) this.chunks = [];
-    const EncoderClass = options.version === 3 ? ColumnEncoder : Encoder;
+    const EncoderClass = (options.version ?? 3) === 3 ? ColumnEncoder : Encoder;
     this.encoder = new EncoderClass(options, this.streaming
       ? frame => this.writeFrame(frame)
       : buffered ? frame => this.chunks!.push(this.messageEncoder.encode(frame)) : undefined);

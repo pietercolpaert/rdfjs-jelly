@@ -4,7 +4,7 @@ import type { WriterOptions } from '../src';
 const { literal, namedNode, quad } = DataFactory;
 
 function write(statements: Parameters<Writer['addQuads']>[0], options: WriterOptions = {}): Uint8Array {
-  const writer = new Writer(options);
+  const writer = new Writer({ version: 2, ...options });
   writer.addQuads(statements);
   let output: Uint8Array | undefined;
   writer.end((error, bytes) => {
@@ -21,7 +21,7 @@ describe('prefix lookup capacity', () => {
   it('rejects capacities too small to encode one statement', () => {
     for (const maxPrefixes of [1, 2, 3]) {
       expect(() => normalizeLookupPreset({ maxPrefixes })).toThrow(JellyConformanceError);
-      expect(() => new Writer({ lookup: { maxPrefixes } })).toThrow(/at least 4/);
+      expect(() => new Writer({ version: 2, lookup: { maxPrefixes } })).toThrow(/at least 4/);
     }
   });
 
