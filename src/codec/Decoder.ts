@@ -1,3 +1,4 @@
+import { matchesPatterns, selectivePatterns, selectionPosition } from './QuadFilter';
 import { ColumnDecoder } from './ColumnDecoder';
 import { ColumnFrameReader } from './ColumnFrameReader';
 import { encodeRdfStreamFrame, proto, decodeProtoRdfStreamFrameReader } from '../generated/rdf_pb';
@@ -30,7 +31,7 @@ import type {
 } from '../generated/rdf_pb';
 import { MAX_DECODED_LOOKUP_SIZE, MIN_NAME_LOOKUP_SIZE, XSD_STRING } from '../options';
 import { DataFactory } from '../rdfjs/adapter';
-import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type StreamOptions } from '../types';
+import { LogicalStreamType, Message, PhysicalStreamType, type ParserOptions, type QuadPattern, type StreamOptions } from '../types';
 import { LookupDecoder } from './LookupDecoder';
 
 type NamespaceListener = (prefix: string, iri: RDF.NamedNode) => void;
@@ -43,6 +44,7 @@ export interface DecoderEvents {
 }
 
 export class Decoder {
+  private readonly patterns: readonly QuadPattern[] | undefined;
   private columns?: ColumnDecoder;
   private columnReader?: ColumnFrameReader;
   private readonly parserOptions: ParserOptions;
@@ -66,6 +68,7 @@ export class Decoder {
 
   public constructor(options: ParserOptions = {}, events: DecoderEvents = {}) {
     this.parserOptions = options;
+    this.patterns = selectivePatterns(options.quadPatterns);
     this.factory = options.factory ?? DataFactory;
     this.strict = options.strict ?? true;
     this.maxSupportedVersion = options.maxSupportedVersion ?? 3;
@@ -79,7 +82,7 @@ export class Decoder {
     const start = reader.pos;
     if (!this.streamOptions || this.columns) {
       const frame = this.columns
-        ? (this.columnReader ??= new ColumnFrameReader()).read(reader, length)
+        ? (this.columnReader ??= new ColumnFrameReader(selectionPosition(this.patterns) !== undefined)).read(reader, length)
         : decodeProtoRdfStreamFrameReader(reader, length);
       if (!frame.rows.length && !frame.columns && !this.columns) return [];
       const version = frame.rows[0]?.options?.version;
@@ -119,8 +122,8 @@ export class Decoder {
       else if (row.case === 'prefix') this.prefixes!.assign(row.value.id, row.value.value);
       else if (row.case === 'datatype') this.datatypes!.assign(row.value.id, row.value.value);
       else if (row.case === 'namespace') this.decodeNamespace(row.value.name, row.value.value);
-      else if (row.case === 'triple') message.push(this.decodeTriple(row.value));
-      else if (row.case === 'quad') message.push(this.decodeQuad(row.value));
+      else if (row.case === 'triple') this.emitQuad(this.decodeTriple(row.value), message);
+      else if (row.case === 'quad') this.emitQuad(this.decodeQuad(row.value), message);
       else if (row.case === 'graphStart') this.startGraph(row.value.graph);
       else if (row.case === 'graphEnd') this.endGraph();
       else throw new JellyConformanceError(`Unsupported or empty Jelly row field ${row.fieldNumber}`);
@@ -150,8 +153,8 @@ export class Decoder {
       else if (field === 'namespace') {
         const value = row.namespace!;
         this.decodeProtoNamespace(value.name ?? '', value.value as ProtoIri);
-      } else if (field === 'triple') message.push(this.decodeProtoTriple(row.triple as ProtoTriple));
-      else if (field === 'quad') message.push(this.decodeProtoQuad(row.quad as ProtoQuad));
+      } else if (field === 'triple') this.emitQuad(this.decodeProtoTriple(row.triple as ProtoTriple), message);
+      else if (field === 'quad') this.emitQuad(this.decodeProtoQuad(row.quad as ProtoQuad), message);
       else if (field === 'graphStart') this.startProtoGraph(row.graphStart as ProtoGraphStart);
       else if (field === 'graphEnd') this.endGraph();
       else throw new JellyConformanceError('Unsupported or empty Jelly row field 0');
@@ -250,9 +253,16 @@ export class Decoder {
     else throw new JellyConformanceError('Unsupported or empty Jelly row field 0');
   }
 
-  private emitQuad(quad: RDF.Quad, message?: Message, output?: RDF.Quad[]): void {
+  private emitQuad(quad: RDF.Quad | undefined, message?: Message, output?: RDF.Quad[]): void {
+    if (!quad) return;
     if (message) message.push(quad);
     else output!.push(quad);
+  }
+
+  private makeQuad(subject: RDF.Quad_Subject, predicate: RDF.Quad_Predicate, object: RDF.Quad_Object, graph: RDF.Quad_Graph): RDF.Quad | undefined {
+    const patterns = this.patterns;
+    if (patterns !== undefined && !matchesPatterns(patterns, subject, predicate, object, graph)) return undefined;
+    return this.factory.quad(subject, predicate, object, graph);
   }
 
   private decodeWireLookupEntry(reader: Reader, length: number, lookup: LookupDecoder): void {
@@ -272,7 +282,7 @@ export class Decoder {
     lookup.assign(id, value);
   }
 
-  private decodeWireTriple(reader: Reader, length: number): RDF.Quad {
+  private decodeWireTriple(reader: Reader, length: number): RDF.Quad | undefined {
     const physical = this.streamOptions!.physicalType;
     if (physical !== PhysicalStreamType.TRIPLES && physical !== PhysicalStreamType.GRAPHS) {
       throw new JellyConformanceError('Triple row is invalid in this physical stream type');
@@ -347,7 +357,7 @@ export class Decoder {
     if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
       throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
     }
-    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
+    return this.makeQuad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
 
   /**
@@ -355,7 +365,7 @@ export class Decoder {
    * graph slot (fields 13-16) added. Falls back to the generated protobuf
    * decoder when a slot repeats, which is where merge semantics matter.
    */
-  private decodeWireQuad(reader: Reader, length: number): RDF.Quad {
+  private decodeWireQuad(reader: Reader, length: number): RDF.Quad | undefined {
     if (this.streamOptions!.physicalType !== PhysicalStreamType.QUADS) {
       throw new JellyConformanceError('Quad row is invalid in this physical stream type');
     }
@@ -440,7 +450,7 @@ export class Decoder {
     this.repeated[1] = predicate;
     this.repeated[2] = object;
     this.repeated[3] = graph;
-    return this.factory.quad(subject, predicate, object, graph);
+    return this.makeQuad(subject, predicate, object, graph);
   }
 
   private decodeWireGraphTerm(reader: Reader, field: number, position: number): RDF.Term {
@@ -618,7 +628,7 @@ export class Decoder {
     return [subject, predicate, object];
   }
 
-  private decodeTriple(value: RdfTriple): RDF.Quad {
+  private decodeTriple(value: RdfTriple): RDF.Quad | undefined {
     const physical = this.streamOptions!.physicalType;
     if (physical !== PhysicalStreamType.TRIPLES && physical !== PhysicalStreamType.GRAPHS) {
       throw new JellyConformanceError('Triple row is invalid in this physical stream type');
@@ -627,10 +637,10 @@ export class Decoder {
     if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
       throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
     }
-    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
+    return this.makeQuad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
 
-  private decodeQuad(value: RdfQuad): RDF.Quad {
+  private decodeQuad(value: RdfQuad): RDF.Quad | undefined {
     if (this.streamOptions!.physicalType !== PhysicalStreamType.QUADS) {
       throw new JellyConformanceError('Quad row is invalid in this physical stream type');
     }
@@ -639,7 +649,7 @@ export class Decoder {
     if (!graph) throw new JellyConformanceError('First Jelly quad must set its graph');
     if (!['NamedNode', 'BlankNode', 'DefaultGraph'].includes(graph.termType)) throw new JellyConformanceError('Invalid RDF graph term');
     this.repeated[3] = graph;
-    return this.factory.quad(subject, predicate, object, graph as RDF.Quad_Graph);
+    return this.makeQuad(subject, predicate, object, graph as RDF.Quad_Graph);
   }
 
   private decodeProtoNamespace(name: string, iri: ProtoIri): void {
@@ -697,7 +707,7 @@ export class Decoder {
     return [subject, predicate, object];
   }
 
-  private decodeProtoTriple(value: ProtoTriple): RDF.Quad {
+  private decodeProtoTriple(value: ProtoTriple): RDF.Quad | undefined {
     const physical = this.streamOptions!.physicalType;
     if (physical !== PhysicalStreamType.TRIPLES && physical !== PhysicalStreamType.GRAPHS) {
       throw new JellyConformanceError('Triple row is invalid in this physical stream type');
@@ -706,7 +716,7 @@ export class Decoder {
     if (physical === PhysicalStreamType.GRAPHS && this.graph === undefined) {
       throw new JellyConformanceError('Triple row occurred outside a graph in a GRAPHS stream');
     }
-    return this.factory.quad(subject, predicate, object, this.graph ?? this.defaultGraph);
+    return this.makeQuad(subject, predicate, object, this.graph ?? this.defaultGraph);
   }
 
   private decodeProtoGraphTerm(value: ProtoQuad | ProtoGraphStart): RDF.Term | undefined {
@@ -718,7 +728,7 @@ export class Decoder {
     return undefined;
   }
 
-  private decodeProtoQuad(value: ProtoQuad): RDF.Quad {
+  private decodeProtoQuad(value: ProtoQuad): RDF.Quad | undefined {
     if (this.streamOptions!.physicalType !== PhysicalStreamType.QUADS) {
       throw new JellyConformanceError('Quad row is invalid in this physical stream type');
     }
@@ -729,7 +739,7 @@ export class Decoder {
       throw new JellyConformanceError('Invalid RDF graph term');
     }
     this.repeated[3] = graph;
-    return this.factory.quad(subject, predicate, object, graph);
+    return this.makeQuad(subject, predicate, object, graph);
   }
 
   private startProtoGraph(value: ProtoGraphStart): void {

@@ -234,6 +234,57 @@ With `messages: true`, output items are wrapped entries and a `messageCounter`
 event accompanies each quad. Quad-only output cannot represent empty messages;
 retain the `message` events if forwarding a message stream.
 
+## Quad-pattern filtering
+
+Since 0.2.1, `Parser`, Node `StreamParser`, and browser `StreamParser` accept
+`quadPatterns`:
+
+```ts
+import { DataFactory, Parser } from 'rdfjs-jelly';
+
+const parser = new Parser({
+  quadPatterns: [
+    { predicate: DataFactory.namedNode('http://example.org/name') },
+    { predicate: DataFactory.namedNode('http://example.org/knows') },
+  ],
+});
+const selectedQuads = parser.parse(bytes);
+```
+
+Patterns are combined with OR; positions within a pattern are combined with AND.
+An omitted or `null` position is a wildcard. Omit `quadPatterns` to select all
+quads; `[]` selects none, and `[{}]` selects all. Matching preserves input order
+and duplicates, without duplicating quads that match several patterns.
+`QuadPattern` is exported as a TypeScript type.
+
+Jelly 1.2 matches column values before constructing RDF/JS terms or quads. When
+every pattern pins the same position (subject, object, predicate or graph) to an
+IRI, that column alone chooses the rows: each distinct IRI is judged once, and the
+other columns, including literal text, are built only for the selected rows. Only
+selected values reach your data factory. Patterns that also constrain other
+positions are checked on those few candidates. Patterns that share no IRI-pinned
+position (for example a literal-only object, or an OR of patterns on different
+positions) use a slower path that, in our measurements, is not faster than
+parsing everything and filtering afterwards.
+Lookup updates and validation still run for rejected statements, so malformed
+input is still rejected. Errors that depend on your data factory, such as a
+directional literal it cannot build, surface only for selected statements. The
+filter does not skip bytes, files or decompression.
+Jelly 1.0/1.1 also support filtering, after term decoding and before quad creation.
+Namespaces remain available regardless of the filter. See
+[PERFORMANCE.md](PERFORMANCE.md#pushing-down-a-filter-to-the-parser) for measurements.
+
+Filtering keeps empty messages, message counters and metadata. A message with no
+matching quads becomes empty; use `parseMessages()` or stream `message` events to
+retain its boundary. Plain quad output contains only selected statements.
+
+Terms match by kind and value. Literal equality includes datatype, language
+(case-insensitive) and direction; plain strings equal explicit `xsd:string`
+literals. Triple terms match recursively. Graph patterns distinguish named,
+blank-node and default graphs. Blank-node patterns use the labels in parser
+output, including the opaque message scope in Jelly 1.2; raw labels from the
+input are not identifiers across independent messages.
+
 ## SPARQL result sets
 
 [Jelly-SPARQL 1.0.0](https://jelly-rdf.github.io/1.2.x/specification/sparql/)

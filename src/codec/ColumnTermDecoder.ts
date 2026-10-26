@@ -5,23 +5,31 @@ import { MAX_DECODED_LOOKUP_SIZE, RDF_DIR_LANG_STRING, RDF_LANG_STRING, XSD_STRI
 import type { ParserOptions } from '../types';
 import { DataFactory } from '../rdfjs/adapter';
 import { LookupDecoder } from './LookupDecoder';
-import { ReusableColumn } from './ColumnFrameReader';
+import { ReusableColumn, decodeUtf8 } from './ColumnFrameReader';
 
 type C = eu.ostrzyciel.jelly.core.proto.v1.RdfColumn;
 type T = eu.ostrzyciel.jelly.core.proto.v1.RdfTripleTerm;
 type I = eu.ostrzyciel.jelly.core.proto.v1.RdfIri;
 type L = eu.ostrzyciel.jelly.core.proto.v1.RdfLiteral;
+export interface ColumnValueReader<V> {
+  iri(prefix: number, name: number, create?: boolean): V | undefined;
+  literal(lex: string, language?: string, direction?: number, datatype?: number, create?: boolean): V | undefined;
+  blank(label: string, create?: boolean): V | undefined;
+  triple(value: T, state: number[], depth?: number, create?: boolean): V | undefined;
+}
+
 function fail(message: string): never { throw new JellyConformanceError(message); }
 
 /**
  * Reusable view of one column plus the position state while decoding it. Lists
  * may be longer than their counts when they come from a `ReusableColumn`.
  */
-class ColumnCursor {
+export class ColumnCursor {
   layouts: ArrayLike<number> = []; layoutCount = 0;
   nameIds: ArrayLike<number> = []; nameCount = 0;
   prefixIds: ArrayLike<number> = []; prefixCount = 0;
   lexValues: ArrayLike<string> = []; lexCount = 0;
+  lexBuf: Uint8Array | undefined; lexOffsets: ArrayLike<number> = [];
   literalKinds: ArrayLike<number> = []; literalKindCount = 0;
   langtags: ArrayLike<string> = []; langtagCount = 0;
   directions: ArrayLike<number> = []; directionCount = 0;
@@ -32,6 +40,12 @@ class ColumnCursor {
   prefixId = 0; nameId = 0; total = 0; mixed = false; uniform = -1;
   readonly tripleState = [0, 0];
 
+  /** Literal text of value `j`; lazy columns decode it on first use. */
+  lex(j: number): string {
+    const buf = this.lexBuf;
+    return buf === undefined ? this.lexValues[j]! : decodeUtf8(buf, this.lexOffsets[2 * j]!, this.lexOffsets[2 * j + 1]!);
+  }
+
   load(c: C): void {
     this.layouts = c.layouts; this.nameIds = c.nameIds; this.prefixIds = c.prefixIds; this.lexValues = c.lexValues;
     this.literalKinds = c.literalKinds; this.langtags = c.langtags; this.directions = c.langtagDirections; this.bnodes = c.bnodes;
@@ -41,7 +55,9 @@ class ColumnCursor {
       this.literalKindCount = c.literalKindCount; this.langtagCount = c.langtagCount; this.directionCount = c.directionCount;
       this.bnodeCount = c.bnodeCount; this.tripleCount = 0;
       this.kinds = c.kinds; this.kindsOffset = c.kindsOffset; this.kindsLength = c.kindsLength;
+      this.lexBuf = c.lexBuf; this.lexOffsets = c.lexOffsets;
     } else {
+      this.lexBuf = undefined;
       this.layoutCount = c.layouts.length; this.nameCount = c.nameIds.length; this.prefixCount = c.prefixIds.length; this.lexCount = c.lexValues.length;
       this.literalKindCount = c.literalKinds.length; this.langtagCount = c.langtags.length; this.directionCount = c.langtagDirections.length;
       this.bnodeCount = c.bnodes.length; this.tripleCount = c.tripleTerms.length;
@@ -99,7 +115,7 @@ export class ColumnTermDecoder {
   protected checkRowCount(n: number): void {
     if (n > 0x7ffffff || n > (this.options.maxRowsPerBatch ?? 1_048_576)) fail('Column row_count exceeds configured size limit');
   }
-  protected resetBlankNodeScope(): void { this.scopedBlankNodes.clear(); }
+  protected resetBlankNodeScope(): void { if (this.scopedBlankNodes.size) this.scopedBlankNodes.clear(); }
   protected scopeTerm(term: RDF.Term, scope: number): RDF.Term {
     if (term.termType === 'Quad') return this.factory.quad(
       this.scopeTerm(term.subject, scope) as RDF.Quad_Subject,
@@ -108,12 +124,15 @@ export class ColumnTermDecoder {
       this.defaultGraph,
     );
     if (term.termType !== 'BlankNode') return term;
-    let node = this.scopedBlankNodes.get(term.value);
+    return this.scopeBlankNode(term.value, scope);
+  }
+  protected scopeBlankNode(label: string, scope: number): RDF.BlankNode {
+    let node = this.scopedBlankNodes.get(label);
     if (!node) {
       // Prefix every label, including the first scope. The canonical numeric
       // scope and delimiter make this injective without retaining past labels.
-      node = this.factory.blankNode(`b${scope}_${term.value}`);
-      this.scopedBlankNodes.set(term.value, node);
+      node = this.factory.blankNode(`b${scope}_${label}`);
+      this.scopedBlankNodes.set(label, node);
     }
     return node;
   }
@@ -176,6 +195,15 @@ export class ColumnTermDecoder {
     return this.factory.quad(s, p, o);
   }
 
+  protected readonly termReader: ColumnValueReader<RDF.Term> = {
+    iri: (prefix, name) => this.resolve(prefix, name),
+    literal: (lex, language, direction, datatype) => this.literal(lex, language, direction, datatype),
+    blank: label => this.factory.blankNode(label),
+    triple: (value, state) => this.triple(value, state),
+  };
+
+  /** Direct RDF/JS decoding of a column. Specialised on purpose: routing every value through a
+   * `ColumnValueReader` costs measurably more when nothing is being filtered. */
   protected column(c: C | null | undefined, n: number, target?: Array<RDF.Term | undefined>): ReadonlyArray<RDF.Term | undefined> {
     const cells = target ?? [];
     if (!c) {
@@ -249,6 +277,93 @@ export class ColumnTermDecoder {
     }
     if (pos + total - next > n) fail('Too many column values');
     while (next < total) cells[pos++] = read();
+    // Overwrite all padding and truncate the tail so reused buffers retain no
+    // terms from previous frames, including after a very large batch.
+    while (pos < n) cells[pos++] = undefined;
+    cells.length = n;
+    return cells;
+  }
+
+  /** Expand layout runs with either RDF terms or lightweight wire values. */
+  protected expandColumn<V>(c: C | null | undefined, n: number, target: Array<V | undefined>, values: ColumnValueReader<V>, position?: 'subject' | 'predicate' | 'object' | 'graph'): ReadonlyArray<V | undefined> {
+    const cells = target;
+    const required = position !== undefined && position !== 'graph';
+    if (!c) {
+      if (required && n) fail(`Unbound ${position} in column`);
+      for (let j = 0; j < n; j++) cells[j] = undefined;
+      cells.length = n;
+      return cells;
+    }
+    const cursor = this.cursor;
+    cursor.load(c);
+    const { layouts, layoutCount, nameCount, lexCount, bnodeCount, tripleCount, kindsLength } = cursor;
+    if (cursor.prefixCount !== 0 && cursor.prefixCount !== 1 && cursor.prefixCount !== nameCount) fail('Invalid prefix_ids length');
+    if (cursor.literalKindCount !== 0 && cursor.literalKindCount !== 1 && cursor.literalKindCount !== lexCount) fail('Invalid literal_kinds length');
+    if (cursor.directionCount && cursor.directionCount !== cursor.langtagCount) fail('Invalid langtag_directions length');
+    const total = nameCount + lexCount + bnodeCount + tripleCount;
+    let uniform = -1, populated = 0;
+    if (nameCount) { uniform = 0; populated++; }
+    if (lexCount) { uniform = 1; populated++; }
+    if (bnodeCount) { uniform = 2; populated++; }
+    if (tripleCount) { uniform = 3; populated++; }
+    const mixed = kindsLength !== 0 || populated > 1;
+    if (mixed) {
+      if (kindsLength !== Math.ceil(total / 4)) fail('Invalid kinds length');
+      if (total % 4 && cursor.kinds[cursor.kindsOffset + kindsLength - 1]! >>> (2 * (total % 4))) fail('Nonzero unused kinds bits');
+    }
+    const { nameIds, prefixIds, literalKinds, langtags, directions, bnodes, tripleTerms, kinds, kindsOffset } = cursor;
+    const { prefixCount, literalKindCount, langtagCount, directionCount } = cursor;
+    let next = 0, iriIndex = 0, literalIndex = 0, blankIndex = 0, tripleIndex = 0, prefixId = 0, nameId = 0;
+    const tripleState = [0, 0];
+    // Consume each run directly into its final cells; a repeat run decodes its node once.
+    const read = (): V | undefined => {
+      if (next >= total) return fail('Column layout references missing run value');
+      const kind = mixed ? (kinds[kindsOffset + (next >> 2)]! >> (2 * (next & 3))) & 3 : uniform;
+      next++;
+      if ((position === 'subject' || position === 'graph') && kind !== 0 && kind !== 2) fail(`Invalid ${position} in column`);
+      if (position === 'predicate' && kind !== 0) fail('Invalid predicate in column');
+      if (kind === 0) {
+        if (iriIndex >= nameCount) return fail('Kinds references missing run value');
+        nameId = nameIds[iriIndex] || nameId + 1;
+        prefixId = prefixCount === 1 ? prefixIds[0]! : prefixIds[iriIndex] || prefixId;
+        iriIndex++;
+        return values.iri(prefixId, nameId);
+      }
+      if (kind === 1) {
+        if (literalIndex >= lexCount) return fail('Kinds references missing run value');
+        const j = literalIndex++;
+        const literalKind = literalKindCount === 1 ? literalKinds[0]! : j < literalKindCount ? literalKinds[j]! : 0;
+        if (literalKind === 0) return values.literal(cursor.lex(j));
+        if (literalKind % 2) return values.literal(cursor.lex(j), undefined, 0, (literalKind + 1) / 2);
+        const index = literalKind / 2 - 1;
+        if (index >= langtagCount) return fail('Invalid language tag index');
+        return values.literal(cursor.lex(j), langtags[index]!, index < directionCount ? directions[index]! : 0);
+      }
+      if (kind === 2) {
+        if (blankIndex >= bnodeCount) return fail('Kinds references missing run value');
+        return values.blank(bnodes[blankIndex++]!);
+      }
+      if (tripleIndex >= tripleCount) return fail('Kinds references missing run value');
+      return values.triple(tripleTerms[tripleIndex++]!, tripleState);
+    };
+    let pos = 0;
+    for (let k = 0; k < layoutCount; k++) {
+      const token = layouts[k]!, skip = token >>> 5, unbound = (token >>> 4) & 1;
+      let length = token & 15;
+      if (length === 15) {
+        if (++k >= layoutCount) fail('Layout escape without extension');
+        length += layouts[k]!;
+      }
+      const count = length + (unbound ? 1 : 2);
+      if (next + skip > total || pos + skip + count > n) fail('Column layout exceeds bounds');
+      for (let j = 0; j < skip; j++) cells[pos++] = read();
+      if (unbound && required) fail(`Unbound ${position} in column`);
+      const value = unbound ? undefined : read();
+      for (let j = 0; j < count; j++) cells[pos++] = value;
+    }
+    if (pos + total - next > n) fail('Too many column values');
+    while (next < total) cells[pos++] = read();
+    if (required && pos < n) fail(`Unbound ${position} in column`);
     // Overwrite all padding and truncate the tail so reused buffers retain no
     // terms from previous frames, including after a very large batch.
     while (pos < n) cells[pos++] = undefined;
